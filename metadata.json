@@ -1,0 +1,6 @@
+{
+  "name": "NearGrid",
+  "description": "Coordinate-powered neighborhood connection and community coordination platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

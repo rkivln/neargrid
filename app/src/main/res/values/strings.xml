@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">NearGrid</string>
+    <string name="tagline">Your neighborhood, connected.</string>
+    <string name="ask_for_help">Ask Nearby</string>
+    <string name="share_something">Share &amp; Exchange</string>
+    <string name="find_people">Find People</string>
+    <string name="report_issue">Report Issue</string>
+    <string name="explore_grid">Living Grid</string>
+    <string name="community">Community</string>
+    <string name="inbox">Inbox</string>
+    <string name="profile">Profile</string>
+</resources>
