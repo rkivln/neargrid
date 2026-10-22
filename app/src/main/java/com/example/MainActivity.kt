@@ -58,14 +58,13 @@ import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
+import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.NearGridTheme
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.WarmBorder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -159,11 +158,11 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
             NavigationBar(
-                containerColor = CharcoalBlack,
-                tonalElevation = 4.dp,
+                containerColor = PureWhite,
+                tonalElevation = 0.dp,
                 modifier = Modifier
                     .testTag("bottom_nav_bar")
-                    .border(1.dp, DarkCardBorder)
+                    .border(1.dp, WarmBorder)
             ) {
                 NavigationDestination.values().forEach { destination ->
                     val isSelected = uiState.currentDestination == destination
@@ -182,24 +181,24 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                             Icon(
                                 imageVector = if (isSelected) iconFilled else iconOutlined,
                                 contentDescription = destination.label,
-                                tint = if (isSelected) PureBlack else NeutralGray
+                                tint = if (isSelected) PrimaryText else SecondaryText
                             )
                         },
                         label = {
                             Text(
-                                text = destination.label.uppercase(),
-                                fontFamily = AntonFontFamily,
+                                text = destination.label,
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
                                 fontSize = 11.sp,
-                                letterSpacing = 0.5.sp,
-                                color = if (isSelected) ElectricLime else NeutralGray
+                                color = if (isSelected) PrimaryText else SecondaryText
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PureBlack,
-                            selectedTextColor = ElectricLime,
-                            unselectedTextColor = NeutralGray,
-                            unselectedIconColor = NeutralGray,
-                            indicatorColor = ElectricLime
+                            selectedIconColor = PrimaryText,
+                            selectedTextColor = PrimaryText,
+                            unselectedTextColor = SecondaryText,
+                            unselectedIconColor = SecondaryText,
+                            indicatorColor = PastelPeach.copy(alpha = 0.5f)
                         ),
                         modifier = Modifier.testTag("nav_item_${destination.name.lowercase()}")
                     )

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,12 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.NearMe
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.ReportProblem
-import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -48,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -63,16 +56,20 @@ import com.example.ui.components.DiscoveryRadiusSelector
 import com.example.ui.components.IntentMatchCard
 import com.example.ui.components.PostCard
 import com.example.ui.components.TopNeighborhoodBar
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
-import com.example.ui.theme.Terracotta
-import com.example.ui.theme.VividPink
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PaleWarmGray
+import com.example.ui.theme.PastelButterYellow
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmIvory
 
 @Composable
 fun HomeScreen(
@@ -92,22 +89,13 @@ fun HomeScreen(
     onOpenCreateDialog: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize().background(PureBlack)) {
-        // Subtle oversized background typographic word
-        Text(
-            text = "GRID",
-            fontFamily = AntonFontFamily,
-            fontSize = 140.sp,
-            color = CharcoalBlack.copy(alpha = 0.5f),
-            letterSpacing = 6.sp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp)
-                .offset(x = 20.dp)
-        )
-
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WarmIvory)
+    ) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            // Top Navigation Bar
+            // Top Navigation & Coordinate Bar
             item {
                 TopNeighborhoodBar(
                     currentCell = currentCell,
@@ -118,97 +106,110 @@ fun HomeScreen(
                 )
             }
 
-            // Hero Community Editorial Showcase
+            // Hero Community Editorial Showcase with hand-drawn line art illustration
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, DarkCardBorder)
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                        Image(
-                            painter = painterResource(id = R.drawable.img_community_banner),
-                            contentDescription = "Neighborhood illustration",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // High-contrast gradient scrim
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Hand-drawn artwork with soft watercolor brush marks
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            PureBlack.copy(alpha = 0.25f),
-                                            PureBlack.copy(alpha = 0.88f)
+                                .fillMaxWidth()
+                                .height(190.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.img_neighborhood_editorial),
+                                contentDescription = "Neighborhood editorial scene",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Soft gradient bottom blend into cream
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.Transparent,
+                                                PureWhite.copy(alpha = 0.15f),
+                                                PureWhite.copy(alpha = 0.95f)
+                                            )
                                         )
                                     )
-                                )
-                        )
+                            )
 
-                        // Editorial Overlay
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(18.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
+                            // Cell resident counter pill
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = ElectricLime
+                                shape = RoundedCornerShape(12.dp),
+                                color = PureWhite.copy(alpha = 0.92f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(14.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(7.dp)
                                             .clip(CircleShape)
-                                            .background(PureBlack)
+                                            .background(PastelMint)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "${currentCell?.name?.uppercase() ?: "OAKWOOD GROVE"} • 42 ACTIVE",
-                                        color = PureBlack,
-                                        fontFamily = AntonFontFamily,
-                                        fontSize = 12.sp,
-                                        letterSpacing = 0.8.sp
+                                        text = "${currentCell?.name ?: "Oakwood Grove"} • 42 neighbors nearby",
+                                        color = PrimaryText,
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
+                        }
 
-                            Column {
-                                Text(
-                                    text = "YOUR NEIGHBORHOOD,\nCOORDINATED.",
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 28.sp,
-                                    lineHeight = 29.sp,
-                                    color = EditorialWhite,
-                                    letterSpacing = 0.5.sp
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Intent-based proximity exchange without private coordinate exposure.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = NeutralGray
-                                )
-                            }
+                        // Editorial headline and storytelling copy
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
+                        ) {
+                            Text(
+                                text = "Your neighborhood, coordinated.",
+                                fontFamily = DMSerifFontFamily,
+                                fontSize = 28.sp,
+                                lineHeight = 33.sp,
+                                color = PrimaryText
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "A quiet, coordinate-aware network for sharing tools, lending hands, and organizing local life without revealing your home address.",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 13.sp,
+                                lineHeight = 19.sp,
+                                color = SecondaryText
+                            )
                         }
                     }
                 }
             }
 
-            // Quick Intent Action Grid (Editorial High-Contrast Tiles)
+            // Quick Intent Action Grid (Editorial Numbered Tiles)
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -216,32 +217,37 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "COORDINATE NEARBY",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 15.sp,
-                            letterSpacing = 1.sp,
-                            color = ElectricLime
+                            text = "Coordinate nearby",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 18.sp,
+                            color = PrimaryText
                         )
-                        Text(
-                            text = "NO HOME PINS",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.sp,
-                            color = NeutralGray
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = SoftCream,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        ) {
+                            Text(
+                                text = "Zero home pins",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = SecondaryText,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ActionTile(
                             number = "01",
-                            title = "ASK NEARBY",
-                            subtitle = "Tools / Favors",
-                            accentColor = ElectricLime,
+                            title = "Ask nearby",
+                            subtitle = "Tools & practical favors",
+                            accentColor = PastelCoral,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("action_ask_help"),
@@ -249,9 +255,9 @@ fun HomeScreen(
                         )
                         ActionTile(
                             number = "02",
-                            title = "SHARE & LEND",
-                            subtitle = "Items / Skills",
-                            accentColor = VividPink,
+                            title = "Share & lend",
+                            subtitle = "Items, books & skills",
+                            accentColor = PastelMint,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("action_share_lend"),
@@ -259,17 +265,17 @@ fun HomeScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         ActionTile(
                             number = "03",
-                            title = "FIND PEOPLE",
-                            subtitle = "Sports / Circles",
-                            accentColor = Color(0xFF32C5F4),
+                            title = "Find people",
+                            subtitle = "Sports, clubs & meetups",
+                            accentColor = PastelSoftCyan,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("action_find_people"),
@@ -277,9 +283,9 @@ fun HomeScreen(
                         )
                         ActionTile(
                             number = "04",
-                            title = "CIVIC REPORT",
-                            subtitle = "Street / Issues",
-                            accentColor = Color(0xFFFFF000),
+                            title = "Civic report",
+                            subtitle = "Streetlights, trails & care",
+                            accentColor = PastelButterYellow,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("action_report_issue"),
@@ -291,6 +297,7 @@ fun HomeScreen(
 
             // Discovery Radius Selector
             item {
+                Spacer(modifier = Modifier.height(8.dp))
                 DiscoveryRadiusSelector(
                     selectedRadiusMeters = discoveryRadiusMeters,
                     onSelectRadius = onRadiusChange
@@ -299,30 +306,6 @@ fun HomeScreen(
 
             // Top Intent Match Spotlight
             if (topIntentMatches.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = ElectricLime,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "AUTOMATED INTENT MATCH",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 14.sp,
-                            letterSpacing = 1.sp,
-                            color = ElectricLime
-                        )
-                    }
-                }
-
                 item {
                     val topMatch = topIntentMatches.first()
                     IntentMatchCard(
@@ -334,39 +317,64 @@ fun HomeScreen(
 
             // Feed filter tabs
             item {
-                Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                    val filterTypes = listOf("ALL" to "ALL FEED", "NEED" to "NEEDS", "OFFER" to "OFFERS", "MEETUP" to "MEETUPS")
-                    TabRow(
-                        selectedTabIndex = filterTypes.indexOfFirst { it.first == selectedFilterType }.coerceAtLeast(0),
-                        containerColor = DarkSurface,
-                        contentColor = ElectricLime,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                ) {
+                    val filterTypes = listOf(
+                        "ALL" to "All updates",
+                        "NEED" to "Needs",
+                        "OFFER" to "Offers",
+                        "MEETUP" to "Meetups"
+                    )
+
+                    Surface(
                         modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, DarkCardBorder, RoundedCornerShape(12.dp))
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = PureWhite,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                     ) {
-                        filterTypes.forEach { (type, label) ->
-                            val isSelected = selectedFilterType == type
-                            Tab(
-                                selected = isSelected,
-                                onClick = { onFilterChange(type) },
-                                text = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            filterTypes.forEach { (type, label) ->
+                                val isSelected = selectedFilterType == type
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) SoftCream else Color.Transparent)
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) PastelPeach else Color.Transparent,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable { onFilterChange(type) }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
                                         text = label,
-                                        fontFamily = AntonFontFamily,
-                                        fontSize = 13.sp,
-                                        letterSpacing = 0.5.sp,
-                                        color = if (isSelected) ElectricLime else NeutralGray
+                                        fontFamily = DMSansFontFamily,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        fontSize = 12.sp,
+                                        color = if (isSelected) PrimaryText else SecondaryText
                                     )
                                 }
-                            )
+                            }
                         }
                     }
 
                     // Category horizontal chips
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val categories = listOf("ALL", "TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
                         items(categories) { cat ->
@@ -376,23 +384,23 @@ fun HomeScreen(
                                 onClick = { onCategoryChange(cat) },
                                 label = {
                                     Text(
-                                        if (cat == "ALL") "ALL" else cat,
-                                        fontFamily = AntonFontFamily,
-                                        fontSize = 11.sp,
-                                        letterSpacing = 0.5.sp
+                                        if (cat == "ALL") "All categories" else cat.lowercase().replaceFirstChar { it.uppercase() },
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 12.sp
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = ElectricLime,
-                                    selectedLabelColor = PureBlack,
-                                    containerColor = DarkSurface,
-                                    labelColor = EditorialWhite
+                                    selectedContainerColor = PastelPeach,
+                                    selectedLabelColor = PrimaryText,
+                                    containerColor = PureWhite,
+                                    labelColor = SecondaryText
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = if (isSelected) ElectricLime else DarkCardBorder,
+                                    borderColor = if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder,
                                     enabled = true,
                                     selected = isSelected
-                                )
+                                ),
+                                shape = RoundedCornerShape(12.dp)
                             )
                         }
                     }
@@ -411,22 +419,22 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.HelpOutline,
                             contentDescription = null,
-                            tint = NeutralGray,
-                            modifier = Modifier.size(48.dp)
+                            tint = SecondaryText,
+                            modifier = Modifier.size(44.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "NO POSTS IN THIS RADIUS",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 18.sp,
-                            letterSpacing = 1.sp,
-                            color = EditorialWhite
+                            text = "No posts in this radius",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 20.sp,
+                            color = PrimaryText
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Expand your discovery radius to 800m or 2km to discover more neighbors.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeutralGray,
+                            text = "Expand your discovery radius to 800m or 2km to find neighbors nearby.",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 13.sp,
+                            color = SecondaryText,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
@@ -441,33 +449,38 @@ fun HomeScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(96.dp))
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
         // Floating Action Button
         FloatingActionButton(
             onClick = { onOpenCreateDialog("NEED") },
-            containerColor = ElectricLime,
-            contentColor = PureBlack,
-            shape = RoundedCornerShape(16.dp),
+            containerColor = PrimaryText,
+            contentColor = PureWhite,
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
+                .padding(20.dp)
                 .testTag("fab_create_post")
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Create Action", tint = PureBlack)
-                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Create Action",
+                    tint = PureWhite,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "POST ACTION",
-                    fontFamily = AntonFontFamily,
-                    fontSize = 16.sp,
-                    letterSpacing = 1.sp,
-                    color = PureBlack
+                    text = "New coordination",
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = PureWhite
                 )
             }
         }
@@ -485,16 +498,16 @@ fun ActionTile(
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -503,10 +516,10 @@ fun ActionTile(
             ) {
                 Text(
                     text = number,
-                    fontFamily = AntonFontFamily,
-                    fontSize = 18.sp,
-                    color = accentColor,
-                    letterSpacing = 0.5.sp
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = accentColor
                 )
                 Box(
                     modifier = Modifier
@@ -515,20 +528,24 @@ fun ActionTile(
                         .background(accentColor)
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
                 text = title,
-                fontFamily = AntonFontFamily,
-                fontSize = 16.sp,
-                color = EditorialWhite,
-                letterSpacing = 0.5.sp
+                fontFamily = DMSerifFontFamily,
+                fontSize = 17.sp,
+                color = PrimaryText
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = NeutralGray,
-                fontSize = 11.sp
+                fontFamily = DMSansFontFamily,
+                fontSize = 11.sp,
+                color = SecondaryText,
+                lineHeight = 15.sp
             )
         }
     }

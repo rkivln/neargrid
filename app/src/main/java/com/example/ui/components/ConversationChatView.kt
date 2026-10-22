@@ -24,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,15 +56,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ChatMessage
 import com.example.data.model.Conversation
-import com.example.ui.theme.AcidYellow
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
-import com.example.ui.theme.VividViolet
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PaleWarmGray
+import com.example.ui.theme.PastelButterYellow
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmDivider
+import com.example.ui.theme.WarmIvory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,16 +96,15 @@ fun ConversationChatView(
                     Column {
                         Text(
                             text = conversation.participantName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = EditorialWhite
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 20.sp,
+                            color = PrimaryText
                         )
                         Text(
-                            text = "${conversation.relatedPostTitle} • ${conversation.distanceBand.uppercase()}",
-                            fontFamily = AntonFontFamily,
+                            text = "${conversation.relatedPostTitle} • ${conversation.distanceBand}",
+                            fontFamily = DMSansFontFamily,
                             fontSize = 11.sp,
-                            letterSpacing = 0.5.sp,
-                            color = VividViolet
+                            color = SecondaryText
                         )
                     }
                 },
@@ -106,59 +113,59 @@ fun ConversationChatView(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back to inbox",
-                            tint = EditorialWhite
+                            tint = PrimaryText
                         )
                     }
                 },
                 actions = {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = VividViolet,
-                        modifier = Modifier.padding(end = 12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        color = SoftCream,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                        modifier = Modifier.padding(end = 16.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Shield,
                                 contentDescription = null,
-                                tint = EditorialWhite,
+                                tint = PastelCoral,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "ZERO HOME PINS",
-                                fontFamily = AntonFontFamily,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.5.sp,
-                                color = EditorialWhite
+                                text = "Zero home pins",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp,
+                                color = PrimaryText
                             )
                         }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = CharcoalBlack
+                    containerColor = PureWhite
                 )
             )
         },
         bottomBar = {
             Surface(
-                color = CharcoalBlack,
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder),
-                tonalElevation = 3.dp
+                color = PureWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     // Quick meeting spot preset chips
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
                             onClick = {
@@ -168,13 +175,24 @@ fun ConversationChatView(
                                     "Oakwood Community Pavilion"
                                 )
                             },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Place, contentDescription = null, tint = AcidYellow, modifier = Modifier.size(12.dp))
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = null,
+                                tint = PastelCoral,
+                                modifier = Modifier.size(13.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Oakwood Pavilion", fontFamily = AntonFontFamily, fontSize = 11.sp, letterSpacing = 0.5.sp, color = EditorialWhite)
+                            Text(
+                                "Oakwood Pavilion",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = PrimaryText
+                            )
                         }
                         OutlinedButton(
                             onClick = {
@@ -184,11 +202,17 @@ fun ConversationChatView(
                                     null
                                 )
                             },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                         ) {
-                            Text("Contactless Porch", fontFamily = AntonFontFamily, fontSize = 11.sp, letterSpacing = 0.5.sp, color = EditorialWhite)
+                            Text(
+                                "Contactless Porch",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = PrimaryText
+                            )
                         }
                     }
 
@@ -200,22 +224,22 @@ fun ConversationChatView(
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
-                            placeholder = { Text("Message ${conversation.participantName}...", color = NeutralGray) },
+                            placeholder = { Text("Message ${conversation.participantName}...", color = SecondaryText, fontSize = 13.sp) },
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("chat_message_input"),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = VividViolet,
-                                unfocusedBorderColor = DarkCardBorder,
-                                focusedTextColor = EditorialWhite,
-                                unfocusedTextColor = EditorialWhite,
-                                focusedContainerColor = DarkSurface,
-                                unfocusedContainerColor = DarkSurface
+                                focusedBorderColor = PrimaryText,
+                                unfocusedBorderColor = WarmBorder,
+                                focusedTextColor = PrimaryText,
+                                unfocusedTextColor = PrimaryText,
+                                focusedContainerColor = SoftCream,
+                                unfocusedContainerColor = SoftCream
                             ),
                             singleLine = true
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         IconButton(
                             onClick = {
                                 if (inputText.isNotBlank()) {
@@ -225,15 +249,15 @@ fun ConversationChatView(
                             },
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(VividViolet)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(PrimaryText)
                                 .testTag("chat_send_button")
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
-                                tint = EditorialWhite,
-                                modifier = Modifier.size(20.dp)
+                                tint = PureWhite,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -246,32 +270,34 @@ fun ConversationChatView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(PureBlack)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .background(WarmIvory)
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = VividViolet,
+                            tint = PastelMint,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Connected via NearGrid Intent Engine. Your residential coordinates are protected.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = EditorialWhite
+                            text = "Connected via NearGrid. Your precise residential location is never disclosed.",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 12.sp,
+                            color = SecondaryText,
+                            lineHeight = 16.sp
                         )
                     }
                 }
@@ -289,71 +315,77 @@ fun ConversationChatView(
                             modifier = Modifier
                                 .padding(vertical = 4.dp)
                                 .width(280.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, AcidYellow)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SoftCream),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PastelCoral.copy(alpha = 0.5f))
                         ) {
                             Row(
-                                modifier = Modifier.padding(10.dp),
+                                modifier = Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Place,
-                                    contentDescription = null,
-                                    tint = AcidYellow,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(PastelPeach),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Place,
+                                        contentDescription = null,
+                                        tint = PrimaryText,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = "PROPOSED MEETING SPOT",
-                                        fontFamily = AntonFontFamily,
+                                        text = "Proposed Exchange Point",
+                                        fontFamily = DMSansFontFamily,
+                                        fontWeight = FontWeight.SemiBold,
                                         fontSize = 11.sp,
-                                        letterSpacing = 0.5.sp,
-                                        color = AcidYellow
+                                        color = PastelCoral
                                     )
                                     Text(
                                         text = msg.meetingPoint,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = EditorialWhite
+                                        fontFamily = DMSerifFontFamily,
+                                        fontSize = 14.sp,
+                                        color = PrimaryText
                                     )
                                 }
                             }
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(
-                                RoundedCornerShape(
-                                    topStart = 14.dp,
-                                    topEnd = 14.dp,
-                                    bottomStart = if (isMe) 14.dp else 2.dp,
-                                    bottomEnd = if (isMe) 2.dp else 14.dp
-                                )
-                            )
-                            .background(if (isMe) VividViolet else CharcoalBlack)
-                            .border(
-                                1.dp,
-                                if (isMe) VividViolet else DarkCardBorder,
-                                RoundedCornerShape(14.dp)
-                            )
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    Surface(
+                        shape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp,
+                            bottomStart = if (isMe) 16.dp else 4.dp,
+                            bottomEnd = if (isMe) 4.dp else 16.dp
+                        ),
+                        color = if (isMe) PrimaryText else PureWhite,
+                        border = if (!isMe) androidx.compose.foundation.BorderStroke(1.dp, WarmBorder) else null,
+                        shadowElevation = 0.5.dp
                     ) {
                         Text(
                             text = msg.text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = EditorialWhite
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = if (isMe) PureWhite else PrimaryText,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(3.dp))
+                    val timeStr = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(msg.timestamp))
                     Text(
-                        text = if (isMe) "SENT" else msg.senderName.uppercase(),
-                        fontFamily = AntonFontFamily,
-                        fontSize = 9.sp,
-                        letterSpacing = 0.5.sp,
-                        color = NeutralGray,
-                        modifier = Modifier.padding(top = 2.dp, end = 4.dp, start = 4.dp)
+                        text = timeStr,
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 10.sp,
+                        color = SecondaryText,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }

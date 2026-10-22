@@ -1,78 +1,68 @@
 package com.example.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val EditorialDarkColorScheme = darkColorScheme(
-    primary = ElectricLime,
-    onPrimary = PureBlack,
-    primaryContainer = Color(0xFF223514),
-    onPrimaryContainer = ElectricLime,
-    secondary = VividPink,
-    onSecondary = EditorialWhite,
-    secondaryContainer = Color(0xFF381222),
-    onSecondaryContainer = VividPink,
-    tertiary = BrightCyan,
-    onTertiary = PureBlack,
-    tertiaryContainer = Color(0xFF0B2D38),
-    onTertiaryContainer = BrightCyan,
-    background = CharcoalBlack,
-    surface = DarkSurface,
-    surfaceVariant = Color(0xFF262626),
-    onBackground = EditorialWhite,
-    onSurface = EditorialWhite,
-    onSurfaceVariant = NeutralGray,
-    outline = DarkCardBorder,
-    outlineVariant = Color(0xFF3A3A3A)
+private val MinimalistColorScheme = lightColorScheme(
+    primary = PrimaryText,
+    onPrimary = PureWhite,
+    primaryContainer = SoftSurface,
+    onPrimaryContainer = PrimaryText,
+    secondary = SlateBlue,
+    onSecondary = PureWhite,
+    secondaryContainer = BlueGray.copy(alpha = 0.2f),
+    onSecondaryContainer = PrimaryText,
+    tertiary = AccentLime,
+    onTertiary = PrimaryText,
+    tertiaryContainer = LightLime.copy(alpha = 0.4f),
+    onTertiaryContainer = PrimaryText,
+    background = BackgroundCanvas,
+    surface = PrimarySurface,
+    surfaceVariant = SoftSurface,
+    onBackground = PrimaryText,
+    onSurface = PrimaryText,
+    onSurfaceVariant = SecondaryText,
+    outline = CardBorderColor,
+    outlineVariant = SubtleDivider
 )
 
-private val EditorialLightColorScheme = lightColorScheme(
-    primary = PureBlack,
-    onPrimary = EditorialWhite,
-    primaryContainer = ElectricLime,
-    onPrimaryContainer = PureBlack,
-    secondary = VividPink,
-    onSecondary = EditorialWhite,
-    secondaryContainer = Color(0xFFFFE0ED),
-    onSecondaryContainer = VividPink,
-    tertiary = ElectricBlue,
-    onTertiary = EditorialWhite,
-    tertiaryContainer = Color(0xFFD6E6FF),
-    onTertiaryContainer = ElectricBlue,
-    background = EditorialWhite,
-    surface = EditorialWhite,
-    surfaceVariant = Color(0xFFF2F2F2),
-    onBackground = CharcoalBlack,
-    onSurface = CharcoalBlack,
-    onSurfaceVariant = Color(0xFF555555),
-    outline = NeutralGray,
-    outlineVariant = Color(0xFFE5E5E5)
+private val MinimalistDarkColorScheme = darkColorScheme(
+    primary = PureWhite,
+    onPrimary = DeepNavy,
+    primaryContainer = SlateBlue,
+    onPrimaryContainer = PureWhite,
+    secondary = AccentLime,
+    onSecondary = PrimaryText,
+    secondaryContainer = DarkNavy,
+    onSecondaryContainer = PureWhite,
+    tertiary = LightLime,
+    onTertiary = PrimaryText,
+    tertiaryContainer = SlateBlue.copy(alpha = 0.5f),
+    onTertiaryContainer = PureWhite,
+    background = DeepNavy,
+    surface = DarkNavy,
+    surfaceVariant = SlateBlue,
+    onBackground = PureWhite,
+    onSurface = PureWhite,
+    onSurfaceVariant = BlueGray,
+    outline = SlateBlue.copy(alpha = 0.4f),
+    outlineVariant = BlueGray.copy(alpha = 0.2f)
 )
 
 @Composable
 fun NearGridTheme(
-    darkTheme: Boolean = true, // Default to stunning dark editorial aesthetic
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) EditorialDarkColorScheme else EditorialLightColorScheme
+    val colorScheme = if (darkTheme) MinimalistDarkColorScheme else MinimalistColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = content
     )
-}
-
-@Composable
-fun MyApplicationTheme(
-    darkTheme: Boolean = true,
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    NearGridTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, content = content)
 }

@@ -3,36 +3,92 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Swiss-Inspired Avant-Garde Editorial Palette
-val ElectricLime = Color(0xFF7CFF00)
-val AcidYellow = Color(0xFFFFF000)
-val VividPink = Color(0xFFFF438F)
-val ElectricBlue = Color(0xFF3183FF)
-val BrightCyan = Color(0xFF32C5F4)
-val VividViolet = Color(0xFF792EFF)
+// Premium Minimalist Template Color System
+// Neutral Surfaces & Canvas
+val BackgroundCanvas = Color(0xFFE9EAEB)
+val PrimarySurface = Color(0xFFFFFFFF)
+val SoftSurface = Color(0xFFF5F5F3)
+val CardBorderColor = Color(0xFFE2E4E6)
+val SubtleDivider = Color(0xFFECEEEF)
 
-val CharcoalBlack = Color(0xFF171717)
-val PureBlack = Color(0xFF050505)
-val EditorialWhite = Color(0xFFFFFFFF)
-val NeutralGray = Color(0xFFD8D8D8)
-val Terracotta = Color(0xFFC86D27)
-val MutedGray = Color(0xFF8E8E8E)
-val DarkSurface = Color(0xFF1E1E1E)
-val DarkCardBorder = Color(0xFF2C2C2C)
+// Blue-Gray and Navy Hierarchy
+val BlueGray = Color(0xFF7F9EAE)
+val SlateBlue = Color(0xFF526F80)
+val DeepNavy = Color(0xFF243A50)
+val DarkNavy = Color(0xFF1B2B3C)
 
-// Semantic Screen Accent Assignments:
-// Home: Electric Lime (#7CFF00)
-// Living Grid: Bright Cyan (#32C5F4)
-// Community: Vivid Pink (#FF438F)
-// Inbox: Vivid Violet (#792EFF)
-// Profile: Acid Yellow (#FFF000)
+// Vibrant Lime Accents
+val AccentLime = Color(0xFFD9FF38)
+val LightLime = Color(0xFFE7FF72)
+val SoftLimeSurface = Color(0xFFF4FDC6)
 
-val LimeOnBlack = ElectricLime
-val PinkOnWhite = VividPink
-val BlueOnBlack = ElectricBlue
+// Typography & Contrast
+val PrimaryText = Color(0xFF151719)
+val SecondaryText = Color(0xFF92999F)
+val MutedText = Color(0xFFA6ACB2)
+val PureWhite = Color(0xFFFFFFFF)
 
-// Gradients & Textures
-val EditorialDarkGradient = Brush.verticalGradient(listOf(PureBlack, CharcoalBlack))
-val LimeAccentGradient = Brush.horizontalGradient(listOf(ElectricLime, Color(0xFFA8FF4D)))
-val PinkAccentGradient = Brush.horizontalGradient(listOf(VividPink, Color(0xFFFF72AC)))
-val CyanAccentGradient = Brush.horizontalGradient(listOf(BrightCyan, ElectricBlue))
+// Semantic Screen Accents
+val AccentHome = AccentLime
+val AccentGrid = BlueGray
+val AccentCommunity = SlateBlue
+val AccentInbox = DeepNavy
+val AccentProfile = LightLime
+
+// Backward compatibility aliases
+val WarmIvory = BackgroundCanvas
+val SoftCream = SoftSurface
+val PaleWarmGray = BackgroundCanvas
+val WarmBorder = CardBorderColor
+val WarmDivider = SubtleDivider
+val CharcoalBlack = PrimaryText
+val PureBlack = PrimaryText
+val EditorialWhite = PureWhite
+val NeutralGray = SecondaryText
+val Terracotta = SlateBlue
+val MutedGray = SecondaryText
+val DarkSurface = DeepNavy
+val DarkCardBorder = SlateBlue.copy(alpha = 0.3f)
+val ElectricLime = AccentLime
+val AcidYellow = LightLime
+val VividPink = DeepNavy
+val ElectricBlue = BlueGray
+val BrightCyan = BlueGray
+val VividViolet = SlateBlue
+val LimeOnBlack = PrimaryText
+val PinkOnWhite = DeepNavy
+val BlueOnBlack = PureWhite
+val PastelPeach = SoftSurface
+val PastelCoral = SlateBlue
+val PastelPowderBlue = BlueGray.copy(alpha = 0.25f)
+val PastelSoftCyan = BlueGray
+val PastelMint = AccentLime
+val PastelButterYellow = LightLime
+val PastelLavenderPink = SoftSurface
+
+// Sophisticated Gradients & Brushes
+val BlueGrayDashboardGradient = Brush.verticalGradient(
+    listOf(BlueGray, SlateBlue)
+)
+
+val DeepNavyViewportGradient = Brush.verticalGradient(
+    listOf(DeepNavy, DarkNavy)
+)
+
+val LimeHighlightGradient = Brush.horizontalGradient(
+    listOf(AccentLime, LightLime)
+)
+
+val SoftSurfaceGradient = Brush.verticalGradient(
+    listOf(PrimarySurface, SoftSurface)
+)
+
+val EditorialWarmGradient = SoftSurfaceGradient
+val PeachToCoralGradient = LimeHighlightGradient
+val CyanToBlueGradient = BlueGrayDashboardGradient
+val MintToYellowGradient = LimeHighlightGradient
+val SoftLavenderGradient = SoftSurfaceGradient
+val LimeAccentGradient = LimeHighlightGradient
+val PinkAccentGradient = BlueGrayDashboardGradient
+val CyanAccentGradient = BlueGrayDashboardGradient
+val EditorialDarkGradient = DeepNavyViewportGradient

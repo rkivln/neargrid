@@ -26,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,14 +39,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GridCell
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmIvory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,13 +61,13 @@ fun CellPickerDialog(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CharcoalBlack
+        containerColor = WarmIvory
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -74,20 +76,25 @@ fun CellPickerDialog(
             ) {
                 Column {
                     Text(
-                        text = "NEIGHBORHOOD MESH CELLS",
-                        fontFamily = AntonFontFamily,
-                        fontSize = 22.sp,
-                        letterSpacing = 1.sp,
-                        color = ElectricLime
+                        text = "Neighborhood mesh cells",
+                        fontFamily = DMSerifFontFamily,
+                        fontSize = 24.sp,
+                        color = PrimaryText
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Select a discrete geographic cell to focus your local discovery",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NeutralGray
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText
                     )
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = EditorialWhite)
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = PrimaryText
+                    )
                 }
             }
 
@@ -99,38 +106,39 @@ fun CellPickerDialog(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
                             .clickable {
                                 onSelectCell(cell)
                                 onDismiss()
                             }
                             .testTag("cell_option_${cell.id}"),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) DarkSurface else PureBlack
+                            containerColor = if (isSelected) SoftCream else PureWhite
                         ),
                         border = androidx.compose.foundation.BorderStroke(
-                            1.5.dp,
-                            if (isSelected) ElectricLime else DarkCardBorder
+                            1.dp,
+                            if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder
                         )
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(if (isSelected) ElectricLime else DarkSurface),
+                                    .background(if (isSelected) PastelPeach else SoftCream),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.GridView,
                                     contentDescription = null,
-                                    tint = if (isSelected) PureBlack else NeutralGray,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
 
@@ -139,23 +147,22 @@ fun CellPickerDialog(
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = cell.name.uppercase(),
-                                        fontFamily = AntonFontFamily,
-                                        fontSize = 16.sp,
-                                        letterSpacing = 0.5.sp,
-                                        color = EditorialWhite
+                                        text = cell.name,
+                                        fontFamily = DMSerifFontFamily,
+                                        fontSize = 17.sp,
+                                        color = PrimaryText
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = ElectricLime
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = SoftCream,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                                     ) {
                                         Text(
                                             text = cell.code,
-                                            fontFamily = AntonFontFamily,
+                                            fontFamily = DMSansFontFamily,
                                             fontSize = 10.sp,
-                                            letterSpacing = 0.5.sp,
-                                            color = PureBlack,
+                                            color = SecondaryText,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -163,16 +170,16 @@ fun CellPickerDialog(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = cell.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = NeutralGray
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 12.sp,
+                                    color = SecondaryText
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${cell.activeNeighborsCount} NEIGHBORS • ${cell.openNeedsCount} NEEDS • ${cell.openOffersCount} OFFERS",
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.5.sp,
-                                    color = ElectricLime
+                                    text = "${cell.activeNeighborsCount} neighbors • ${cell.openNeedsCount} needs • ${cell.openOffersCount} offers",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 11.sp,
+                                    color = PastelCoral
                                 )
                             }
 
@@ -180,8 +187,8 @@ fun CellPickerDialog(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Selected",
-                                    tint = ElectricLime,
-                                    modifier = Modifier.size(22.dp)
+                                    tint = PastelCoral,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }

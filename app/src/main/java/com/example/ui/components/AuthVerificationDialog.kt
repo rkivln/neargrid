@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
@@ -28,7 +26,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -49,13 +46,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GridCell
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.BrightCyan
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
-import com.example.ui.theme.PureBlack
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmIvory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -75,13 +76,13 @@ fun AuthVerificationDialog(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CharcoalBlack
+        containerColor = WarmIvory
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp)
+                .padding(bottom = 40.dp)
         ) {
             // Header
             Row(
@@ -91,20 +92,25 @@ fun AuthVerificationDialog(
             ) {
                 Column {
                     Text(
-                        text = "RESIDENT PASS",
-                        fontFamily = AntonFontFamily,
+                        text = "Resident pass verification",
+                        fontFamily = DMSerifFontFamily,
                         fontSize = 24.sp,
-                        letterSpacing = 1.sp,
-                        color = ElectricLime
+                        color = PrimaryText
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Verify neighborhood credentials & unlock coordinate exchange",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = EditorialWhite.copy(alpha = 0.7f)
+                        text = "Confirm neighborhood credentials to participate in exchanges",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText
                     )
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.testTag("close_auth_dialog")) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = EditorialWhite)
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = PrimaryText
+                    )
                 }
             }
 
@@ -112,42 +118,43 @@ fun AuthVerificationDialog(
 
             // Cell Badge
             Surface(
-                color = PureBlack,
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder),
+                color = PureWhite,
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(ElectricLime),
+                            .background(PastelMint.copy(alpha = 0.5f))
+                            .border(1.dp, PastelMint, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = null,
-                            tint = PureBlack,
-                            modifier = Modifier.size(20.dp)
+                            tint = PrimaryText,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "ASSIGNED TO ${currentCell?.name?.uppercase() ?: "OAKWOOD GROVE"}",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 14.sp,
-                            color = EditorialWhite,
-                            letterSpacing = 0.5.sp
+                            text = "Assigned to ${currentCell?.name ?: "Oakwood Grove"}",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 16.sp,
+                            color = PrimaryText
                         )
                         Text(
                             text = "${currentCell?.code ?: "#H3-8826"} • Zero Private Tracking Active",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ElectricLime
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 11.sp,
+                            color = SecondaryText
                         )
                     }
                 }
@@ -162,17 +169,24 @@ fun AuthVerificationDialog(
                     residentName = it
                     errorMessage = null
                 },
-                label = { Text("Neighbor Display Name", color = EditorialWhite.copy(alpha = 0.7f)) },
+                label = { Text("Neighbor Display Name", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
                 leadingIcon = {
-                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = ElectricLime)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = SecondaryText,
+                        modifier = Modifier.size(18.dp)
+                    )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ElectricLime,
-                    unfocusedBorderColor = DarkCardBorder,
-                    focusedTextColor = EditorialWhite,
-                    unfocusedTextColor = EditorialWhite
+                    focusedBorderColor = PrimaryText,
+                    unfocusedBorderColor = WarmBorder,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedContainerColor = PureWhite,
+                    unfocusedContainerColor = PureWhite
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("auth_name_input"),
@@ -188,17 +202,24 @@ fun AuthVerificationDialog(
                     cellPasscode = it
                     errorMessage = null
                 },
-                label = { Text("Neighborhood Cell Key / Invite Code", color = EditorialWhite.copy(alpha = 0.7f)) },
+                label = { Text("Neighborhood Cell Key / Invite Code", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
                 leadingIcon = {
-                    Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = ElectricLime)
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = SecondaryText,
+                        modifier = Modifier.size(18.dp)
+                    )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ElectricLime,
-                    unfocusedBorderColor = DarkCardBorder,
-                    focusedTextColor = EditorialWhite,
-                    unfocusedTextColor = EditorialWhite
+                    focusedBorderColor = PrimaryText,
+                    unfocusedBorderColor = WarmBorder,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedContainerColor = PureWhite,
+                    unfocusedContainerColor = PureWhite
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("auth_key_input"),
@@ -209,12 +230,13 @@ fun AuthVerificationDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = error,
-                    color = Color(0xFFFF5252),
-                    style = MaterialTheme.typography.bodySmall
+                    color = PastelCoral,
+                    fontFamily = DMSansFontFamily,
+                    fontSize = 12.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(22.dp))
 
             // Submit Button
             Button(
@@ -233,8 +255,11 @@ fun AuthVerificationDialog(
                         onDismiss()
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = ElectricLime),
-                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryText,
+                    contentColor = PureWhite
+                ),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
@@ -243,29 +268,32 @@ fun AuthVerificationDialog(
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = PureBlack,
-                        strokeWidth = 2.5.dp
+                        modifier = Modifier.size(20.dp),
+                        color = PureWhite,
+                        strokeWidth = 2.dp
                     )
                 } else if (isSuccess) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = PureBlack)
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = PureWhite,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "PASS VERIFIED",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 16.sp,
-                            letterSpacing = 1.sp,
-                            color = PureBlack
+                            text = "Pass verified",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
                         )
                     }
                 } else {
                     Text(
-                        text = "VERIFY NEIGHBORHOOD PASS",
-                        fontFamily = AntonFontFamily,
-                        fontSize = 16.sp,
-                        letterSpacing = 1.sp,
-                        color = PureBlack
+                        text = "Verify Neighborhood Pass",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
                     )
                 }
             }

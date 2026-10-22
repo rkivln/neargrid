@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,23 +18,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,17 +46,19 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AcidYellow
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.BrightCyan
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
-import com.example.ui.theme.VividPink
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PastelButterYellow
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmIvory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,24 +91,24 @@ fun CreateIntentSheet(
 
     val categories = listOf("TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
 
-    val activeColor = when (selectedTab) {
-        0 -> VividPink
-        1 -> ElectricLime
-        2 -> AcidYellow
-        else -> BrightCyan
+    val typeAccent = when (selectedTab) {
+        0 -> PastelCoral
+        1 -> PastelMint
+        2 -> PastelButterYellow
+        else -> PastelSoftCyan
     }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = CharcoalBlack
+        containerColor = WarmIvory
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 36.dp)
+                .padding(bottom = 40.dp)
         ) {
             // Header
             Row(
@@ -118,114 +116,105 @@ fun CreateIntentSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "POST ACTION",
-                    fontFamily = AntonFontFamily,
-                    fontSize = 24.sp,
-                    letterSpacing = 1.sp,
-                    color = activeColor
-                )
+                Column {
+                    Text(
+                        text = "New neighborhood post",
+                        fontFamily = DMSerifFontFamily,
+                        fontSize = 24.sp,
+                        color = PrimaryText
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Coordinate directly with nearby residents",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText
+                    )
+                }
                 IconButton(onClick = onDismiss, modifier = Modifier.testTag("close_create_sheet")) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = EditorialWhite)
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = PrimaryText
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Tabs for action types
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = DarkSurface,
-                contentColor = activeColor,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, DarkCardBorder, RoundedCornerShape(12.dp))
+            // Action type tabs
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = SoftCream,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text(
-                            "NEED",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.5.sp,
-                            color = if (selectedTab == 0) VividPink else NeutralGray
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val tabs = listOf("Need", "Offer", "Civic", "Meetup")
+                    tabs.forEachIndexed { idx, label ->
+                        val isSelected = selectedTab == idx
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) PureWhite else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) WarmBorder else Color.Transparent,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable { selectedTab = idx }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                fontSize = 12.sp,
+                                color = PrimaryText
+                            )
+                        }
                     }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            "OFFER",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.5.sp,
-                            color = if (selectedTab == 1) ElectricLime else NeutralGray
-                        )
-                    }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = {
-                        Text(
-                            "CIVIC",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.5.sp,
-                            color = if (selectedTab == 2) AcidYellow else NeutralGray
-                        )
-                    }
-                )
-                Tab(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    text = {
-                        Text(
-                            "MEETUP",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.5.sp,
-                            color = if (selectedTab == 3) BrightCyan else NeutralGray
-                        )
-                    }
-                )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Privacy guarantee card
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = PureBlack,
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder),
+                shape = RoundedCornerShape(14.dp),
+                color = PureWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.HelpOutline,
+                        imageVector = Icons.Default.Shield,
                         contentDescription = null,
-                        tint = activeColor,
+                        tint = PastelCoral,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "ZERO ADDRESS LEAK: Only your neighborhood cell and fuzzy distance band (< 400m) will be shown.",
-                        fontFamily = AntonFontFamily,
+                        text = "Zero address leak: Only your neighborhood cell and fuzzy distance band (< 400m) will be shown.",
+                        fontFamily = DMSansFontFamily,
                         fontSize = 11.sp,
-                        letterSpacing = 0.5.sp,
-                        color = EditorialWhite
+                        lineHeight = 15.sp,
+                        color = SecondaryText
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Title input
             OutlinedTextField(
@@ -235,44 +224,45 @@ fun CreateIntentSheet(
                     Text(
                         when (selectedTab) {
                             0 -> "What do you need? (e.g. 16ft ladder, Calculus tutor)"
-                            1 -> "What are you offering? (e.g. DeWalt drill, Baby stroller)"
-                            2 -> "What is the problem? (e.g. Broken streetlamp, Pothole)"
-                            else -> "Activity title (e.g. Saturday Cricket, Walking group)"
+                            1 -> "What are you offering? (e.g. Power drill, Stroller)"
+                            2 -> "What is the civic issue? (e.g. Streetlamp out)"
+                            else -> "Meetup title (e.g. Saturday Cricket, Book swap)"
                         },
-                        color = NeutralGray
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp
                     )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = activeColor,
-                    unfocusedBorderColor = DarkCardBorder,
-                    focusedTextColor = EditorialWhite,
-                    unfocusedTextColor = EditorialWhite,
-                    focusedContainerColor = DarkSurface,
-                    unfocusedContainerColor = DarkSurface
+                    focusedBorderColor = PrimaryText,
+                    unfocusedBorderColor = WarmBorder,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedContainerColor = PureWhite,
+                    unfocusedContainerColor = PureWhite
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("create_title_input"),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Description input
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Details, availability or context", color = NeutralGray) },
+                label = { Text("Details, availability or context", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = activeColor,
-                    unfocusedBorderColor = DarkCardBorder,
-                    focusedTextColor = EditorialWhite,
-                    unfocusedTextColor = EditorialWhite,
-                    focusedContainerColor = DarkSurface,
-                    unfocusedContainerColor = DarkSurface
+                    focusedBorderColor = PrimaryText,
+                    unfocusedBorderColor = WarmBorder,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedContainerColor = PureWhite,
+                    unfocusedContainerColor = PureWhite
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("create_desc_input"),
@@ -280,43 +270,42 @@ fun CreateIntentSheet(
                 maxLines = 5
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Issue specific: Location snippet
             if (selectedTab == 2) {
                 OutlinedTextField(
                     value = locationOrSpot,
                     onValueChange = { locationOrSpot = it },
-                    label = { Text("Approximate location (e.g. Elm St & 4th Cross)", color = NeutralGray) },
+                    label = { Text("Approximate location (e.g. Elm St & 4th Cross)", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = activeColor,
-                        unfocusedBorderColor = DarkCardBorder,
-                        focusedTextColor = EditorialWhite,
-                        unfocusedTextColor = EditorialWhite,
-                        focusedContainerColor = DarkSurface,
-                        unfocusedContainerColor = DarkSurface
+                        focusedBorderColor = PrimaryText,
+                        unfocusedBorderColor = WarmBorder,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedContainerColor = PureWhite,
+                        unfocusedContainerColor = PureWhite
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("create_location_input"),
                     singleLine = true
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
             // Category Selector
             Text(
-                text = "CATEGORY",
-                fontFamily = AntonFontFamily,
-                fontSize = 13.sp,
-                letterSpacing = 0.5.sp,
-                color = EditorialWhite
+                text = "Category",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 15.sp,
+                color = PrimaryText
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 categories.forEach { cat ->
                     val isSelected = selectedCategory == cat
@@ -329,88 +318,86 @@ fun CreateIntentSheet(
                                 imageVector = icon,
                                 contentDescription = null,
                                 modifier = Modifier.size(13.dp),
-                                tint = if (isSelected) PureBlack else NeutralGray
+                                tint = if (isSelected) PrimaryText else SecondaryText
                             )
                         },
                         label = {
                             Text(
-                                cat,
-                                fontFamily = AntonFontFamily,
-                                fontSize = 11.sp,
-                                letterSpacing = 0.5.sp
+                                cat.lowercase().replaceFirstChar { it.uppercase() },
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = activeColor,
-                            selectedLabelColor = PureBlack,
-                            containerColor = DarkSurface,
-                            labelColor = EditorialWhite
+                            selectedContainerColor = PastelPeach,
+                            selectedLabelColor = PrimaryText,
+                            containerColor = PureWhite,
+                            labelColor = SecondaryText
                         ),
                         border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (isSelected) activeColor else DarkCardBorder,
+                            borderColor = if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder,
                             enabled = true,
                             selected = isSelected
                         ),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.testTag("category_chip_$cat")
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Need specific: Urgency
             if (selectedTab == 0) {
                 Text(
-                    text = "URGENCY LEVEL",
-                    fontFamily = AntonFontFamily,
-                    fontSize = 13.sp,
-                    letterSpacing = 0.5.sp,
-                    color = EditorialWhite
+                    text = "Urgency level",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 15.sp,
+                    color = PrimaryText
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("NORMAL", "TIME_SENSITIVE", "URGENT").forEach { urg ->
+                    listOf("NORMAL" to "Normal", "TIME_SENSITIVE" to "Time-sensitive", "URGENT" to "Urgent").forEach { (urg, label) ->
                         val isSelected = selectedUrgency == urg
                         FilterChip(
                             selected = isSelected,
                             onClick = { selectedUrgency = urg },
                             label = {
                                 Text(
-                                    urg.replace("_", " "),
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 11.sp,
-                                    letterSpacing = 0.5.sp
+                                    label,
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 12.sp
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = VividPink,
-                                selectedLabelColor = EditorialWhite,
-                                containerColor = DarkSurface,
-                                labelColor = EditorialWhite
+                                selectedContainerColor = PastelCoral.copy(alpha = 0.25f),
+                                selectedLabelColor = PastelCoral,
+                                containerColor = PureWhite,
+                                labelColor = SecondaryText
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                borderColor = if (isSelected) VividPink else DarkCardBorder,
+                                borderColor = if (isSelected) PastelCoral else WarmBorder,
                                 enabled = true,
                                 selected = isSelected
-                            )
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Expiry hours
             if (selectedTab != 2) {
                 Text(
-                    text = "AUTO-EXPIRES AFTER",
-                    fontFamily = AntonFontFamily,
-                    fontSize = 13.sp,
-                    letterSpacing = 0.5.sp,
-                    color = EditorialWhite
+                    text = "Auto-expires after",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 15.sp,
+                    color = PrimaryText
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(6 to "6 HOURS", 24 to "24 HOURS", 72 to "3 DAYS").forEach { (hours, label) ->
+                    listOf(6 to "6 hours", 24 to "24 hours", 72 to "3 days").forEach { (hours, label) ->
                         val isSelected = selectedExpiryHours == hours
                         FilterChip(
                             selected = isSelected,
@@ -418,26 +405,26 @@ fun CreateIntentSheet(
                             label = {
                                 Text(
                                     label,
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 11.sp,
-                                    letterSpacing = 0.5.sp
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 12.sp
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = activeColor,
-                                selectedLabelColor = PureBlack,
-                                containerColor = DarkSurface,
-                                labelColor = EditorialWhite
+                                selectedContainerColor = PastelMint.copy(alpha = 0.4f),
+                                selectedLabelColor = PrimaryText,
+                                containerColor = PureWhite,
+                                labelColor = SecondaryText
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                borderColor = if (isSelected) activeColor else DarkCardBorder,
+                                borderColor = if (isSelected) PastelMint else WarmBorder,
                                 enabled = true,
                                 selected = isSelected
-                            )
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
 
             // Submit Button
@@ -457,20 +444,22 @@ fun CreateIntentSheet(
                     .fillMaxWidth()
                     .height(52.dp)
                     .testTag("submit_action_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = activeColor),
-                shape = RoundedCornerShape(12.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryText,
+                    contentColor = PureWhite
+                ),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
                     text = when (selectedTab) {
-                        0 -> "POST NEED TO NEIGHBORS"
-                        1 -> "PUBLISH RESOURCE OFFER"
-                        2 -> "SUBMIT CIVIC ISSUE"
-                        else -> "PUBLISH MICRO-MEETUP"
+                        0 -> "Post Need to Neighbors"
+                        1 -> "Publish Resource Offer"
+                        2 -> "Submit Civic Issue"
+                        else -> "Publish Neighborhood Meetup"
                     },
-                    fontFamily = AntonFontFamily,
-                    fontSize = 16.sp,
-                    letterSpacing = 1.sp,
-                    color = if (selectedTab == 0) EditorialWhite else PureBlack
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
                 )
             }
         }

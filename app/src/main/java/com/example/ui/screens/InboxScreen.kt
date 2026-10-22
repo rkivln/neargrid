@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,19 +34,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Conversation
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
-import com.example.ui.theme.VividViolet
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelLavenderPink
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmIvory
 
 @Composable
 fun InboxScreen(
@@ -55,68 +61,61 @@ fun InboxScreen(
     onSelectConversation: (Conversation) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize().background(PureBlack)) {
-        // Oversized background typographic word
-        Text(
-            text = "INBOX",
-            fontFamily = AntonFontFamily,
-            fontSize = 140.sp,
-            color = CharcoalBlack.copy(alpha = 0.5f),
-            letterSpacing = 6.sp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp)
-                .offset(x = 10.dp)
-        )
-
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WarmIvory)
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = CharcoalBlack,
-                tonalElevation = 2.dp
+                color = PureWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "COORDINATION INBOX",
-                                fontFamily = AntonFontFamily,
-                                fontSize = 24.sp,
-                                letterSpacing = 1.sp,
-                                color = VividViolet
+                                text = "Coordination inbox",
+                                fontFamily = DMSerifFontFamily,
+                                fontSize = 26.sp,
+                                color = PrimaryText
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Private handoff coordination & safe exchange protocols",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NeutralGray
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = SecondaryText
                             )
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = VividViolet
+                            shape = RoundedCornerShape(12.dp),
+                            color = PastelLavenderPink.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PastelLavenderPink)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Shield,
                                     contentDescription = null,
-                                    tint = EditorialWhite,
+                                    tint = PrimaryText,
                                     modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = "ENCRYPTED",
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.5.sp,
-                                    color = EditorialWhite
+                                    text = "Encrypted",
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp,
+                                    color = PrimaryText
                                 )
                             }
                         }
@@ -135,23 +134,24 @@ fun InboxScreen(
                         Icon(
                             imageVector = Icons.Default.ChatBubbleOutline,
                             contentDescription = null,
-                            modifier = Modifier.size(56.dp),
-                            tint = NeutralGray
+                            modifier = Modifier.size(48.dp),
+                            tint = SecondaryText
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "NO CONVERSATIONS YET",
-                            fontFamily = AntonFontFamily,
-                            fontSize = 18.sp,
-                            letterSpacing = 1.sp,
-                            color = EditorialWhite
+                            text = "No active conversations",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 20.sp,
+                            color = PrimaryText
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "When you connect with a neighbor about a tool, need, or meetup, your private chat will appear here.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeutralGray,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 13.sp,
+                            color = SecondaryText,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 18.sp
                         )
                     }
                 }
@@ -159,48 +159,50 @@ fun InboxScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
                         // Safe Handoff Guide Card
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, VividViolet.copy(alpha = 0.4f))
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = SoftCream),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                         ) {
                             Row(
-                                modifier = Modifier.padding(14.dp),
+                                modifier = Modifier.padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(VividViolet),
+                                        .background(PastelLavenderPink.copy(alpha = 0.7f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Handshake,
                                         contentDescription = null,
-                                        tint = EditorialWhite,
-                                        modifier = Modifier.size(20.dp)
+                                        tint = PrimaryText,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(14.dp))
                                 Column {
                                     Text(
-                                        text = "SAFE HANDOFF PROTOCOL",
-                                        fontFamily = AntonFontFamily,
-                                        fontSize = 13.sp,
-                                        letterSpacing = 0.5.sp,
-                                        color = VividViolet
+                                        text = "Safe Handoff Protocol",
+                                        fontFamily = DMSerifFontFamily,
+                                        fontSize = 15.sp,
+                                        color = PrimaryText
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Agree on verified public spots like Oakwood Pavilion or use contactless porch drop-offs.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = NeutralGray
+                                        text = "Agree on verified public spots like Oakwood Pavilion or coordinate contactless porch drops.",
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp,
+                                        color = SecondaryText
                                     )
                                 }
                             }
@@ -215,7 +217,7 @@ fun InboxScreen(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(96.dp))
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
             }
@@ -231,32 +233,33 @@ fun ConversationItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .testTag("conversation_item_${conversation.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(CircleShape)
-                    .background(VividViolet),
+                    .background(PastelPeach.copy(alpha = 0.5f))
+                    .border(1.dp, WarmBorder, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = conversation.participantName.take(2).uppercase(),
-                    fontFamily = AntonFontFamily,
-                    fontSize = 16.sp,
-                    letterSpacing = 0.5.sp,
-                    color = EditorialWhite
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = PrimaryText
                 )
             }
 
@@ -270,36 +273,35 @@ fun ConversationItemCard(
                 ) {
                     Text(
                         text = conversation.participantName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = EditorialWhite
+                        fontFamily = DMSerifFontFamily,
+                        fontSize = 17.sp,
+                        color = PrimaryText
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = VividViolet,
+                            tint = PastelCoral,
                             modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = conversation.distanceBand.uppercase(),
-                            fontFamily = AntonFontFamily,
-                            fontSize = 10.sp,
-                            letterSpacing = 0.5.sp,
-                            color = NeutralGray
+                            text = conversation.distanceBand,
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 11.sp,
+                            color = SecondaryText
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
-                    text = "RE: ${conversation.relatedPostTitle.uppercase()}",
-                    fontFamily = AntonFontFamily,
-                    fontSize = 11.sp,
-                    letterSpacing = 0.5.sp,
-                    color = VividViolet,
+                    text = "Regarding: ${conversation.relatedPostTitle}",
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    color = PastelCoral,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -308,20 +310,21 @@ fun ConversationItemCard(
 
                 Text(
                     text = conversation.lastMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NeutralGray,
+                    fontFamily = DMSansFontFamily,
+                    fontSize = 13.sp,
+                    color = SecondaryText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = NeutralGray,
-                modifier = Modifier.size(20.dp)
+                tint = SecondaryText,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

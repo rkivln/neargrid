@@ -1,7 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,12 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,22 +57,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.model.GridCell
-import com.example.ui.theme.AcidYellow
-import com.example.ui.theme.AntonFontFamily
-import com.example.ui.theme.BrightCyan
-import com.example.ui.theme.CharcoalBlack
-import com.example.ui.theme.DarkCardBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.EditorialWhite
-import com.example.ui.theme.ElectricLime
-import com.example.ui.theme.NeutralGray
-import com.example.ui.theme.PureBlack
-import com.example.ui.theme.VividPink
+import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.PastelButterYellow
+import com.example.ui.theme.PastelCoral
+import com.example.ui.theme.PastelMint
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelSoftCyan
+import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SecondaryText
+import com.example.ui.theme.SoftCream
+import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.WarmDivider
+import com.example.ui.theme.WarmIvory
 
 @Composable
 fun ProfileScreen(
@@ -80,21 +93,13 @@ fun ProfileScreen(
 ) {
     var privacyMode by remember { mutableStateOf("APPROXIMATE_BAND") }
     var allowDirectMessages by remember { mutableStateOf(true) }
+    var expandedFaqIndex by remember { mutableIntStateOf(-1) }
 
-    Box(modifier = modifier.fillMaxSize().background(PureBlack)) {
-        // Oversized background typographic word
-        Text(
-            text = "TRUST",
-            fontFamily = AntonFontFamily,
-            fontSize = 140.sp,
-            color = CharcoalBlack.copy(alpha = 0.5f),
-            letterSpacing = 6.sp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp)
-                .offset(x = 10.dp)
-        )
-
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WarmIvory)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -103,190 +108,214 @@ fun ProfileScreen(
             // Top Header
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = CharcoalBlack,
-                tonalElevation = 2.dp
+                color = PureWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "PROFILE & TRUST",
-                        fontFamily = AntonFontFamily,
-                        fontSize = 24.sp,
-                        letterSpacing = 1.sp,
-                        color = AcidYellow
+                        text = "Profile & trust",
+                        fontFamily = DMSerifFontFamily,
+                        fontSize = 26.sp,
+                        color = PrimaryText
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Community reputation & cryptographic coordinate privacy",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NeutralGray
+                        text = "Community reputation and privacy-preserving coordinate settings",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Neighbor Identity Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, AcidYellow)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
-                                .background(AcidYellow),
+                                .background(PastelPeach.copy(alpha = 0.5f))
+                                .border(1.dp, PastelCoral.copy(alpha = 0.4f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "YOU",
-                                fontFamily = AntonFontFamily,
-                                fontSize = 20.sp,
-                                letterSpacing = 1.sp,
-                                color = PureBlack
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = PrimaryText
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(14.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "VERIFIED RESIDENT",
-                                    fontFamily = AntonFontFamily,
-                                    fontSize = 17.sp,
-                                    letterSpacing = 0.5.sp,
-                                    color = EditorialWhite
+                                    text = "Verified Resident",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 19.sp,
+                                    color = PrimaryText
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Verified Neighbor",
-                                    tint = AcidYellow,
+                                    tint = PastelMint,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "CELL: ${currentCell?.name?.uppercase() ?: "OAKWOOD GROVE"} (${currentCell?.code ?: "#H3-8826"})",
-                                fontFamily = AntonFontFamily,
-                                fontSize = 11.sp,
-                                letterSpacing = 0.5.sp,
-                                color = AcidYellow
+                                text = "${currentCell?.name ?: "Oakwood Grove"} (${currentCell?.code ?: "#H3-8826"})",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = PastelCoral
                             )
                             Text(
-                                text = "Member since October 2026 • Tier 1 Trust",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NeutralGray
+                                text = "Member since October 2026 • Tier 1 Neighborhood Trust",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = SecondaryText
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         OutlinedButton(
                             onClick = onOpenAuthDialog,
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, AcidYellow),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = AcidYellow, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.VerifiedUser,
+                                contentDescription = null,
+                                tint = PrimaryText,
+                                modifier = Modifier.size(15.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Resident Pass", fontFamily = AntonFontFamily, fontSize = 12.sp, letterSpacing = 0.5.sp, color = AcidYellow)
+                            Text(
+                                "Resident Pass",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = PrimaryText
+                            )
                         }
 
                         Button(
                             onClick = onReplayOnboarding,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AcidYellow),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryText,
+                                contentColor = PureWhite
+                            ),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = PureBlack, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = PureWhite,
+                                modifier = Modifier.size(15.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Tour Guide", fontFamily = AntonFontFamily, fontSize = 12.sp, letterSpacing = 0.5.sp, color = PureBlack)
+                            Text(
+                                "Tour Guide",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Community Contribution Badges
             Text(
-                text = "COMMUNITY CONTRIBUTION BADGES",
-                fontFamily = AntonFontFamily,
-                fontSize = 15.sp,
-                letterSpacing = 1.sp,
-                color = AcidYellow,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                text = "Community contribution badges",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 18.sp,
+                color = PrimaryText,
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     BadgeItem(
                         icon = Icons.Default.VolunteerActivism,
-                        title = "HELPFUL NEIGHBOR (LEVEL 2)",
+                        title = "Helpful Neighbor (Level 2)",
                         desc = "Completed 4 tool lendings & local assists",
-                        color = ElectricLime
+                        color = PastelMint
                     )
                     BadgeItem(
                         icon = Icons.Default.Shield,
-                        title = "PROBLEM SOLVER",
+                        title = "Problem Solver",
                         desc = "Upvoted & verified 3 resolved neighborhood issues",
-                        color = VividPink
+                        color = PastelCoral
                     )
                     BadgeItem(
                         icon = Icons.Default.People,
-                        title = "COMMUNITY BUILDER",
-                        desc = "Participated in local cricket & Pinecrest pavilion sessions",
-                        color = BrightCyan
+                        title = "Community Builder",
+                        desc = "Participated in local sports & Pinecrest pavilion sessions",
+                        color = PastelSoftCyan
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Location & Privacy Guarantees
+            // Coordinate Privacy Protocols
             Text(
-                text = "COORDINATE PRIVACY PROTOCOLS",
-                fontFamily = AntonFontFamily,
-                fontSize = 15.sp,
-                letterSpacing = 1.sp,
-                color = AcidYellow,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                text = "Coordinate privacy protocols",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 18.sp,
+                color = PrimaryText,
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = CharcoalBlack),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     // Privacy Mode 1: Distance Bands
                     Row(
                         modifier = Modifier
@@ -297,26 +326,28 @@ fun ProfileScreen(
                         RadioButton(
                             selected = privacyMode == "APPROXIMATE_BAND",
                             onClick = { privacyMode = "APPROXIMATE_BAND" },
-                            colors = RadioButtonDefaults.colors(selectedColor = AcidYellow)
+                            colors = RadioButtonDefaults.colors(selectedColor = PastelCoral)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "DISTANCE BANDS (RECOMMENDED)",
-                                fontFamily = AntonFontFamily,
+                                text = "Distance bands (Recommended)",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
-                                letterSpacing = 0.5.sp,
-                                color = EditorialWhite
+                                color = PrimaryText
                             )
                             Text(
                                 text = "Neighbors only see fuzzy proximity like \"within 350 m\". Your exact home coordinates are never stored or exposed.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NeutralGray
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = SecondaryText
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Privacy Mode 2: Cell Only
                     Row(
@@ -328,26 +359,28 @@ fun ProfileScreen(
                         RadioButton(
                             selected = privacyMode == "CELL_ONLY",
                             onClick = { privacyMode = "CELL_ONLY" },
-                            colors = RadioButtonDefaults.colors(selectedColor = AcidYellow)
+                            colors = RadioButtonDefaults.colors(selectedColor = PastelCoral)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "CELL ONLY (MAXIMUM PRIVACY)",
-                                fontFamily = AntonFontFamily,
+                                text = "Cell only (Maximum privacy)",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
-                                letterSpacing = 0.5.sp,
-                                color = EditorialWhite
+                                color = PrimaryText
                             )
                             Text(
-                                text = "Only displays cell name (${currentCell?.name?.uppercase() ?: "OAKWOOD GROVE"}) with zero distance calculations.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NeutralGray
+                                text = "Only displays cell name (${currentCell?.name ?: "Oakwood Grove"}) with zero distance calculations.",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = SecondaryText
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Toggle direct messages
                     Row(
@@ -357,29 +390,30 @@ fun ProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "ALLOW INTENT-MATCHED MESSAGES",
-                                fontFamily = AntonFontFamily,
+                                text = "Allow intent-matched messages",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
-                                letterSpacing = 0.5.sp,
-                                color = EditorialWhite
+                                color = PrimaryText
                             )
                             Text(
                                 text = "Neighbors can message you only after an exchange is accepted.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NeutralGray
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = SecondaryText
                             )
                         }
                         Switch(
                             checked = allowDirectMessages,
                             onCheckedChange = { allowDirectMessages = it },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureBlack,
-                                checkedTrackColor = AcidYellow
+                                checkedThumbColor = PureWhite,
+                                checkedTrackColor = PastelCoral
                             )
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Toggle GPS coordinate sensor
                     Row(
@@ -389,31 +423,174 @@ fun ProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "LIVE GPS SENSOR ACCESS",
-                                fontFamily = AntonFontFamily,
+                                text = "Live GPS sensor access",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
-                                letterSpacing = 0.5.sp,
-                                color = EditorialWhite
+                                color = PrimaryText
                             )
                             Text(
                                 text = if (gpsEnabled) "GPS active for live distance band calculations." else "Using discrete spatial mesh without device GPS.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NeutralGray
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = SecondaryText
                             )
                         }
                         Switch(
                             checked = gpsEnabled,
                             onCheckedChange = { onGpsToggle() },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureBlack,
-                                checkedTrackColor = AcidYellow
+                                checkedThumbColor = PureWhite,
+                                checkedTrackColor = PastelCoral
                             )
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(96.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 9: FAQ, Help, and Contact Screen ("Magic Canvas" reference)
+            Text(
+                text = "Help & Community FAQ",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 18.sp,
+                color = PrimaryText,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    // Hand-drawn artwork with pastel brush strokes
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_community_gathering),
+                            contentDescription = "Community help illustration",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Questions & neighborhood answers",
+                        fontFamily = DMSerifFontFamily,
+                        fontSize = 20.sp,
+                        color = PrimaryText
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Everything you need to know about NearGrid coordinates, privacy, and community safety.",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText,
+                        lineHeight = 17.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Expandable FAQ items
+                    val faqs = listOf(
+                        "How does NearGrid protect my exact address?" to "NearGrid divides geography into discrete H3 cells and shows only fuzzy distance bands like 'within 350m'. Your actual home address is never pinned or visible on any map.",
+                        "What are verified safe public exchange spots?" to "These are pre-screened municipal public locations such as the Oakwood Pavilion with 24/7 lighting and security where neighbors can comfortably meet to hand off items.",
+                        "How does the autonomous intent matching engine work?" to "The engine correlates needs (e.g. borrowing a ladder) with neighbor offers within your selected radius and alerts both parties without broadcast spam."
+                    )
+
+                    faqs.forEachIndexed { idx, (question, answer) ->
+                        val isExpanded = expandedFaqIndex == idx
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isExpanded) SoftCream else Color.Transparent)
+                                .clickable { expandedFaqIndex = if (isExpanded) -1 else idx }
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = question,
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = PrimaryText,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = SecondaryText,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            if (isExpanded) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = answer,
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp,
+                                    color = SecondaryText
+                                )
+                            }
+                        }
+                        if (idx < faqs.size - 1) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(WarmDivider)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // Simple high-contrast action button
+                    Button(
+                        onClick = { /* Contact community council support */ },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryText,
+                            contentColor = PureWhite
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mail,
+                            contentDescription = null,
+                            tint = PureWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Contact Community Council",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }
@@ -433,29 +610,31 @@ fun BadgeItem(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(color),
+                .background(color.copy(alpha = 0.5f))
+                .border(1.dp, color, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PureBlack,
-                modifier = Modifier.size(20.dp)
+                tint = PrimaryText,
+                modifier = Modifier.size(18.dp)
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Column {
             Text(
                 text = title,
-                fontFamily = AntonFontFamily,
+                fontFamily = DMSansFontFamily,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
-                letterSpacing = 0.5.sp,
-                color = EditorialWhite
+                color = PrimaryText
             )
             Text(
                 text = desc,
-                style = MaterialTheme.typography.bodySmall,
-                color = NeutralGray
+                fontFamily = DMSansFontFamily,
+                fontSize = 12.sp,
+                color = SecondaryText
             )
         }
     }
