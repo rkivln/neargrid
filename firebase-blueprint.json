@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public and privacy-preserving settings for a neighborhood resident.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase User UID." },
+        "email": { "type": "string", "description": "Google account email." },
+        "displayName": { "type": "string", "description": "Resident display nickname." },
+        "handle": { "type": "string", "description": "Local handle e.g. @alex_oakwood." },
+        "bio": { "type": "string", "description": "Short bio or skill offer snippet." },
+        "cellId": { "type": "string", "description": "Selected home grid cell." },
+        "cellName": { "type": "string", "description": "Neighborhood sector name." },
+        "avatarPresetIndex": { "type": "integer", "description": "Index of selected avatar preset." },
+        "avatarUri": { "type": "string", "description": "Custom avatar photo URI if selected." },
+        "privacyRadiusMeters": { "type": "integer", "description": "Privacy masking radius (250m to 2500m)." },
+        "fuzzyCoords": { "type": "boolean", "description": "Whether coordinates are dynamically offset." },
+        "incognito": { "type": "boolean", "description": "Whether resident is hidden on living mesh canvas." },
+        "allowDMs": { "type": "boolean", "description": "Whether neighbor allows direct handoff coordination messages." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update." }
+      },
+      "required": ["userId", "email", "displayName", "createdAt"]
+    },
+    "NeighborPost": {
+      "title": "NeighborPost",
+      "description": "Hyperlocal need, offer, or community meetup request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique post document ID." },
+        "userId": { "type": "string", "description": "Author UID." },
+        "type": { "type": "string", "enum": ["NEED", "OFFER", "MEETUP"], "description": "Post type." },
+        "title": { "type": "string", "description": "Post title." },
+        "description": { "type": "string", "description": "Post details." },
+        "category": { "type": "string", "description": "Category e.g. TOOLS, STUDY, SPORTS, HELP, HOUSEHOLD." },
+        "authorName": { "type": "string", "description": "Author nickname." },
+        "authorInitials": { "type": "string", "description": "Author initials." },
+        "authorCellId": { "type": "string", "description": "Author's neighborhood cell ID." },
+        "cellName": { "type": "string", "description": "Cell display name." },
+        "lat": { "type": "number", "description": "Fuzzy centroid latitude." },
+        "lng": { "type": "number", "description": "Fuzzy centroid longitude." },
+        "approxDistanceBand": { "type": "string", "description": "Distance band label e.g. within 300 m." },
+        "urgency": { "type": "string", "enum": ["NORMAL", "TIME_SENSITIVE", "URGENT"], "description": "Urgency rating." },
+        "expiresInHours": { "type": "integer", "description": "Active duration in hours." },
+        "status": { "type": "string", "enum": ["ACTIVE", "RESOLVED", "CANCELLED"], "description": "Post lifecycle status." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of update." }
+      },
+      "required": ["id", "userId", "type", "title", "description", "category", "authorName", "status", "createdAt"]
+    },
+    "CommunityIssue": {
+      "title": "CommunityIssue",
+      "description": "Crowdsourced infrastructure or safety report.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique issue document ID." },
+        "title": { "type": "string", "description": "Issue title." },
+        "description": { "type": "string", "description": "Description of the hazard or need." },
+        "locationSnippet": { "type": "string", "description": "Approximate location description." },
+        "cellId": { "type": "string", "description": "Target neighborhood cell ID." },
+        "category": { "type": "string", "description": "LIGHTING, ROADS, SAFETY, SANITATION, PARKS, OTHER." },
+        "status": { "type": "string", "enum": ["REPORTED", "ACKNOWLEDGED", "IN_PROGRESS", "RESOLVED"], "description": "Current lifecycle status." },
+        "reporterName": { "type": "string", "description": "Reporter nickname." },
+        "reporterId": { "type": "string", "description": "Reporter user UID." },
+        "upvotesCount": { "type": "integer", "description": "Total verification upvotes." },
+        "upvoterIds": { "type": "array", "description": "UIDs of neighbors who have upvoted." },
+        "assignedVolunteer": { "type": "string", "description": "Assigned volunteer or group name." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp." }
+      },
+      "required": ["id", "title", "description", "cellId", "category", "status", "reporterId", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Secure coordination thread between two neighbors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Conversation document ID." },
+        "participantIds": { "type": "array", "description": "Array of 2 participant UIDs." },
+        "participantNames": { "type": "array", "description": "Display names of participants." },
+        "relatedPostId": { "type": "string", "description": "Associated post ID if any." },
+        "relatedPostTitle": { "type": "string", "description": "Title of the item or need." },
+        "relatedPostType": { "type": "string", "description": "NEED or OFFER." },
+        "lastMessage": { "type": "string", "description": "Preview snippet of last message." },
+        "lastMessageTime": { "type": "string", "format": "date-time", "description": "Timestamp of last message." },
+        "distanceBand": { "type": "string", "description": "Approximate proximity band." },
+        "isResolved": { "type": "boolean", "description": "Whether coordination has completed." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp." }
+      },
+      "required": ["id", "participantIds", "lastMessage", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual handoff message or safe exchange confirmation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Message document ID." },
+        "conversationId": { "type": "string", "description": "Parent conversation ID." },
+        "senderId": { "type": "string", "description": "Sender user UID." },
+        "senderName": { "type": "string", "description": "Sender display name." },
+        "text": { "type": "string", "description": "Message content." },
+        "isPickupLocation": { "type": "boolean", "description": "Whether message declares a verified exchange point." },
+        "meetingPoint": { "type": "string", "description": "Verified meeting pavilion/landmark." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of message." }
+      },
+      "required": ["id", "conversationId", "senderId", "senderName", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Resident profiles keyed by UID."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/NeighborPost" },
+      "description": "Public neighborhood requests, offers, and meetups."
+    },
+    "/issues/{issueId}": {
+      "schema": { "$ref": "#/entities/CommunityIssue" },
+      "description": "Community civic hazard and maintenance issues."
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Private direct coordination conversations between neighbors."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Handoff coordination messages inside a conversation."
+    }
+  }
+}

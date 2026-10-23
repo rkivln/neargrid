@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.data.model.ChatMessage
 import com.example.data.model.CommunityIssue
 import com.example.data.model.CommunityNotice
@@ -20,9 +21,10 @@ import com.example.data.model.NeighborPost
         ChatMessage::class,
         GridCell::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(StringListConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun neighborPostDao(): NeighborPostDao
     abstract fun communityIssueDao(): CommunityIssueDao

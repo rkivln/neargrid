@@ -58,6 +58,7 @@ import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.UserProfileScreen
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.NearGridTheme
@@ -121,6 +122,16 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                 )
             )
         }
+    }
+
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+
+    // Authentication Gate: Render Google Sign-In when unauthenticated
+    if (currentUser == null) {
+        SignInScreen(
+            onSignInSuccess = { /* Managed reactively by Firebase AuthStateListener */ }
+        )
+        return
     }
 
     // Full-screen Onboarding experience if active
@@ -309,7 +320,9 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         avatarUri = uiState.avatarUri,
                         avatarPresetIndex = uiState.avatarPresetIndex,
                         onEditProfile = { viewModel.openUserProfileEditor() },
-                        onResetToFreshGrid = { viewModel.resetToFreshGrid() }
+                        onResetToFreshGrid = { viewModel.resetToFreshGrid() },
+                        userEmail = currentUser?.email,
+                        onSignOut = { viewModel.signOut(context) }
                     )
                 }
             }

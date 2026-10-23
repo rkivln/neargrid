@@ -1,6 +1,9 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
@@ -11,7 +14,11 @@ import com.example.data.model.Conversation
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
+import com.example.data.model.UserProfile
+import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 enum class NavigationDestination(val label: String) {
     HOME("Home"),
@@ -55,67 +63,155 @@ data class NearGridUiState(
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository: NearGridRepository
+    private val auth = FirebaseAuth.getInstance()
+    private val firestoreRepository = FirestoreRepository(application)
+    private val localRepository: NearGridRepository
+
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
+    val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     private val _uiState = MutableStateFlow(NearGridUiState())
     val uiState: StateFlow<NearGridUiState> = _uiState.asStateFlow()
 
+    private val _firestorePosts = MutableStateFlow<List<NeighborPost>>(emptyList())
+    private val _firestoreIssues = MutableStateFlow<List<CommunityIssue>>(emptyList())
+    private val _firestoreConversations = MutableStateFlow<List<Conversation>>(emptyList())
+
+    private val authStateListener = FirebaseAuth.AuthStateListener { fbAuth ->
+        val user = fbAuth.currentUser
+        _currentUser.value = user
+        if (user != null) {
+            syncUserSession(user)
+        }
+    }
+
     init {
         val db = AppDatabase.getDatabase(application)
-        repository = NearGridRepository(db)
+        localRepository = NearGridRepository(db)
 
         viewModelScope.launch {
-            repository.seedInitialDataIfEmpty()
+            localRepository.seedInitialDataIfEmpty()
+        }
+
+        auth.addAuthStateListener(authStateListener)
+        val initialUser = auth.currentUser
+        if (initialUser != null) {
+            syncUserSession(initialUser)
+        }
+    }
+
+    private fun syncUserSession(user: FirebaseUser) {
+        viewModelScope.launch {
+            // Observe or create profile in Firestore
+            firestoreRepository.observeUserProfile(user.uid).collect { profile ->
+                if (profile != null) {
+                    _uiState.value = _uiState.value.copy(
+                        userNickname = profile.displayName.ifBlank { user.displayName ?: "Local Resident" },
+                        userHandle = profile.handle.ifBlank { "@${user.email?.substringBefore("@") ?: "neighbor"}" },
+                        userBio = profile.bio,
+                        avatarUri = profile.avatarUri ?: user.photoUrl?.toString(),
+                        avatarPresetIndex = profile.avatarPresetIndex,
+                        neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
+                        fuzzyCoordinateOffset = profile.fuzzyCoords,
+                        incognitoGridPresence = profile.incognito,
+                        allowProximityMessaging = profile.allowDMs
+                    )
+                } else {
+                    // Create baseline profile for Google user
+                    val defaultName = user.displayName?.ifBlank { "Local Resident" } ?: "Local Resident"
+                    val defaultHandle = "@${user.email?.substringBefore("@") ?: "resident"}"
+                    val newProfile = UserProfile(
+                        userId = user.uid,
+                        email = user.email ?: "",
+                        displayName = defaultName,
+                        handle = defaultHandle,
+                        bio = "Oakwood neighborhood resident. Connected via Google Resident Pass.",
+                        cellId = _uiState.value.selectedCell?.id ?: "cell_oakwood_center",
+                        cellName = _uiState.value.selectedCell?.name ?: "Oakwood Grove",
+                        avatarUri = user.photoUrl?.toString(),
+                        privacyRadiusMeters = 500,
+                        fuzzyCoords = true,
+                        incognito = false,
+                        allowDMs = true
+                    )
+                    firestoreRepository.saveUserProfile(newProfile)
+                }
+            }
+        }
+
+        // Observe real-time posts from Firestore
+        viewModelScope.launch {
+            firestoreRepository.observePosts().collect { posts ->
+                _firestorePosts.value = posts
+            }
+        }
+
+        // Observe real-time issues from Firestore
+        viewModelScope.launch {
+            firestoreRepository.observeIssues().collect { issuesList ->
+                _firestoreIssues.value = issuesList
+            }
+        }
+
+        // Observe real-time conversations from Firestore
+        viewModelScope.launch {
+            firestoreRepository.observeConversations().collect { convs ->
+                _firestoreConversations.value = convs
+            }
         }
     }
 
     val cells: StateFlow<List<GridCell>> = combine(
-        repository.allCells,
-        repository.allPosts,
-        repository.allIssues
-    ) { baseCells, posts, issuesList ->
+        localRepository.allCells,
+        _firestorePosts,
+        localRepository.allPosts,
+        _firestoreIssues,
+        localRepository.allIssues
+    ) { baseCells, firePosts, locPosts, fireIssues, locIssues ->
+        val combinedPosts = if (firePosts.isNotEmpty()) firePosts else locPosts
+        val combinedIssues = if (fireIssues.isNotEmpty()) fireIssues else locIssues
+
         baseCells.map { cell ->
-            val cellPosts = posts.filter { it.authorCellId == cell.id }
+            val cellPosts = combinedPosts.filter { it.authorCellId == cell.id }
             val cellNeeds = cellPosts.count { it.type == "NEED" && it.status == "ACTIVE" }
             val cellOffers = cellPosts.count { it.type == "OFFER" && it.status == "ACTIVE" }
-            val cellIssues = issuesList.count { it.cellId == cell.id && it.status != "RESOLVED" }
+            val cellIssuesCount = combinedIssues.count { it.cellId == cell.id && it.status != "RESOLVED" }
             val authorCount = cellPosts.map { it.authorName }.filter { it.isNotBlank() }.toSet().size
             val activeNeighbors = authorCount.coerceAtLeast(1)
             cell.copy(
                 openNeedsCount = cellNeeds,
                 openOffersCount = cellOffers,
-                activeIssuesCount = cellIssues,
+                activeIssuesCount = cellIssuesCount,
                 activeNeighborsCount = activeNeighbors
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val rawPosts: StateFlow<List<NeighborPost>> = repository.allPosts
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val rawPosts: StateFlow<List<NeighborPost>> = combine(
+        _firestorePosts,
+        localRepository.allPosts
+    ) { firestoreList, localList ->
+        if (firestoreList.isNotEmpty()) firestoreList else localList
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredPosts: StateFlow<List<NeighborPost>> = combine(
         rawPosts,
         _uiState
     ) { posts, state ->
         posts.filter { post ->
-            // Filter by type
             val matchesType = when (state.postFilterType) {
                 "ALL" -> true
                 else -> post.type == state.postFilterType
             }
-            // Filter by category
             val matchesCategory = when (state.selectedCategory) {
                 "ALL" -> true
                 else -> post.category.equals(state.selectedCategory, ignoreCase = true)
             }
-            // Radius and cell filtering
             val matchesRadius = when (state.discoveryRadiusMeters) {
-                300 -> post.approxDistanceBand.contains("190") || post.approxDistanceBand.contains("280") || post.approxDistanceBand.contains("210") || post.approxDistanceBand.contains("250")
+                300 -> post.approxDistanceBand.contains("150") || post.approxDistanceBand.contains("190") || post.approxDistanceBand.contains("280") || post.approxDistanceBand.contains("210") || post.approxDistanceBand.contains("250")
                 800 -> !post.approxDistanceBand.contains("1.2 km")
-                else -> true // 2km shows all
+                else -> true
             }
-
-            // Cell filtering if a cell is specifically locked
             val matchesCell = state.selectedCell?.let { cell ->
                 if (state.discoveryRadiusMeters <= 300) {
                     post.authorCellId == cell.id
@@ -132,17 +228,25 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         rawPosts,
         _uiState
     ) { posts, _ ->
-        repository.findTopIntentMatches(posts)
+        localRepository.findTopIntentMatches(posts)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val issues: StateFlow<List<CommunityIssue>> = repository.allIssues
+    val issues: StateFlow<List<CommunityIssue>> = combine(
+        _firestoreIssues,
+        localRepository.allIssues
+    ) { firestoreList, localList ->
+        if (firestoreList.isNotEmpty()) firestoreList else localList
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val notices: StateFlow<List<CommunityNotice>> = localRepository.allNotices
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val notices: StateFlow<List<CommunityNotice>> = repository.allNotices
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val conversations: StateFlow<List<Conversation>> = repository.allConversations
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val conversations: StateFlow<List<Conversation>> = combine(
+        _firestoreConversations,
+        localRepository.allConversations
+    ) { firestoreList, localList ->
+        if (firestoreList.isNotEmpty()) firestoreList else localList
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -203,7 +307,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun getChatMessagesForActive(): StateFlow<List<ChatMessage>> {
         val activeId = _uiState.value.activeConversation?.id ?: ""
-        return repository.getChatMessages(activeId)
+        return localRepository.getChatMessages(activeId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 
@@ -211,15 +315,16 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         val active = _uiState.value.activeConversation ?: return
         if (text.isBlank()) return
         viewModelScope.launch {
-            repository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
+            localRepository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
+            if (auth.currentUser != null) {
+                firestoreRepository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
+            }
         }
     }
 
     fun connectFromPost(post: NeighborPost) {
         viewModelScope.launch {
-            val convId = repository.startConversationForPost(post)
-            val convs = repository.allConversations
-            // Set active conversation and switch to inbox
+            val convId = localRepository.startConversationForPost(post)
             val conv = Conversation(
                 id = convId,
                 participantName = post.authorName,
@@ -237,7 +342,10 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleIssueUpvote(issue: CommunityIssue) {
         viewModelScope.launch {
-            repository.toggleUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
+            localRepository.toggleUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
+            if (auth.currentUser != null) {
+                firestoreRepository.toggleIssueUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
+            }
         }
     }
 
@@ -274,11 +382,36 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             allowProximityMessaging = allowDMs,
             showUserProfileEditor = false
         )
+
+        val user = auth.currentUser
+        if (user != null) {
+            viewModelScope.launch {
+                val profile = UserProfile(
+                    userId = user.uid,
+                    email = user.email ?: "",
+                    displayName = nickname.trim().ifBlank { "Neighbor" },
+                    handle = sanitizedHandle,
+                    bio = bio.trim(),
+                    cellId = _uiState.value.selectedCell?.id ?: "cell_oakwood_center",
+                    cellName = _uiState.value.selectedCell?.name ?: "Oakwood Grove",
+                    avatarPresetIndex = avatarPresetIndex,
+                    avatarUri = avatarUri,
+                    privacyRadiusMeters = privacyRadiusMeters,
+                    fuzzyCoords = fuzzyCoords,
+                    incognito = incognito,
+                    allowDMs = allowDMs
+                )
+                firestoreRepository.saveUserProfile(profile)
+            }
+        }
     }
 
     fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?) {
         viewModelScope.launch {
-            repository.updateIssueStatus(issueId, newStatus, volunteer)
+            localRepository.updateIssueStatus(issueId, newStatus, volunteer)
+            if (auth.currentUser != null) {
+                firestoreRepository.updateIssueStatus(issueId, newStatus, volunteer)
+            }
         }
     }
 
@@ -292,7 +425,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
-            repository.createPost(
+            localRepository.createPost(
                 type = "NEED",
                 title = title,
                 description = description,
@@ -304,6 +437,26 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = expiresInHours,
                 distanceBand = "within 150 m"
             )
+
+            if (auth.currentUser != null) {
+                val post = NeighborPost(
+                    id = UUID.randomUUID().toString(),
+                    userId = auth.currentUser?.uid ?: "",
+                    type = "NEED",
+                    title = title,
+                    description = description,
+                    category = category,
+                    authorName = author,
+                    authorInitials = author.take(2).uppercase(),
+                    authorCellId = cell?.id ?: "cell_oakwood_center",
+                    cellName = cell?.name ?: "Oakwood Grove",
+                    urgency = urgency,
+                    expiresInHours = expiresInHours,
+                    approxDistanceBand = "within 150 m",
+                    status = "ACTIVE"
+                )
+                firestoreRepository.createPost(post)
+            }
             closeCreateDialog()
         }
     }
@@ -317,7 +470,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
-            repository.createPost(
+            localRepository.createPost(
                 type = "OFFER",
                 title = title,
                 description = description,
@@ -329,6 +482,26 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = expiresInHours,
                 distanceBand = "within 150 m"
             )
+
+            if (auth.currentUser != null) {
+                val post = NeighborPost(
+                    id = UUID.randomUUID().toString(),
+                    userId = auth.currentUser?.uid ?: "",
+                    type = "OFFER",
+                    title = title,
+                    description = description,
+                    category = category,
+                    authorName = author,
+                    authorInitials = author.take(2).uppercase(),
+                    authorCellId = cell?.id ?: "cell_oakwood_center",
+                    cellName = cell?.name ?: "Oakwood Grove",
+                    urgency = "NORMAL",
+                    expiresInHours = expiresInHours,
+                    approxDistanceBand = "within 150 m",
+                    status = "ACTIVE"
+                )
+                firestoreRepository.createPost(post)
+            }
             closeCreateDialog()
         }
     }
@@ -342,7 +515,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { "Resident" }
-            repository.createIssue(
+            localRepository.createIssue(
                 title = title,
                 description = description,
                 locationSnippet = location,
@@ -350,6 +523,20 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 category = category,
                 reporterName = author
             )
+
+            if (auth.currentUser != null) {
+                val issue = CommunityIssue(
+                    id = UUID.randomUUID().toString(),
+                    title = title,
+                    description = description,
+                    locationSnippet = location,
+                    cellId = cell?.id ?: "cell_oakwood_center",
+                    category = category,
+                    reporterName = author,
+                    reporterId = auth.currentUser?.uid ?: ""
+                )
+                firestoreRepository.createIssue(issue)
+            }
             closeCreateDialog()
             _uiState.value = _uiState.value.copy(currentDestination = NavigationDestination.COMMUNITY)
         }
@@ -364,7 +551,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
-            repository.createPost(
+            localRepository.createPost(
                 type = "MEETUP",
                 title = title,
                 description = description,
@@ -376,13 +563,54 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = timeframeHours,
                 distanceBand = "within 200 m"
             )
+
+            if (auth.currentUser != null) {
+                val post = NeighborPost(
+                    id = UUID.randomUUID().toString(),
+                    userId = auth.currentUser?.uid ?: "",
+                    type = "MEETUP",
+                    title = title,
+                    description = description,
+                    category = category,
+                    authorName = author,
+                    authorInitials = author.take(2).uppercase(),
+                    authorCellId = cell?.id ?: "cell_oakwood_center",
+                    cellName = cell?.name ?: "Oakwood Grove",
+                    urgency = "NORMAL",
+                    expiresInHours = timeframeHours,
+                    approxDistanceBand = "within 200 m",
+                    status = "ACTIVE"
+                )
+                firestoreRepository.createPost(post)
+            }
             closeCreateDialog()
         }
     }
 
     fun resetToFreshGrid() {
         viewModelScope.launch {
-            repository.resetToFreshState()
+            localRepository.resetToFreshState()
         }
+    }
+
+    fun signOut(context: Context) {
+        viewModelScope.launch {
+            try {
+                val credentialManager = CredentialManager.create(context)
+                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+            } catch (e: Exception) {
+                // ignore
+            }
+            auth.signOut()
+            _currentUser.value = null
+            _firestorePosts.value = emptyList()
+            _firestoreIssues.value = emptyList()
+            _firestoreConversations.value = emptyList()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        auth.removeAuthStateListener(authStateListener)
     }
 }

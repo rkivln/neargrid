@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isServerTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // Validation for User Profile
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() > 0 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             (!('handle' in data) || (data.handle is string && data.handle.size() <= 60)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
+             (!('cellId' in data) || (data.cellId is string && data.cellId.size() <= 80)) &&
+             (!('cellName' in data) || (data.cellName is string && data.cellName.size() <= 100)) &&
+             (!('avatarPresetIndex' in data) || data.avatarPresetIndex is int) &&
+             (!('avatarUri' in data) || data.avatarUri == null || (data.avatarUri is string && data.avatarUri.size() <= 1000)) &&
+             (!('privacyRadiusMeters' in data) || data.privacyRadiusMeters is int) &&
+             (!('fuzzyCoords' in data) || data.fuzzyCoords is bool) &&
+             (!('incognito' in data) || data.incognito is bool) &&
+             (!('allowDMs' in data) || data.allowDMs is bool);
+    }
+
+    // Validation for Neighbor Post (Need, Offer, Meetup)
+    function isValidPost(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.type in ['NEED', 'OFFER', 'MEETUP'] &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.authorName is string && data.authorName.size() <= 100 &&
+             data.status in ['ACTIVE', 'RESOLVED', 'CANCELLED'] &&
+             (!('urgency' in data) || data.urgency in ['NORMAL', 'TIME_SENSITIVE', 'URGENT']) &&
+             (!('cellName' in data) || (data.cellName is string && data.cellName.size() <= 100)) &&
+             (!('authorCellId' in data) || (data.authorCellId is string && data.authorCellId.size() <= 80)) &&
+             (!('approxDistanceBand' in data) || (data.approxDistanceBand is string && data.approxDistanceBand.size() <= 50)) &&
+             (!('expiresInHours' in data) || data.expiresInHours is int) &&
+             (!('lat' in data) || (data.lat is number)) &&
+             (!('lng' in data) || (data.lng is number));
+    }
+
+    // Validation for Community Issue
+    function isValidIssue(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.category in ['LIGHTING', 'ROADS', 'SAFETY', 'SANITATION', 'PARKS', 'OTHER'] &&
+             data.status in ['REPORTED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'] &&
+             data.reporterId is string && data.reporterId.size() > 0 &&
+             (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 100)) &&
+             (!('cellId' in data) || (data.cellId is string && data.cellId.size() <= 80)) &&
+             (!('locationSnippet' in data) || (data.locationSnippet is string && data.locationSnippet.size() <= 300)) &&
+             (!('upvotesCount' in data) || data.upvotesCount is int) &&
+             (!('upvoterIds' in data) || (data.upvoterIds is list && data.upvoterIds.size() <= 1000)) &&
+             (!('assignedVolunteer' in data) || data.assignedVolunteer == null || (data.assignedVolunteer is string && data.assignedVolunteer.size() <= 200));
+    }
+
+    // Validation for Conversation
+    function isValidConversation(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.participantIds is list && data.participantIds.size() == 2 &&
+             (!('participantNames' in data) || (data.participantNames is list && data.participantNames.size() <= 2)) &&
+             (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500)) &&
+             (!('relatedPostTitle' in data) || (data.relatedPostTitle is string && data.relatedPostTitle.size() <= 200)) &&
+             (!('relatedPostType' in data) || (data.relatedPostType is string && data.relatedPostType.size() <= 50)) &&
+             (!('isResolved' in data) || data.isResolved is bool);
+    }
+
+    // Validation for ChatMessage
+    function isValidChatMessage(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.conversationId is string && data.conversationId.size() > 0 &&
+             data.senderId is string && data.senderId.size() > 0 &&
+             data.senderName is string && data.senderName.size() <= 100 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+             (!('isPickupLocation' in data) || data.isPickupLocation is bool) &&
+             (!('meetingPoint' in data) || data.meetingPoint == null || (data.meetingPoint is string && data.meetingPoint.size() <= 200));
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create: if isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isServerTimestamp(incoming().updatedAt) &&
+                       isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+    }
+
+    // --- Posts Collection ---
+    match /posts/{postId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidPost(incoming());
+      allow update: if isSignedIn() &&
+                       existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isServerTimestamp(incoming().updatedAt) &&
+                       isValidPost(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // --- Issues Collection ---
+    match /issues/{issueId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       incoming().reporterId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidIssue(incoming());
+      allow update: if isSignedIn() && (
+        // Action 1: Toggle upvote
+        (incoming().diff(existing()).affectedKeys().hasOnly(['upvotesCount', 'upvoterIds', 'updatedAt']) &&
+         incoming().upvotesCount is int &&
+         isServerTimestamp(incoming().updatedAt)) ||
+        // Action 2: Advance status or assign volunteer
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'assignedVolunteer', 'updatedAt']) &&
+         incoming().status in ['REPORTED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'] &&
+         isServerTimestamp(incoming().updatedAt)) ||
+        // Action 3: Reporter full update
+        (existing().reporterId == request.auth.uid &&
+         incoming().reporterId == existing().reporterId &&
+         incoming().createdAt == existing().createdAt &&
+         isServerTimestamp(incoming().updatedAt) &&
+         isValidIssue(incoming()))
+      );
+      allow delete: if isSignedIn() && existing().reporterId == request.auth.uid;
+    }
+
+    // --- Conversations Collection ---
+    match /conversations/{conversationId} {
+      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+      allow create: if isSignedIn() &&
+                       request.auth.uid in incoming().participantIds &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidConversation(incoming());
+      allow update: if isSignedIn() &&
+                       request.auth.uid in existing().participantIds &&
+                       incoming().participantIds == existing().participantIds &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidConversation(incoming());
+      allow delete: if isSignedIn() && request.auth.uid in existing().participantIds;
+
+      // --- Nested Chat Messages ---
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn() &&
+                            request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow create: if isSignedIn() &&
+                         incoming().senderId == request.auth.uid &&
+                         isServerTimestamp(incoming().createdAt) &&
+                         isValidChatMessage(incoming()) &&
+                         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

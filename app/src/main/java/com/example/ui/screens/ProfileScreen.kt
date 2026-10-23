@@ -99,6 +99,8 @@ fun ProfileScreen(
     avatarPresetIndex: Int = 0,
     onEditProfile: () -> Unit = {},
     onResetToFreshGrid: () -> Unit = {},
+    userEmail: String? = null,
+    onSignOut: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var privacyMode by remember { mutableStateOf("APPROXIMATE_BAND") }
@@ -106,6 +108,7 @@ fun ProfileScreen(
     var expandedFaqIndex by remember { mutableIntStateOf(-1) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showResetSuccessBanner by remember { mutableStateOf(false) }
+    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -784,6 +787,82 @@ fun ProfileScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Google Account & Authentication Session
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(PastelMint.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VerifiedUser,
+                                contentDescription = null,
+                                tint = PrimaryText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Google Resident Account",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                                color = PrimaryText
+                            )
+                            Text(
+                                text = userEmail ?: "Signed in with Google",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = SecondaryText
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Button(
+                        onClick = { showSignOutConfirmDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PastelCoral.copy(alpha = 0.15f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("sign_out_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = PastelCoral,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Sign Out of NearGrid",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = PastelCoral
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(100.dp))
         }
 
@@ -815,6 +894,41 @@ fun ProfileScreen(
                 },
                 dismissButton = {
                     OutlinedButton(onClick = { showResetConfirmDialog = false }) {
+                        Text("Cancel", fontFamily = DMSansFontFamily, color = PrimaryText)
+                    }
+                },
+                containerColor = PureWhite,
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
+
+        if (showSignOutConfirmDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showSignOutConfirmDialog = false },
+                title = {
+                    Text("Sign out of NearGrid?", fontFamily = DMSerifFontFamily, color = PrimaryText)
+                },
+                text = {
+                    Text(
+                        "You will need to sign in with your Google account to access your neighborhood mutual aid board and direct chats.",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 13.sp,
+                        color = SecondaryText
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showSignOutConfirmDialog = false
+                            onSignOut()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PastelCoral)
+                    ) {
+                        Text("Sign Out", fontFamily = DMSansFontFamily, color = PureWhite)
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { showSignOutConfirmDialog = false }) {
                         Text("Cancel", fontFamily = DMSansFontFamily, color = PrimaryText)
                     }
                 },
