@@ -22,7 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Button
@@ -136,7 +138,8 @@ fun CommunityScreen(
                                     text = "Report",
                                     fontFamily = DMSansFontFamily,
                                     fontWeight = FontWeight.Medium,
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    color = PureWhite
                                 )
                             }
                         }
@@ -210,17 +213,73 @@ fun CommunityScreen(
             // Tab Content
             if (selectedTab == 0) {
                 // Noticeboard Feed
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(notices, key = { it.id }) { notice ->
-                        NoticeCard(notice = notice)
+                if (notices.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("empty_notices_card"),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(CircleShape)
+                                        .background(PastelPeach.copy(alpha = 0.4f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PushPin,
+                                        contentDescription = null,
+                                        tint = PastelCoral,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Text(
+                                    text = "No Civic Notices",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 20.sp,
+                                    color = PrimaryText
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Scheduled maintenance, water valve diagnostics, and neighborhood advisories from civic organizers will appear here.",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 13.sp,
+                                    color = SecondaryText,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
                     }
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(notices, key = { it.id }) { notice ->
+                            NoticeCard(notice = notice)
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(100.dp))
+                        }
                     }
                 }
             } else {
@@ -277,20 +336,89 @@ fun CommunityScreen(
                         if (issueStatusFilter == "ALL") true else it.status == issueStatusFilter
                     }
 
-                    items(filteredIssues, key = { it.id }) { issue ->
-                        IssueCard(
-                            issue = issue,
-                            onUpvote = { onToggleUpvote(issue) },
-                            onAdvanceStatus = {
-                                val nextStatus = when (issue.status) {
-                                    "REPORTED" -> "ACKNOWLEDGED"
-                                    "ACKNOWLEDGED" -> "IN_PROGRESS"
-                                    "IN_PROGRESS" -> "RESOLVED"
-                                    else -> "RESOLVED"
+                    if (filteredIssues.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp)
+                                    .testTag("empty_issues_card"),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(28.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(CircleShape)
+                                            .background(PastelMint.copy(alpha = 0.4f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = PrimaryText,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text(
+                                        text = "All Clear in the Neighborhood",
+                                        fontFamily = DMSerifFontFamily,
+                                        fontSize = 20.sp,
+                                        color = PrimaryText
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "No civic maintenance issues or safety hazards reported. Spot a broken lamp, pothole, or fallen branch?",
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 13.sp,
+                                        color = SecondaryText,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        lineHeight = 18.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(18.dp))
+                                    Button(
+                                        onClick = onOpenReportIssue,
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryText,
+                                            contentColor = PureWhite
+                                        ),
+                                        modifier = Modifier.testTag("fresh_report_issue_button")
+                                    ) {
+                                        Text(
+                                            text = "Report an Issue",
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
                                 }
-                                onUpdateIssueStatus(issue.id, nextStatus, "Assigned Local Volunteers")
                             }
-                        )
+                        }
+                    } else {
+                        items(filteredIssues, key = { it.id }) { issue ->
+                            IssueCard(
+                                issue = issue,
+                                onUpvote = { onToggleUpvote(issue) },
+                                onAdvanceStatus = {
+                                    val nextStatus = when (issue.status) {
+                                        "REPORTED" -> "ACKNOWLEDGED"
+                                        "ACKNOWLEDGED" -> "IN_PROGRESS"
+                                        "IN_PROGRESS" -> "RESOLVED"
+                                        else -> "RESOLVED"
+                                    }
+                                    onUpdateIssueStatus(issue.id, nextStatus, "Assigned Local Volunteers")
+                                }
+                            )
+                        }
                     }
 
                     item {
@@ -549,7 +677,8 @@ fun IssueCard(
                             },
                             fontFamily = DMSansFontFamily,
                             fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            color = PureWhite
                         )
                     }
                 }

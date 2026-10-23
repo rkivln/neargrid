@@ -79,7 +79,8 @@ class NearGridRepository(private val database: AppDatabase) {
         description: String,
         locationSnippet: String,
         cellId: String,
-        category: String
+        category: String,
+        reporterName: String = "You (Local Resident)"
     ) = withContext(Dispatchers.IO) {
         val issue = CommunityIssue(
             id = UUID.randomUUID().toString(),
@@ -89,7 +90,7 @@ class NearGridRepository(private val database: AppDatabase) {
             cellId = cellId,
             category = category,
             status = "REPORTED",
-            reporterName = "You (Local Resident)",
+            reporterName = reporterName,
             upvotesCount = 1,
             hasUserUpvoted = true,
             createdAt = System.currentTimeMillis()
@@ -213,20 +214,26 @@ class NearGridRepository(private val database: AppDatabase) {
         return matches.sortedByDescending { it.compatibilityPercent }
     }
 
-    suspend fun seedInitialDataIfEmpty() = withContext(Dispatchers.IO) {
-        val existingPosts = postDao.getAllPosts().first()
-        if (existingPosts.isNotEmpty()) return@withContext
+    suspend fun resetToFreshState() = withContext(Dispatchers.IO) {
+        postDao.deleteAllPosts()
+        issueDao.deleteAllIssues()
+        noticeDao.deleteAllNotices()
+        conversationDao.deleteAllConversations()
+        chatDao.deleteAllMessages()
+        cellDao.deleteAllCells()
+        seedFreshCells()
+    }
 
-        // 1. Seed Grid Cells
+    private suspend fun seedFreshCells() {
         val cells = listOf(
             GridCell(
                 id = "cell_oakwood_center",
                 name = "Oakwood Grove",
                 code = "#H3-8826",
-                activeNeighborsCount = 42,
-                openNeedsCount = 6,
-                openOffersCount = 9,
-                activeIssuesCount = 2,
+                activeNeighborsCount = 1,
+                openNeedsCount = 0,
+                openOffersCount = 0,
+                activeIssuesCount = 0,
                 centerLat = 37.7749,
                 centerLng = -122.4194,
                 description = "Tree-lined central avenue, quiet cul-de-sacs, and community corner market."
@@ -235,10 +242,10 @@ class NearGridRepository(private val database: AppDatabase) {
                 id = "cell_elmwood_north",
                 name = "Elmwood Avenue",
                 code = "#H3-8827",
-                activeNeighborsCount = 31,
-                openNeedsCount = 4,
-                openOffersCount = 7,
-                activeIssuesCount = 3,
+                activeNeighborsCount = 1,
+                openNeedsCount = 0,
+                openOffersCount = 0,
+                activeIssuesCount = 0,
                 centerLat = 37.7780,
                 centerLng = -122.4160,
                 description = "North corridor connecting local bakery, residential blocks, and walking loop."
@@ -247,10 +254,10 @@ class NearGridRepository(private val database: AppDatabase) {
                 id = "cell_pinecrest_park",
                 name = "Pinecrest Commons",
                 code = "#H3-8828",
-                activeNeighborsCount = 55,
-                openNeedsCount = 8,
-                openOffersCount = 11,
-                activeIssuesCount = 1,
+                activeNeighborsCount = 1,
+                openNeedsCount = 0,
+                openOffersCount = 0,
+                activeIssuesCount = 0,
                 centerLat = 37.7720,
                 centerLng = -122.4230,
                 description = "Recreation center, community gardens, sports pitch, and safe exchange zone."
@@ -259,308 +266,34 @@ class NearGridRepository(private val database: AppDatabase) {
                 id = "cell_sunset_ridge",
                 name = "Sunset Ridge",
                 code = "#H3-8829",
-                activeNeighborsCount = 24,
-                openNeedsCount = 3,
-                openOffersCount = 5,
-                activeIssuesCount = 2,
+                activeNeighborsCount = 1,
+                openNeedsCount = 0,
+                openOffersCount = 0,
+                activeIssuesCount = 0,
                 centerLat = 37.7795,
                 centerLng = -122.4255,
                 description = "Elevated street cluster with shared composting station and panoramic views."
             )
         )
         cellDao.insertCells(cells)
+    }
 
-        // 2. Seed Needs (Requests)
-        val posts = listOf(
-            NeighborPost(
-                id = "need_1",
-                type = "NEED",
-                title = "16ft extension ladder to clean gutters",
-                description = "Need to clear out maple leaves from my second-story gutters this Saturday. Just need it for ~2 hours.",
-                category = "TOOLS",
-                authorName = "Marcus Chen",
-                authorInitials = "MC",
-                authorCellId = "cell_oakwood_center",
-                cellName = "Oakwood Grove",
-                lat = 37.7746,
-                lng = -122.4190,
-                approxDistanceBand = "within 280 m",
-                urgency = "TIME_SENSITIVE",
-                expiresInHours = 18,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 7200000
-            ),
-            NeighborPost(
-                id = "offer_1",
-                type = "OFFER",
-                title = "16ft aluminum extension ladder & stabilizer",
-                description = "Happy to lend my heavy-duty Werner ladder with standoff stabilizer. Can leave it on my covered front porch.",
-                category = "TOOLS",
-                authorName = "Robert Miller",
-                authorInitials = "RM",
-                authorCellId = "cell_oakwood_center",
-                cellName = "Oakwood Grove",
-                lat = 37.7751,
-                lng = -122.4185,
-                approxDistanceBand = "within 350 m",
-                urgency = "NORMAL",
-                expiresInHours = 72,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 14400000
-            ),
-            NeighborPost(
-                id = "need_2",
-                type = "NEED",
-                title = "Need high school Calculus study partner or tutor",
-                description = "Looking for a neighbor who understands limits and derivatives for 1 hour weekend review sessions.",
-                category = "STUDY",
-                authorName = "Priya Sharma",
-                authorInitials = "PS",
-                authorCellId = "cell_elmwood_north",
-                cellName = "Elmwood Avenue",
-                lat = 37.7782,
-                lng = -122.4165,
-                approxDistanceBand = "within 600 m",
-                urgency = "NORMAL",
-                expiresInHours = 48,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 21600000
-            ),
-            NeighborPost(
-                id = "offer_2",
-                type = "OFFER",
-                title = "Free math tutoring & study help for high schoolers",
-                description = "Retired engineer, happy to help high school neighbors with Algebra, Calculus, or Physics over coffee or at the park pavilion.",
-                category = "STUDY",
-                authorName = "Anita Roy",
-                authorInitials = "AR",
-                authorCellId = "cell_elmwood_north",
-                cellName = "Elmwood Avenue",
-                lat = 37.7779,
-                lng = -122.4158,
-                approxDistanceBand = "within 520 m",
-                urgency = "NORMAL",
-                expiresInHours = 96,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 28800000
-            ),
-            NeighborPost(
-                id = "need_3",
-                type = "NEED",
-                title = "Hammer drill & masonry bit for shelving",
-                description = "Mounting bookshelves into brick wall. Need a rotary drill for 30 minutes tonight.",
-                category = "TOOLS",
-                authorName = "Elena Rostova",
-                authorInitials = "ER",
-                authorCellId = "cell_oakwood_center",
-                cellName = "Oakwood Grove",
-                lat = 37.7742,
-                lng = -122.4201,
-                approxDistanceBand = "within 190 m",
-                urgency = "URGENT",
-                expiresInHours = 6,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 3600000
-            ),
-            NeighborPost(
-                id = "offer_3",
-                type = "OFFER",
-                title = "DeWalt hammer drill & masonry bit set",
-                description = "Ready to lend drill with full metric & imperial masonry set. Available all evening.",
-                category = "TOOLS",
-                authorName = "Tariq Al-Mansoor",
-                authorInitials = "TA",
-                authorCellId = "cell_oakwood_center",
-                cellName = "Oakwood Grove",
-                lat = 37.7745,
-                lng = -122.4197,
-                approxDistanceBand = "within 210 m",
-                urgency = "NORMAL",
-                expiresInHours = 48,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 86400000
-            ),
-            NeighborPost(
-                id = "meetup_1",
-                type = "MEETUP",
-                title = "Casual Cricket & Catch — Pinecrest Pitch",
-                description = "Looking for 4-6 more neighbors for friendly tape-ball cricket this Saturday at 4 PM! All skill levels welcome, bats provided.",
-                category = "SPORTS",
-                authorName = "David Kumar",
-                authorInitials = "DK",
-                authorCellId = "cell_pinecrest_park",
-                cellName = "Pinecrest Commons",
-                lat = 37.7725,
-                lng = -122.4235,
-                approxDistanceBand = "within 750 m",
-                urgency = "NORMAL",
-                expiresInHours = 36,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 10800000
-            ),
-            NeighborPost(
-                id = "offer_4",
-                type = "OFFER",
-                title = "6 Organic heirloom tomato seedlings in pots",
-                description = "Over-seeded Cherokee Purple and Sweet 100 cherry tomato plants. Free to any green-thumb neighbor!",
-                category = "HOUSEHOLD",
-                authorName = "Clara Davis",
-                authorInitials = "CD",
-                authorCellId = "cell_sunset_ridge",
-                cellName = "Sunset Ridge",
-                lat = 37.7798,
-                lng = -122.4250,
-                approxDistanceBand = "within 850 m",
-                urgency = "NORMAL",
-                expiresInHours = 48,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis() - 43200000
-            )
-        )
-        postDao.insertPosts(posts)
+    suspend fun seedInitialDataIfEmpty() = withContext(Dispatchers.IO) {
+        val existingPosts = postDao.getAllPosts().first()
+        val hasMockPosts = existingPosts.any { it.id.startsWith("need_") || it.id.startsWith("offer_") || it.id.startsWith("meetup_") }
+        val existingConversations = conversationDao.getAllConversations().first()
+        val hasMockConversations = existingConversations.any { it.id == "conv_ladder" }
 
-        // 3. Seed Community Issues
-        val issues = listOf(
-            CommunityIssue(
-                id = "issue_1",
-                title = "Flickering street lamp outside 42 Elmwood",
-                description = "The sodium vapor street light has been strobing intermittently every night, making the sidewalk dark for evening walkers.",
-                locationSnippet = "Corner of Elmwood Ave & 3rd Cross",
-                cellId = "cell_elmwood_north",
-                category = "LIGHTING",
-                status = "IN_PROGRESS",
-                reporterName = "Samantha Wu",
-                upvotesCount = 19,
-                hasUserUpvoted = true,
-                assignedVolunteer = "Ward Maintenance Crew #4",
-                createdAt = System.currentTimeMillis() - 86400000 * 2
-            ),
-            CommunityIssue(
-                id = "issue_2",
-                title = "Large pothole at Pinecrest bicycle entry",
-                description = "Deep asphalt crack near the park curb. Several cyclists had near falls during evening commute.",
-                locationSnippet = "Pinecrest South Gate Bike Path",
-                cellId = "cell_pinecrest_park",
-                category = "ROADS",
-                status = "ACKNOWLEDGED",
-                reporterName = "Leo Martinez",
-                upvotesCount = 14,
-                hasUserUpvoted = false,
-                assignedVolunteer = "Pending Public Works Review",
-                createdAt = System.currentTimeMillis() - 86400000
-            ),
-            CommunityIssue(
-                id = "issue_3",
-                title = "Loose handrail on wooden creek pedestrian bridge",
-                description = "Right-side handrail is loose near post #3. Needs tightening with heavy screws for toddler safety.",
-                locationSnippet = "Oakwood Grove Creek Walkway",
-                cellId = "cell_oakwood_center",
-                category = "SAFETY",
-                status = "REPORTED",
-                reporterName = "Marcus Chen",
-                upvotesCount = 8,
-                hasUserUpvoted = false,
-                assignedVolunteer = null,
-                createdAt = System.currentTimeMillis() - 36000000
-            ),
-            CommunityIssue(
-                id = "issue_4",
-                title = "Storm branches cleared from sidewalk",
-                description = "Volunteers cleared two heavy fallen eucalyptus limbs from the sidewalk following Tuesday wind.",
-                locationSnippet = "Elmwood Park border",
-                cellId = "cell_elmwood_north",
-                category = "SANITATION",
-                status = "RESOLVED",
-                reporterName = "Neighborhood Volunteer Team",
-                upvotesCount = 27,
-                hasUserUpvoted = true,
-                assignedVolunteer = "Green Volunteers & Robert Miller",
-                createdAt = System.currentTimeMillis() - 86400000 * 4
-            )
-        )
-        issueDao.insertIssues(issues)
+        // If leftover mock data from previous version exists, wipe to fresh state
+        if (hasMockPosts || hasMockConversations) {
+            resetToFreshState()
+            return@withContext
+        }
 
-        // 4. Seed Community Notices
-        val notices = listOf(
-            CommunityNotice(
-                id = "notice_1",
-                title = "Oakwood Water Main Valve Inspection",
-                content = "Scheduled low water pressure window on Thursday between 10:00 AM and 12:30 PM for valve diagnostics. Please store drinking water in advance.",
-                cellId = "cell_oakwood_center",
-                authorityName = "Suburban Water Authority",
-                isPinned = true,
-                isUrgent = true,
-                dateLabel = "Thursday, 10 AM - 12:30 PM",
-                createdAt = System.currentTimeMillis() - 7200000
-            ),
-            CommunityNotice(
-                id = "notice_2",
-                title = "Safe Exchange Zone at Pinecrest Community Hall",
-                content = "Neighbors borrowing or returning items are encouraged to use the well-lit, covered Community Hall lobby, monitored 24/7.",
-                cellId = "cell_pinecrest_park",
-                authorityName = "NearGrid Safety Council",
-                isPinned = true,
-                isUrgent = false,
-                dateLabel = "Ongoing Community Guide",
-                createdAt = System.currentTimeMillis() - 86400000 * 5
-            ),
-            CommunityNotice(
-                id = "notice_3",
-                title = "Annual Spring Seed Swap & Tool Lending Day",
-                content = "Bring extra cuttings, garden tools, and seeds to share this Saturday at Pinecrest Pavilion from 9 AM to 1 PM.",
-                cellId = "cell_pinecrest_park",
-                authorityName = "Oakwood Community Gardeners",
-                isPinned = false,
-                isUrgent = false,
-                dateLabel = "This Saturday, 9 AM",
-                createdAt = System.currentTimeMillis() - 86400000
-            )
-        )
-        noticeDao.insertNotices(notices)
-
-        // 5. Seed Conversation & Messages
-        val conv = Conversation(
-            id = "conv_ladder",
-            participantName = "Robert Miller",
-            relatedPostTitle = "16ft extension ladder to clean gutters",
-            relatedPostType = "NEED",
-            lastMessage = "Sounds good! I'll leave the ladder by my garage door at 3 PM.",
-            lastMessageTime = System.currentTimeMillis() - 1800000,
-            distanceBand = "within 350 m",
-            isResolved = false
-        )
-        conversationDao.insertConversation(conv)
-
-        val messages = listOf(
-            ChatMessage(
-                id = "msg_1",
-                conversationId = "conv_ladder",
-                senderName = "Robert Miller",
-                isFromCurrentUser = false,
-                text = "Hi! I saw your request for the 16ft ladder. I'm right on Oakwood Lane (~350m away) and have one ready with stabilizer bars.",
-                timestamp = System.currentTimeMillis() - 7200000,
-                isPickupLocation = false
-            ),
-            ChatMessage(
-                id = "msg_2",
-                conversationId = "conv_ladder",
-                senderName = "You",
-                isFromCurrentUser = true,
-                text = "That is so wonderful! Thank you so much Robert. Can I pick it up around 3 PM today?",
-                timestamp = System.currentTimeMillis() - 3600000,
-                isPickupLocation = false
-            ),
-            ChatMessage(
-                id = "msg_3",
-                conversationId = "conv_ladder",
-                senderName = "Robert Miller",
-                isFromCurrentUser = false,
-                text = "Sounds good! I'll leave the ladder by my garage door at 3 PM. Safe exchange point is confirmed.",
-                timestamp = System.currentTimeMillis() - 1800000,
-                isPickupLocation = true,
-                meetingPoint = "Oakwood Lane #14 Side Entrance"
-            )
-        )
-        chatDao.insertMessages(messages)
+        // Seed fresh spatial cells if database is empty
+        val existingCells = cellDao.getAllCells().first()
+        if (existingCells.isEmpty()) {
+            seedFreshCells()
+        }
     }
 }

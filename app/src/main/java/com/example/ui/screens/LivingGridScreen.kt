@@ -741,7 +741,8 @@ fun MeshCalibrationProgressDialog(onDismiss: () -> Unit) {
                         text = "Complete calibration",
                         fontFamily = DMSansFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        color = PureWhite
                     )
                 }
             }

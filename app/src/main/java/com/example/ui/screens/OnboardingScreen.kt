@@ -267,7 +267,8 @@ fun OnboardingSlideIntroduction(
                     text = "Continue",
                     fontFamily = DMSansFontFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    color = PureWhite
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
@@ -367,7 +368,8 @@ fun OnboardingSlideDiscovery(
                     text = "Explore the mesh",
                     fontFamily = DMSansFontFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    color = PureWhite
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
@@ -463,7 +465,8 @@ fun OnboardingSlideConnection(
                     text = "See how it works",
                     fontFamily = DMSansFontFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    color = PureWhite
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
@@ -566,7 +569,8 @@ fun OnboardingSlideGetStarted(
                 text = "Enter NearGrid",
                 fontFamily = DMSansFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                color = PureWhite
             )
         }
     }

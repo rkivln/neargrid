@@ -331,10 +331,10 @@ fun TopNeighborhoodBar(
             Text(
                 text = currentCell?.code ?: "#H3-8826",
                 fontFamily = ManropeFontFamily,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
                 letterSpacing = 0.5.sp,
-                color = PureWhite.copy(alpha = 0.9f)
+                color = SlateBlue
             )
 
             // Right: Circular GPS Mode Toggle Button
@@ -670,7 +670,8 @@ fun IntentMatchCard(
                         text = "Coordinate with ${match.matchingOffer.authorName}",
                         fontFamily = ManropeFontFamily,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        color = PureWhite
                     )
                 }
             }
@@ -874,7 +875,8 @@ fun PostCard(
                         text = if (isNeed) "Offer help" else if (isOffer) "Borrow / Share" else "Join meetup",
                         fontFamily = ManropeFontFamily,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        color = PureWhite
                     )
                 }
             }

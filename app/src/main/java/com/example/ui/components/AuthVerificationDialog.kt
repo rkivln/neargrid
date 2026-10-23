@@ -285,7 +285,8 @@ fun AuthVerificationDialog(
                             text = "Pass verified",
                             fontFamily = DMSansFontFamily,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            color = PureWhite
                         )
                     }
                 } else {
@@ -293,7 +294,8 @@ fun AuthVerificationDialog(
                         text = "Verify Neighborhood Pass",
                         fontFamily = DMSansFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        color = PureWhite
                     )
                 }
             }

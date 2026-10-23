@@ -79,6 +79,9 @@ import com.example.ui.theme.SoftCream
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmDivider
 import com.example.ui.theme.WarmIvory
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Tune
+import coil.compose.AsyncImage
 
 @Composable
 fun ProfileScreen(
@@ -89,11 +92,20 @@ fun ProfileScreen(
     onGpsToggle: () -> Unit,
     onReplayOnboarding: () -> Unit,
     onOpenAuthDialog: () -> Unit,
+    userNickname: String = "Alex Rivera",
+    userHandle: String = "@alex_oakwood",
+    userBio: String = "",
+    avatarUri: String? = null,
+    avatarPresetIndex: Int = 0,
+    onEditProfile: () -> Unit = {},
+    onResetToFreshGrid: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var privacyMode by remember { mutableStateOf("APPROXIMATE_BAND") }
     var allowDirectMessages by remember { mutableStateOf(true) }
     var expandedFaqIndex by remember { mutableIntStateOf(-1) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showResetSuccessBanner by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -111,20 +123,51 @@ fun ProfileScreen(
                 color = PureWhite,
                 border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Profile & trust",
-                        fontFamily = DMSerifFontFamily,
-                        fontSize = 26.sp,
-                        color = PrimaryText
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Community reputation and privacy-preserving coordinate settings",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 12.sp,
-                        color = SecondaryText
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Profile & trust",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 26.sp,
+                            color = PrimaryText
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Community reputation and privacy-preserving coordinate settings",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 12.sp,
+                            color = SecondaryText
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onEditProfile,
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                        modifier = Modifier.testTag("profile_edit_top_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Profile",
+                            tint = PrimaryText,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Edit",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = PrimaryText
+                        )
+                    }
                 }
             }
 
@@ -146,19 +189,39 @@ fun ProfileScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
+                                .size(68.dp)
                                 .clip(CircleShape)
                                 .background(PastelPeach.copy(alpha = 0.5f))
-                                .border(1.dp, PastelCoral.copy(alpha = 0.4f), CircleShape),
+                                .border(1.5.dp, PastelCoral.copy(alpha = 0.6f), CircleShape)
+                                .clickable { onEditProfile() }
+                                .testTag("profile_avatar_preview"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "YOU",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = PrimaryText
-                            )
+                            if (avatarUri != null) {
+                                AsyncImage(
+                                    model = avatarUri,
+                                    contentDescription = "Profile picture",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                val currentPreset = PRESET_AVATARS.getOrNull(avatarPresetIndex) ?: PRESET_AVATARS[0]
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(currentPreset.backgroundColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = currentPreset.icon,
+                                        contentDescription = currentPreset.name,
+                                        tint = currentPreset.accentColor,
+                                        modifier = Modifier.size(34.dp)
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -166,9 +229,9 @@ fun ProfileScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Verified Resident",
+                                    text = userNickname,
                                     fontFamily = DMSerifFontFamily,
-                                    fontSize = 19.sp,
+                                    fontSize = 20.sp,
                                     color = PrimaryText
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -181,13 +244,13 @@ fun ProfileScreen(
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${currentCell?.name ?: "Oakwood Grove"} (${currentCell?.code ?: "#H3-8826"})",
+                                text = "$userHandle • ${currentCell?.name ?: "Oakwood Grove"} (${currentCell?.code ?: "#H3-8826"})",
                                 fontFamily = DMSansFontFamily,
                                 fontSize = 12.sp,
                                 color = PastelCoral
                             )
                             Text(
-                                text = "Member since October 2026 • Tier 1 Neighborhood Trust",
+                                text = "Privacy Radius: $discoveryRadiusMeters m active • Tier 1 Neighborhood Trust",
                                 fontFamily = DMSansFontFamily,
                                 fontSize = 11.sp,
                                 color = SecondaryText
@@ -195,7 +258,55 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    if (userBio.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SoftCream,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "“$userBio”",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = PrimaryText,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Primary Action: Edit Profile & Privacy
+                    Button(
+                        onClick = onEditProfile,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryText,
+                            contentColor = PureWhite
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile_edit_full_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = PureWhite,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Edit Nickname, Picture & Privacy Radius",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = PureWhite
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -227,15 +338,16 @@ fun ProfileScreen(
                             onClick = onReplayOnboarding,
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryText,
-                                contentColor = PureWhite
+                                containerColor = SoftCream,
+                                contentColor = PrimaryText
                             ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = null,
-                                tint = PureWhite,
+                                tint = PrimaryText,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -243,7 +355,8 @@ fun ProfileScreen(
                                 "Tour Guide",
                                 fontFamily = DMSansFontFamily,
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                color = PrimaryText
                             )
                         }
                     }
@@ -276,20 +389,20 @@ fun ProfileScreen(
                 ) {
                     BadgeItem(
                         icon = Icons.Default.VolunteerActivism,
-                        title = "Helpful Neighbor (Level 2)",
-                        desc = "Completed 4 tool lendings & local assists",
+                        title = "Neighbor Member (Active)",
+                        desc = "Verified resident in the neighborhood grid mesh",
                         color = PastelMint
                     )
                     BadgeItem(
                         icon = Icons.Default.Shield,
-                        title = "Problem Solver",
-                        desc = "Upvoted & verified 3 resolved neighborhood issues",
+                        title = "Civic Guardian",
+                        desc = "Ready to report and resolve local hazards",
                         color = PastelCoral
                     )
                     BadgeItem(
                         icon = Icons.Default.People,
-                        title = "Community Builder",
-                        desc = "Participated in local sports & Pinecrest pavilion sessions",
+                        title = "Mutual Aid Circle",
+                        desc = "Lend tools, help neighbors, or share skills",
                         color = PastelSoftCyan
                     )
                 }
@@ -584,13 +697,130 @@ fun ProfileScreen(
                             text = "Contact Community Council",
                             fontFamily = DMSansFontFamily,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            color = PureWhite
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Data & Fresh State Reset Card
+            Text(
+                text = "Neighborhood mesh storage",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 18.sp,
+                color = PrimaryText,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text(
+                        text = "Clean state & fresh grid",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = PrimaryText
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Reset all locally stored needs, offers, issues, and private chats to start completely fresh without any lingering test entries.",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        color = SecondaryText,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (showResetSuccessBanner) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = PastelMint.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                        ) {
+                            Text(
+                                text = "Grid reset! All data is fresh and clean.",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = PrimaryText,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showResetConfirmDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, PastelCoral.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                        modifier = Modifier.fillMaxWidth().testTag("reset_fresh_grid_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = PastelCoral,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Reset Grid to Fresh State",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = PastelCoral
                         )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(100.dp))
+        }
+
+        if (showResetConfirmDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showResetConfirmDialog = false },
+                title = {
+                    Text("Reset Grid to Fresh State?", fontFamily = DMSerifFontFamily, color = PrimaryText)
+                },
+                text = {
+                    Text(
+                        "This will clear all locally created posts, issues, and private chats, restoring NearGrid to its fresh default state.",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 13.sp,
+                        color = SecondaryText
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showResetConfirmDialog = false
+                            onResetToFreshGrid()
+                            showResetSuccessBanner = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PastelCoral)
+                    ) {
+                        Text("Reset Now", fontFamily = DMSansFontFamily, color = PureWhite)
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { showResetConfirmDialog = false }) {
+                        Text("Cancel", fontFamily = DMSansFontFamily, color = PrimaryText)
+                    }
+                },
+                containerColor = PureWhite,
+                shape = RoundedCornerShape(20.dp)
+            )
         }
     }
 }

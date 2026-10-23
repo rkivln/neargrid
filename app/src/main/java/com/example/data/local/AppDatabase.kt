@@ -20,7 +20,7 @@ import com.example.data.model.NeighborPost
         ChatMessage::class,
         GridCell::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

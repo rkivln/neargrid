@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/neargrid_icon_1792589717153"
+        android:drawable="@drawable/ic_app_icon_fg"
         android:gravity="center" />
 </layer-list>

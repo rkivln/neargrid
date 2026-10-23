@@ -58,6 +58,7 @@ import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.UserProfileScreen
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.NearGridTheme
 import com.example.ui.theme.PastelPeach
@@ -131,12 +132,45 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     }
 
     // Predictive Back Handling
-    BackHandler(enabled = uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
-        if (uiState.activeConversation != null) {
+    BackHandler(enabled = uiState.showUserProfileEditor || uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
+        if (uiState.showUserProfileEditor) {
+            viewModel.closeUserProfileEditor()
+        } else if (uiState.activeConversation != null) {
             viewModel.closeConversation()
         } else if (uiState.currentDestination != NavigationDestination.HOME) {
             viewModel.setDestination(NavigationDestination.HOME)
         }
+    }
+
+    // Full-screen User Profile & Privacy settings editor
+    if (uiState.showUserProfileEditor) {
+        UserProfileScreen(
+            currentNickname = uiState.userNickname,
+            currentHandle = uiState.userHandle,
+            currentBio = uiState.userBio,
+            currentAvatarUri = uiState.avatarUri,
+            currentPresetIndex = uiState.avatarPresetIndex,
+            currentPrivacyRadius = uiState.neighborhoodPrivacyRadiusMeters,
+            currentFuzzyCoords = uiState.fuzzyCoordinateOffset,
+            currentIncognito = uiState.incognitoGridPresence,
+            currentAllowDMs = uiState.allowProximityMessaging,
+            currentCell = uiState.selectedCell,
+            onSaveProfile = { nick, handle, bio, uri, preset, radius, fuzzy, incognito, allowDMs ->
+                viewModel.updateUserProfile(
+                    nickname = nick,
+                    handle = handle,
+                    bio = bio,
+                    avatarUri = uri,
+                    avatarPresetIndex = preset,
+                    privacyRadiusMeters = radius,
+                    fuzzyCoords = fuzzy,
+                    incognito = incognito,
+                    allowDMs = allowDMs
+                )
+            },
+            onBack = { viewModel.closeUserProfileEditor() }
+        )
+        return
     }
 
     // Active conversation view
@@ -268,7 +302,14 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
                         onGpsToggle = onToggleGps,
                         onReplayOnboarding = { showOnboarding = true },
-                        onOpenAuthDialog = { showAuthDialog = true }
+                        onOpenAuthDialog = { showAuthDialog = true },
+                        userNickname = uiState.userNickname,
+                        userHandle = uiState.userHandle,
+                        userBio = uiState.userBio,
+                        avatarUri = uiState.avatarUri,
+                        avatarPresetIndex = uiState.avatarPresetIndex,
+                        onEditProfile = { viewModel.openUserProfileEditor() },
+                        onResetToFreshGrid = { viewModel.resetToFreshGrid() }
                     )
                 }
             }

@@ -40,7 +40,17 @@ data class NearGridUiState(
     val showCreateDialog: Boolean = false,
     val createDialogInitialType: String = "NEED",
     val activeConversation: Conversation? = null,
-    val isFilterExpanded: Boolean = false
+    val isFilterExpanded: Boolean = false,
+    val userNickname: String = "Alex Rivera",
+    val userHandle: String = "@alex_oakwood",
+    val userBio: String = "Oakwood resident & tool sharing volunteer. Active in Cell #H3-8826.",
+    val avatarUri: String? = null,
+    val avatarPresetIndex: Int = 0,
+    val neighborhoodPrivacyRadiusMeters: Int = 500, // 250m, 500m, 1000m, 2500m
+    val fuzzyCoordinateOffset: Boolean = true,
+    val incognitoGridPresence: Boolean = false,
+    val allowProximityMessaging: Boolean = true,
+    val showUserProfileEditor: Boolean = false
 )
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
@@ -59,8 +69,26 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    val cells: StateFlow<List<GridCell>> = repository.allCells
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val cells: StateFlow<List<GridCell>> = combine(
+        repository.allCells,
+        repository.allPosts,
+        repository.allIssues
+    ) { baseCells, posts, issuesList ->
+        baseCells.map { cell ->
+            val cellPosts = posts.filter { it.authorCellId == cell.id }
+            val cellNeeds = cellPosts.count { it.type == "NEED" && it.status == "ACTIVE" }
+            val cellOffers = cellPosts.count { it.type == "OFFER" && it.status == "ACTIVE" }
+            val cellIssues = issuesList.count { it.cellId == cell.id && it.status != "RESOLVED" }
+            val authorCount = cellPosts.map { it.authorName }.filter { it.isNotBlank() }.toSet().size
+            val activeNeighbors = authorCount.coerceAtLeast(1)
+            cell.copy(
+                openNeedsCount = cellNeeds,
+                openOffersCount = cellOffers,
+                activeIssuesCount = cellIssues,
+                activeNeighborsCount = activeNeighbors
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val rawPosts: StateFlow<List<NeighborPost>> = repository.allPosts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -213,6 +241,41 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun openUserProfileEditor() {
+        _uiState.value = _uiState.value.copy(showUserProfileEditor = true)
+    }
+
+    fun closeUserProfileEditor() {
+        _uiState.value = _uiState.value.copy(showUserProfileEditor = false)
+    }
+
+    fun updateUserProfile(
+        nickname: String,
+        handle: String,
+        bio: String,
+        avatarUri: String?,
+        avatarPresetIndex: Int,
+        privacyRadiusMeters: Int,
+        fuzzyCoords: Boolean,
+        incognito: Boolean,
+        allowDMs: Boolean
+    ) {
+        val sanitizedHandle = if (handle.startsWith("@")) handle.trim() else "@${handle.trim()}"
+        _uiState.value = _uiState.value.copy(
+            userNickname = nickname.trim().ifBlank { "Neighbor" },
+            userHandle = sanitizedHandle,
+            userBio = bio.trim(),
+            avatarUri = avatarUri,
+            avatarPresetIndex = avatarPresetIndex,
+            neighborhoodPrivacyRadiusMeters = privacyRadiusMeters,
+            discoveryRadiusMeters = privacyRadiusMeters,
+            fuzzyCoordinateOffset = fuzzyCoords,
+            incognitoGridPresence = incognito,
+            allowProximityMessaging = allowDMs,
+            showUserProfileEditor = false
+        )
+    }
+
     fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?) {
         viewModelScope.launch {
             repository.updateIssueStatus(issueId, newStatus, volunteer)
@@ -228,12 +291,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     ) {
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
+            val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
             repository.createPost(
                 type = "NEED",
                 title = title,
                 description = description,
                 category = category,
-                authorName = "You (Local Resident)",
+                authorName = author,
                 cellName = cell?.name ?: "Oakwood Grove",
                 cellId = cell?.id ?: "cell_oakwood_center",
                 urgency = urgency,
@@ -252,12 +316,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     ) {
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
+            val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
             repository.createPost(
                 type = "OFFER",
                 title = title,
                 description = description,
                 category = category,
-                authorName = "You (Local Resident)",
+                authorName = author,
                 cellName = cell?.name ?: "Oakwood Grove",
                 cellId = cell?.id ?: "cell_oakwood_center",
                 urgency = "NORMAL",
@@ -276,12 +341,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     ) {
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
+            val author = _uiState.value.userNickname.ifBlank { "Resident" }
             repository.createIssue(
                 title = title,
                 description = description,
                 locationSnippet = location,
                 cellId = cell?.id ?: "cell_oakwood_center",
-                category = category
+                category = category,
+                reporterName = author
             )
             closeCreateDialog()
             _uiState.value = _uiState.value.copy(currentDestination = NavigationDestination.COMMUNITY)
@@ -296,12 +363,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     ) {
         viewModelScope.launch {
             val cell = _uiState.value.selectedCell
+            val author = _uiState.value.userNickname.ifBlank { "You (Local Resident)" }
             repository.createPost(
                 type = "MEETUP",
                 title = title,
                 description = description,
                 category = category,
-                authorName = "You (Local Resident)",
+                authorName = author,
                 cellName = cell?.name ?: "Oakwood Grove",
                 cellId = cell?.id ?: "cell_oakwood_center",
                 urgency = "NORMAL",
@@ -309,6 +377,12 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 distanceBand = "within 200 m"
             )
             closeCreateDialog()
+        }
+    }
+
+    fun resetToFreshGrid() {
+        viewModelScope.launch {
+            repository.resetToFreshState()
         }
     }
 }

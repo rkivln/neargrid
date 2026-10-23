@@ -35,6 +35,9 @@ interface NeighborPostDao {
 
     @Query("DELETE FROM neighbor_posts WHERE id = :id")
     suspend fun deletePost(id: String)
+
+    @Query("DELETE FROM neighbor_posts")
+    suspend fun deleteAllPosts()
 }
 
 @Dao
@@ -53,6 +56,9 @@ interface CommunityIssueDao {
 
     @Query("UPDATE community_issues SET upvotesCount = :upvotes, hasUserUpvoted = :hasUpvoted WHERE id = :id")
     suspend fun updateUpvote(id: String, upvotes: Int, hasUpvoted: Boolean)
+
+    @Query("DELETE FROM community_issues")
+    suspend fun deleteAllIssues()
 }
 
 @Dao
@@ -65,6 +71,9 @@ interface CommunityNoticeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNotice(notice: CommunityNotice)
+
+    @Query("DELETE FROM community_notices")
+    suspend fun deleteAllNotices()
 }
 
 @Dao
@@ -83,6 +92,9 @@ interface ConversationDao {
 
     @Query("UPDATE conversations SET isResolved = :isResolved WHERE id = :id")
     suspend fun setResolved(id: String, isResolved: Boolean)
+
+    @Query("DELETE FROM conversations")
+    suspend fun deleteAllConversations()
 }
 
 @Dao
@@ -95,6 +107,9 @@ interface ChatMessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessages(messages: List<ChatMessage>)
+
+    @Query("DELETE FROM chat_messages")
+    suspend fun deleteAllMessages()
 }
 
 @Dao
@@ -107,4 +122,7 @@ interface GridCellDao {
 
     @Query("SELECT * FROM grid_cells WHERE id = :id LIMIT 1")
     suspend fun getCellById(id: String): GridCell?
+
+    @Query("DELETE FROM grid_cells")
+    suspend fun deleteAllCells()
 }

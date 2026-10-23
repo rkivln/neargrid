@@ -25,6 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -32,6 +35,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -410,33 +414,90 @@ fun HomeScreen(
             // Feed Items list
             if (posts.isEmpty()) {
                 item {
-                    Column(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(horizontal = 20.dp, vertical = 20.dp)
+                            .testTag("fresh_grid_empty_card"),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = PureWhite),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.HelpOutline,
-                            contentDescription = null,
-                            tint = SecondaryText,
-                            modifier = Modifier.size(44.dp)
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "No posts in this radius",
-                            fontFamily = DMSerifFontFamily,
-                            fontSize = 20.sp,
-                            color = PrimaryText
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Expand your discovery radius to 800m or 2km to find neighbors nearby.",
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 13.sp,
-                            color = SecondaryText,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(PastelPeach.copy(alpha = 0.4f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VolunteerActivism,
+                                    contentDescription = null,
+                                    tint = PastelCoral,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Your Neighborhood Grid is Fresh",
+                                fontFamily = DMSerifFontFamily,
+                                fontSize = 22.sp,
+                                color = PrimaryText,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Be the pioneer neighbor on this block! Share a spare tool, lend a hand, or request assistance from your neighbors.",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 13.sp,
+                                color = SecondaryText,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 19.sp
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Button(
+                                    onClick = { onOpenCreateDialog("NEED") },
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = PrimaryText,
+                                        contentColor = PureWhite
+                                    ),
+                                    modifier = Modifier.weight(1f).testTag("fresh_ask_help_button")
+                                ) {
+                                    Text(
+                                        text = "Ask for Help",
+                                        fontFamily = DMSansFontFamily,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = { onOpenCreateDialog("OFFER") },
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                                    modifier = Modifier.weight(1f).testTag("fresh_offer_button")
+                                ) {
+                                    Text(
+                                        text = "Lend an Item",
+                                        fontFamily = DMSansFontFamily,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp,
+                                        color = PrimaryText
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             } else {

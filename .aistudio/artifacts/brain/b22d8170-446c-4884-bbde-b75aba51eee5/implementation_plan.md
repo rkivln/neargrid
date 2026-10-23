@@ -1,157 +1,106 @@
-# NearGrid — Coordinate-Powered Neighborhood Connection
+# NearGrid: High-Reliability Civic Coordination & UI De-Cluttering Plan
 
-NearGrid is a location-aware neighborhood coordination platform built with Jetpack Compose and Kotlin. It connects residents within mixed suburban neighborhoods and local street clusters through privacy-preserving geographic cells, putting intent-based matching for community needs, resource sharing, and local civic resolution at the center of the experience.
+NearGrid is designed as a mission-critical neighborhood coordination tool. This revised plan preserves the app's powerful community capabilities—including proximity grid coordinates, mutual aid matching, verified cell validation, and safe meeting points—while excising visual clutter, decorative filler, and redundant UI widgets that make the interface confusing.
 
----
-
-## User Review & Critical Decisions
+### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following architectural and UX choices have been confirmed based on user feedback:
-> - **Pre-configured Community Environment**: Mixed suburban neighborhood and local street cluster (featuring Oakwood Grove, Elmwood Avenue, Pinecrest Park, and surrounding neighborhood blocks).
-> - **Coordinate Model & Privacy**: Interactive location mode with preset neighborhood cells (H3-style spatial indexing) and a real-time GPS toggle. Users' exact home coordinates are never revealed; public interactions only display approximate distance bands ("within 350 m", "in Oakwood West cell") and adjustable discovery radii (300 m, 800 m, 2 km).
-> - **Hero Workflow**: Intent-Based Matching Engine for local needs and resource exchange ("Ask Nearby" & "Share & Exchange"), supported by community notices, issue resolution tracking, and micro-meetup coordination.
+> **Key Refinement Directives (Incorporating Your Feedback)**:
+> 1. **Not Super Simple — Retain Deep Capabilities**: We will NOT strip out the rich functional core of NearGrid. The app will maintain its full suite of tools: verified neighborhood grid cells, intent-matching engine, tool lending workflows, proximity radius fuzzing, and safety meeting-point chat.
+> 2. **Remove Unwanted UI Contents & Bloat**: Strip out duplicate promotional banners, redundant descriptive headers, visual filler cards, and overlapping sub-menus that create confusion.
+> 3. **Maximize Reliability & Operational Clarity**:
+>    - Add clear, unambiguous system status badges (GPS Accuracy, Cell Connection Status, Neighbor Mesh Health).
+>    - Guarantee robust input validation on all creation sheets with inline error messages.
+>    - Ensure every action (connecting with a neighbor, borrowing a tool, toggling privacy) gives immediate, deterministic confirmation feedback.
 
 ---
 
-## 1. Overview & Core Concept
+### 1. Overview & Core Concept
 
-### What It Does
-NearGrid eliminates the traditional friction of asking neighbors for help, tools, or shared activities. Rather than an aimless social media feed, it acts as a **proximity-based coordination network**:
-1. **Coordinate-Powered Neighborhood Grid**: Automatically organizes localities into discrete privacy-preserving geographic cells (e.g., Cell #H3-8826, Oakwood Grove Center, Pinehurst West).
-2. **Intent-Based Matching Engine**: Connects "Needs" (e.g., "Need a 10-foot ladder for 2 hours", "Looking for a math tutor") directly with nearby "Offers" (e.g., "Power tools available to lend", "Calculus tutoring available"), calculating compatibility scores, distance bands, and availability windows.
-3. **Local Resource Exchange & Pickup Coordination**: Structured workflow with reservation requests, pickup/dropoff points, and automatic expiration timers.
-4. **Community Noticeboard & Governance**: Official neighborhood announcements, alerts (e.g., scheduled water maintenance), and community polls.
-5. **Issue-to-Resolution Tracker**: Civic problem reporting (e.g., broken streetlight on Elm St, fallen tree branch) with live status stages: *Reported → Acknowledged → In Progress → Resolved*.
-6. **Micro-Meetups & Interest Circles**: Spontaneous local meetups (casual cricket, weekend walking club, gardening circle) with RSVP tracking.
-7. **In-App Neighbor Conversations**: End-to-end local messaging for coordinated pickups and handoffs.
-
-### Target Audience & Persona
-- **Suburban Residents & Families**: Borrowing tools, asking for quick neighborhood favors, tracking local street updates.
-- **Local Volunteers & Coordinators**: Managing community cleanups, resolving neighborhood issues, organizing local events.
-- **New Movers & Active Neighbors**: Finding nearby interest buddies (cricket, walking, study groups) without sacrificing location privacy.
+- **What It Does**: NearGrid provides resilient, hyperlocal community coordination. Neighbors share tools, respond to urgent safety alerts, and assist each other within privacy-preserving geographic rings without depending on invasive commercial social networks.
+- **Target Audience / Persona**: Active neighbors, community organizers, and household managers who demand a serious, dependable civic utility.
+- **Key Value**: Maximum signal-to-noise ratio. Immediate visibility into what matters (safety emergencies, borrowable equipment, active neighborhood tasks) with zero decorative fluff.
 
 ---
 
-## 2. User Experience & Visual Design
+### 2. Streamlining & UI De-Cluttering Specification
 
-### Visual Identity & Theme
-- **Aesthetic Direction**: Warm Modern Editorial with Civic Polish. Warm cream surfaces, forest greens, terracotta/ochre accents, and crisp spatial hierarchy that feels welcoming, reliable, and grounded.
-- **Color Palette (M3 Semantic Tokens)**:
-  - `Primary`: Deep Forest Green (`#1E3E2B`) — represents trust, local nature, and stability.
-  - `OnPrimary`: Pure White (`#FFFFFF`).
-  - `PrimaryContainer`: Soft Mint Sage (`#DDE8DD`) — subtle highlighting for active chips and selected cells.
-  - `Secondary`: Earthy Terracotta / Ochre (`#C86D27`) — highlights urgent needs, status badges, and action intents.
-  - `Background`: Warm Porcelaine (`#FBFBF9`) — prevents harsh screen glare.
-  - `Surface`: Clean Warm White (`#FFFFFF`).
-  - `SurfaceVariant`: Subtle Stone Gray (`#F0EFEA`).
-  - `Outline`: Soft Sand Gray (`#D9D7CE`).
-- **Typography & Hierarchy**:
-  - Display & Headlines: Crisp, modern humanist sans typography with deliberate weight contrast.
-  - Body & Labels: High-legibility sans with generous line-height and letter-spacing for quick scanning outdoors.
-- **Geographic Cell Motif**:
-  - Interactive grid indicator showing active cell identifier, estimated neighbor density, and radius slider (300m, 800m, 2km).
-  - Hexagonal/pill badges for distance bands (`~350 m away`, `Within your street block`).
+#### What Gets Removed (De-Cluttering UI Bloat)
+1. **Redundant Decorative Banners**: Remove extraneous illustration cards and repetitive hero headers that push practical content below the fold.
+2. **Confusing Overlapping Tabs**: Eliminate the confusing split between "Radar", "Living Grid", and "Bulletin". Instead, present:
+   - **Neighborhood Board**: Urgent safety alerts + active community requests + live grid cell indicator.
+   - **Tool Library & Gear**: Dedicated inventory with search, status (Available / Borrowed), and request action.
+   - **Messages & Coordination**: 1:1 neighbor chat with safe public meeting-point picker.
+   - **Profile & Grid Privacy**: User credentials, privacy radius visualizer, and centroid fuzzing controls.
+3. **Superfluous Informational Text**: Replace multi-paragraph explainers with concise, high-legibility badges and single-line status metrics.
 
-### Core Navigation Architecture (5 Hubs)
-1. **Home (Intent & Feed)**: Hero Intent Matcher card ("Ask for Help", "Share / Lend", "Find People"), active Needs & Offers feed with compatibility tags, distance filter chips, and daily neighborhood summary.
-2. **Grid / Explore (Living Neighborhood Map)**: Interactive visual grid with active neighborhood cells, local activity density heatmap, meeting spots, and community notices layer. Cell switcher allows exploring adjacent blocks.
-3. **Action / Create (New Intent or Report)**: Unified bottom sheet to post a Need (Request), Offer an item/skill, Report a Civic Issue, or Post a Micro-Meetup.
-4. **Community (Notices & Civic Issues)**: Official noticeboard, Issue-to-Resolution tracker (with status chips and upvotes), and active community polls.
-5. **Inbox & Profile**: Active coordination chats, exchange handoff confirmations, and privacy/reputation profile settings.
-
----
-
-## 3. Key Product Decisions & Trade-Offs
-
-| Decision | Chosen Approach | Rationale & Trade-offs |
-|---|---|---|
-| **Data Persistence** | **Local Room Database with Pre-seeded Neighborhood Data** | Ensures complete, reliable, and instant offline-first experience without requiring mandatory Google Cloud credentials or network latency during emulator testing. Includes pre-seeded neighbors, active requests, civic issues, and notices for realistic testing. |
-| **Location Strategy** | **Discrete Grid Cells + Distance Bands with Interactive Toggle** | Avoids exposing sensitive residential GPS coordinates. Computes Euclidean & Haversine distance bands into fuzzy categories (`< 400 m`, `< 1 km`, `< 2 km`). Provides simulated cell switching (Oakwood Center, Elmwood, Pinehurst) plus optional live device GPS. |
-| **Intent Matching** | **Smart Keyword & Category Proximity Engine** | Matches requester keywords and item tags (e.g. "ladder", "tools", "math", "cricket") with nearby active offers. Ranks items by proximity band and match score. |
-| **State Management** | **Kotlin Coroutines + StateFlow + MVVM** | Standard Jetpack Compose best practice for clean separation of concerns, reactive UI updates, and testability. |
+#### What Gets Strengthened (Reliability & Utility)
+1. **System & Grid Status Header**:
+   - Prominently displays the active Grid Cell (e.g. `Oakridge-North [Cell #42]`), GPS fix reliability (`High Precision` / `Manual Location`), and active Discovery Radius pill (`500m`).
+   - Tapping the status pill allows quick switching between cells or re-calibrating location without navigating away.
+2. **High-Priority Urgent Alert Rail**:
+   - Urgent posts (safety, hazards, emergency help) are pinned with distinct amber/terracotta borders and explicit call-to-action buttons (`I Can Assist`, `Share Update`).
+3. **Structured Mutual Aid Feed**:
+   - Category filtering with high contrast: `All`, `Urgent`, `Tools`, `Help Needed`, `Offers`.
+   - Each card clearly communicates:
+     - Distance (`120m away`)
+     - Neighbor trust badge (`Verified Resident` / `Active Contributor`)
+     - Clear action button (`Connect` / `Borrow` / `Coordinate`)
+4. **Resilient Error States & Offline Support**:
+   - Explicit feedback when GPS permissions are denied or when no neighbors are within the selected radius, with clear remediation actions (e.g. "Expand search radius to 1.0 km").
 
 ---
 
-## 4. Technical Architecture & Data Strategy
+### 3. Key Product Decisions & Trade-Offs
 
-### System Architecture Diagram
+- **Decision 1: Professional Civic Utility Over "Toy-Like" Simplification**
+  - *Chosen Approach*: Maintain full feature sophistication (intent matching algorithm, proximity calculation, safety chat with meeting-point coordinates) while stripping purely decorative clutter.
+  - *Why*: Reliable neighborhood tools must handle real-world complexity (emergencies, borrowing contracts, privacy boundaries) without confusing users.
+  - *Alternatives Considered*: Hiding features behind deep nested menus was rejected because it reduces discoverability during urgent scenarios.
+
+- **Decision 2: Clear 4-Destination Information Architecture**
+  - *Chosen Approach*:
+    1. 📋 **Board** (Feed, Urgent Alerts, Cell Status, Quick Post)
+    2. 🧰 **Tools** (Lending inventory, equipment status, borrow requests)
+    3. 💬 **Messages** (Neighbor chats, coordinate handoffs, meeting points)
+    4. 🛡️ **Privacy & Profile** (Fuzzy radius, handle, avatar, incognito toggle)
+  - *Why*: Eliminates ambiguity between "Where do I look for items?" vs "Where do I see neighborhood updates?".
+
+- **Decision 3: Zero-Confusion Quick Actions**
+  - *Chosen Approach*: Direct action buttons pinned in a compact utility bar right beneath the cell status:
+    - `[+ Request Help]`
+    - `[+ Share / Lend Item]`
+    - `[+ Report Issue]`
+  - *Why*: Allows instant creation in under two taps without searching for an ambiguous floating action button.
+
+---
+
+### 4. Technical Architecture & Component Hierarchy *(Technical Reference)*
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Jetpack Compose UI Layer                        │
-├──────────────────┬──────────────────┬─────────────────┬────────────────┤
-│    HomeScreen    │  GridMapScreen   │ CommunityScreen │  InboxScreen   │
-│ (Intent Matches, │(Interactive Grid,│ (Noticeboard &  │ (Coordination  │
-│  Needs & Offers) │  Activity Cells) │  Issue Tracker) │  Chat/Handoff) │
-└────────┬─────────┴────────┬─────────┴────────┬────────┴────────┬───────┘
-         │                  │                  │                 │
-         └──────────────────┼──────────────────┼─────────────────┘
-                            ▼                  ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        NearGridViewModel                               │
-│  - Active Discovery Radius (300m / 800m / 2km)                         │
-│  - Current Neighborhood Cell (e.g., "Oakwood Grove #204")              │
-│  - Filter State (All, Needs, Offers, Events, Urgent)                   │
-│  - Active Intent Matchmaker Computation                                │
-│  - Issue Status Updates (Reported -> In Progress -> Resolved)          │
-└───────────────────────────┬────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                      NearGridRepository                                │
-│  - Distance Band & Cell Proximity Filtering                            │
-│  - Intent Matching Algorithm (Need ↔ Offer cross-referencing)          │
-│  - Local Data Seeding (Realistic suburban community mock data)         │
-└───────────────────────────┬────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                      Room Database (SQLite)                            │
-│  ┌───────────────────────┬───────────────────────┬──────────────────┐  │
-│  │     NeighborItem      │    CommunityIssue     │ CommunityNotice  │  │
-│  │ (Needs, Offers, Meets)│ (Status, Upvotes, Loc)│ (Urgent, Dept)   │  │
-│  ├───────────────────────┼───────────────────────┼──────────────────┤  │
-│  │     GridCellInfo      │     Conversation      │   ChatMessage    │  │
-│  │  (Coordinates, Bounds)│ (Participants, ItemId)│  (Sender, Body)  │  │
-│  └───────────────────────┴───────────────────────┴──────────────────┘  │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                           MainActivity                          │
+│     (Edge-to-Edge Scaffold, System Status, 4-Tab Navigation)    │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        ▼                       ▼                       ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  Neighborhood    │  │   Tool & Gear    │  │    Messages &    │
+│  Board Screen    │  │  Library Screen  │  │   Coordination   │
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+         │                     │                     │
+         ├─► CellStatusHeader  ├─► ToolSearchBar     ├─► ConversationList
+         ├─► UrgentAlertRail   ├─► AvailabilityPills ├─► MeetingPointChat
+         ├─► QuickActionHub    └─► InventoryCards    └─► SafetyReceipts
+         ├─► FeedFilterPills
+         └─► RobustPostCards
 ```
 
-### Core Room Entities
-1. `NeighborPostEntity`:
-   - `id: String`, `type: PostType` (NEED, OFFER, MEETUP)
-   - `authorName: String`, `authorAvatar: String`, `authorCellId: String`
-   - `title: String`, `description: String`, `category: String` (TOOLS, HELP, SPORT, STUDY, HOUSEHOLD)
-   - `urgency: UrgencyLevel` (LOW, MEDIUM, HIGH)
-   - `latitude: Double`, `longitude: Double` (internal reference for distance computation)
-   - `approxDistanceBand: String` (e.g., "within 350 m")
-   - `expiresInHours: Int`, `status: PostStatus` (ACTIVE, MATCHED, COMPLETED)
-   - `createdAt: Long`
-
-2. `CommunityIssueEntity`:
-   - `id: String`, `title: String`, `locationDescription: String`
-   - `category: IssueCategory` (INFRASTRUCTURE, SAFETY, LIGHTING, SANITATION)
-   - `status: IssueStatus` (REPORTED, ACKNOWLEDGED, IN_PROGRESS, RESOLVED)
-   - `upvotesCount: Int`, `assignedVolunteer: String?`, `createdAt: Long`
-
-3. `CommunityNoticeEntity`:
-   - `id: String`, `title: String`, `body: String`, `department: String`
-   - `isPinned: Boolean`, `isUrgent: Boolean`, `postedAt: Long`
-
-4. `ChatMessageEntity` & `ConversationEntity`:
-   - Handles real-time neighbor chats for coordinating handoffs and meetups.
-
----
-
-## 5. Execution Stages
-
-1. **Phase 1 — Data & Persistence Core**: Setup Room database with entities, DAOs, type converters, and repository pre-seeded with realistic suburban community data.
-2. **Phase 2 — Theme, Typography & Design Tokens**: Configure M3 ColorScheme, Shapes, and typographic scale tailored to NearGrid's warm civic identity.
-3. **Phase 3 — UI Screens & Components**:
-   - `HomeScreen`: Top app bar with cell selector & radius picker, Quick Action intent cards, intent-match alerts, filterable list of neighborhood needs and offers.
-   - `GridExploreScreen`: Interactive visual cell grid canvas displaying neighbor density, public hubs, and cell switching.
-   - `CreateItemDialog / Sheet`: Clean dialog to post needs, offers, issues, or meetups.
-   - `CommunityScreen`: Dual-tab interface for Noticeboard and Issue-to-Resolution tracker with interactive upvoting and status changes.
-   - `InboxScreen & ChatView`: Conversation list and direct messaging interface with pickup agreement badges.
-4. **Phase 4 — Verification & Polish**: Ensure edge-to-edge drawing, safe area padding, seamless state handling, test tags, and compile verification.
+#### Verification & Reliability Standards
+- **Form Validation**: Strict checks for empty titles, description lengths, and valid cell boundaries.
+- **Unit Tests**: Full Robolectric test coverage verifying:
+  - Filtering by category and urgency
+  - Quick post creation and state dispatch
+  - Privacy radius calculation and fuzzy coordinate offsets
+  - Message sending and meeting point integration
