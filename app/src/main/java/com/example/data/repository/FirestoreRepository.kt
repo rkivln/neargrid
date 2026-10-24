@@ -5,6 +5,7 @@ import com.example.R
 import com.example.data.model.ChatMessage
 import com.example.data.model.CommunityIssue
 import com.example.data.model.Conversation
+import com.example.data.model.GeohashMessage
 import com.example.data.model.NeighborPost
 import com.example.data.model.UserProfile
 import com.example.data.remote.OperationType
@@ -39,11 +40,18 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- User Profile ---
 
     fun observeUserProfile(userId: String): Flow<UserProfile?> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null || userId.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
         val docRef = db.collection("users").document(userId)
         val listener = docRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 handleFirestoreError(error, OperationType.GET, docRef.path)
-                close(error)
+                trySend(null)
+                close()
                 return@addSnapshotListener
             }
             if (snapshot == null || !snapshot.exists()) {
@@ -114,13 +122,20 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Posts (Needs / Offers / Meetups) ---
 
     fun observePosts(): Flow<List<NeighborPost>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
         val path = "posts"
         val listener = db.collection(path)
             .whereEqualTo("status", "ACTIVE")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val items = snapshot?.documents?.mapNotNull { doc ->
@@ -219,12 +234,19 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Community Issues ---
 
     fun observeIssues(): Flow<List<CommunityIssue>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
         val path = "issues"
         val listener = db.collection(path)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val currentUid = auth.currentUser?.uid ?: ""
@@ -337,7 +359,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val items = snapshot?.documents?.mapNotNull { doc ->
@@ -370,6 +393,12 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     }
 
     fun observeMessages(conversationId: String): Flow<List<ChatMessage>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null || conversationId.isBlank()) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
         val path = "conversations/$conversationId/messages"
         val listener = db.collection("conversations")
             .document(conversationId)
@@ -377,7 +406,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val currentUid = auth.currentUser?.uid ?: ""
@@ -474,6 +504,103 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             Result.success(convId)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, convRef.path)
+            Result.failure(e)
+        }
+    }
+
+    // --- Geohash Messages (Broadcasts by Geohash Area) ---
+
+    fun observeGeohashMessages(geohash: String? = null): Flow<List<GeohashMessage>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val path = "geohash_messages"
+        val query = if (!geohash.isNullOrBlank()) {
+            db.collection(path).whereEqualTo("geohash", geohash)
+        } else {
+            db.collection(path)
+        }
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                handleFirestoreError(error, OperationType.LIST, path)
+                trySend(emptyList())
+                close()
+                return@addSnapshotListener
+            }
+            val currentUid = auth.currentUser?.uid ?: ""
+            val items = snapshot?.documents?.mapNotNull { doc ->
+                try {
+                    val data = doc.data ?: return@mapNotNull null
+                    val senderId = data["userId"] as? String ?: ""
+                    val ts = (data["timestamp"] as? Timestamp)?.toDate()?.time
+                        ?: (data["createdAt"] as? Timestamp)?.toDate()?.time
+                        ?: System.currentTimeMillis()
+
+                    GeohashMessage(
+                        id = doc.id,
+                        userId = senderId,
+                        authorName = data["authorName"] as? String ?: "Neighbor",
+                        authorInitials = data["authorInitials"] as? String ?: "N",
+                        text = data["text"] as? String ?: "",
+                        geohash = data["geohash"] as? String ?: "",
+                        latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
+                        longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
+                        timestamp = ts,
+                        localityName = data["localityName"] as? String ?: "",
+                        isFromCurrentUser = senderId == currentUid
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            } ?: emptyList()
+            trySend(items.sortedByDescending { it.timestamp })
+        }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun postGeohashMessage(
+        text: String,
+        latitude: Double,
+        longitude: Double,
+        geohash: String,
+        authorName: String = "",
+        localityName: String = ""
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val uid = requireUserId()
+        val displayName = authorName.ifBlank { auth.currentUser?.displayName ?: "Neighbor" }
+        val initials = displayName.split(" ")
+            .filter { it.isNotBlank() }
+            .take(2)
+            .map { it.first().uppercase() }
+            .joinToString("")
+            .ifEmpty { "N" }
+
+        val docId = UUID.randomUUID().toString()
+        val docRef = db.collection("geohash_messages").document(docId)
+
+        val payload = hashMapOf<String, Any>(
+            "id" to docId,
+            "userId" to uid,
+            "authorName" to displayName,
+            "authorInitials" to initials,
+            "text" to text.trim(),
+            "geohash" to geohash.trim().lowercase(),
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "localityName" to localityName,
+            "timestamp" to FieldValue.serverTimestamp(),
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+
+        try {
+            docRef.set(payload).await()
+            Result.success(docId)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
             Result.failure(e)
         }
     }

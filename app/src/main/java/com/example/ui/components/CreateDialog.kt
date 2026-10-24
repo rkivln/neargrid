@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -425,6 +426,33 @@ fun CreateIntentSheet(
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            // Real-Time GPS Notice Badge
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(PureWhite)
+                    .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(PastelCoral)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Live GPS coordinates will be attached for exact distance calculation to nearby neighbors.",
+                    fontFamily = DMSansFontFamily,
+                    fontSize = 12.sp,
+                    color = SecondaryText,
+                    lineHeight = 16.sp
+                )
             }
 
             // Submit Button

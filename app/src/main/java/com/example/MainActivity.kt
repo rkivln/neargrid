@@ -91,6 +91,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val notices by viewModel.notices.collectAsStateWithLifecycle()
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
     val chatMessages by viewModel.getChatMessagesForActive().collectAsStateWithLifecycle()
+    val geohashMessages by viewModel.geohashMessages.collectAsStateWithLifecycle()
 
     var showCellPickerDialog by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -103,7 +104,28 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
         if (fineGranted || coarseGranted) {
-            viewModel.toggleGpsMode()
+            viewModel.refreshDeviceLocation()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            viewModel.refreshDeviceLocation()
+        } else {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -111,8 +133,12 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission || uiState.gpsModeEnabled) {
+
+        if (hasPermission) {
             viewModel.toggleGpsMode()
         } else {
             permissionLauncher.launch(
@@ -262,6 +288,17 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         currentCell = uiState.selectedCell,
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
                         gpsEnabled = uiState.gpsModeEnabled,
+                        isLocating = uiState.isLocating,
+                        currentGeohash = uiState.currentGeohash,
+                        latitude = uiState.currentLocation?.latitude ?: uiState.selectedCell?.centerLat ?: 0.0,
+                        longitude = uiState.currentLocation?.longitude ?: uiState.selectedCell?.centerLng ?: 0.0,
+                        localityName = uiState.currentLocation?.displayAreaName ?: uiState.selectedCell?.name ?: "",
+                        isPostingGeohashMessage = uiState.isPostingGeohashMessage,
+                        geohashPostStatus = uiState.geohashPostStatus,
+                        geohashMessages = geohashMessages,
+                        onRefreshLocation = { viewModel.refreshDeviceLocation() },
+                        onPostGeohashMessage = { viewModel.postGeohashMessage(it) },
+                        onDismissGeohashStatus = { viewModel.clearGeohashPostStatus() },
                         posts = posts,
                         topIntentMatches = topIntentMatches,
                         selectedFilterType = uiState.postFilterType,

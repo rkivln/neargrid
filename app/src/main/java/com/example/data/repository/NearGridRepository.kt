@@ -221,79 +221,19 @@ class NearGridRepository(private val database: AppDatabase) {
         conversationDao.deleteAllConversations()
         chatDao.deleteAllMessages()
         cellDao.deleteAllCells()
-        seedFreshCells()
-    }
-
-    private suspend fun seedFreshCells() {
-        val cells = listOf(
-            GridCell(
-                id = "cell_oakwood_center",
-                name = "Oakwood Grove",
-                code = "#H3-8826",
-                activeNeighborsCount = 1,
-                openNeedsCount = 0,
-                openOffersCount = 0,
-                activeIssuesCount = 0,
-                centerLat = 37.7749,
-                centerLng = -122.4194,
-                description = "Tree-lined central avenue, quiet cul-de-sacs, and community corner market."
-            ),
-            GridCell(
-                id = "cell_elmwood_north",
-                name = "Elmwood Avenue",
-                code = "#H3-8827",
-                activeNeighborsCount = 1,
-                openNeedsCount = 0,
-                openOffersCount = 0,
-                activeIssuesCount = 0,
-                centerLat = 37.7780,
-                centerLng = -122.4160,
-                description = "North corridor connecting local bakery, residential blocks, and walking loop."
-            ),
-            GridCell(
-                id = "cell_pinecrest_park",
-                name = "Pinecrest Commons",
-                code = "#H3-8828",
-                activeNeighborsCount = 1,
-                openNeedsCount = 0,
-                openOffersCount = 0,
-                activeIssuesCount = 0,
-                centerLat = 37.7720,
-                centerLng = -122.4230,
-                description = "Recreation center, community gardens, sports pitch, and safe exchange zone."
-            ),
-            GridCell(
-                id = "cell_sunset_ridge",
-                name = "Sunset Ridge",
-                code = "#H3-8829",
-                activeNeighborsCount = 1,
-                openNeedsCount = 0,
-                openOffersCount = 0,
-                activeIssuesCount = 0,
-                centerLat = 37.7795,
-                centerLng = -122.4255,
-                description = "Elevated street cluster with shared composting station and panoramic views."
-            )
-        )
-        cellDao.insertCells(cells)
     }
 
     suspend fun seedInitialDataIfEmpty() = withContext(Dispatchers.IO) {
+        // Purge any legacy synthetic or mock records so the app is 100% clean
         val existingPosts = postDao.getAllPosts().first()
-        val hasMockPosts = existingPosts.any { it.id.startsWith("need_") || it.id.startsWith("offer_") || it.id.startsWith("meetup_") }
+        val hasMockPosts = existingPosts.any { 
+            it.id.startsWith("need_") || it.id.startsWith("offer_") || it.id.startsWith("meetup_") || it.title.contains("ladder", ignoreCase = true)
+        }
         val existingConversations = conversationDao.getAllConversations().first()
         val hasMockConversations = existingConversations.any { it.id == "conv_ladder" }
 
-        // If leftover mock data from previous version exists, wipe to fresh state
         if (hasMockPosts || hasMockConversations) {
             resetToFreshState()
-            return@withContext
-        }
-
-        // Seed fresh spatial cells if database is empty
-        val existingCells = cellDao.getAllCells().first()
-        if (existingCells.isEmpty()) {
-            seedFreshCells()
         }
     }
 }

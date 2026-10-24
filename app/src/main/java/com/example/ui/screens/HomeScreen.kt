@@ -53,10 +53,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
 import com.example.ui.components.DiscoveryRadiusSelector
+import com.example.ui.components.GeohashMessageComposer
 import com.example.ui.components.IntentMatchCard
 import com.example.ui.components.PostCard
 import com.example.ui.components.TopNeighborhoodBar
@@ -80,6 +82,17 @@ fun HomeScreen(
     currentCell: GridCell?,
     discoveryRadiusMeters: Int,
     gpsEnabled: Boolean,
+    isLocating: Boolean = false,
+    currentGeohash: String = "",
+    latitude: Double = 0.0,
+    longitude: Double = 0.0,
+    localityName: String = "",
+    isPostingGeohashMessage: Boolean = false,
+    geohashPostStatus: String? = null,
+    geohashMessages: List<GeohashMessage> = emptyList(),
+    onRefreshLocation: () -> Unit = {},
+    onPostGeohashMessage: (String) -> Unit = {},
+    onDismissGeohashStatus: () -> Unit = {},
     posts: List<NeighborPost>,
     topIntentMatches: List<IntentMatchResult>,
     selectedFilterType: String,
@@ -105,6 +118,7 @@ fun HomeScreen(
                     currentCell = currentCell,
                     discoveryRadiusMeters = discoveryRadiusMeters,
                     gpsEnabled = gpsEnabled,
+                    isLocating = isLocating,
                     onCellClick = onCellClick,
                     onGpsToggle = onGpsToggle
                 )
@@ -205,6 +219,29 @@ fun HomeScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Hyperlocal Geohash Broadcast Area Composer
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                ) {
+                    GeohashMessageComposer(
+                        currentGeohash = currentGeohash,
+                        latitude = latitude,
+                        longitude = longitude,
+                        localityName = localityName,
+                        isLocating = isLocating,
+                        isPosting = isPostingGeohashMessage,
+                        postStatus = geohashPostStatus,
+                        messages = geohashMessages,
+                        onRefreshLocation = onRefreshLocation,
+                        onPostMessage = onPostGeohashMessage,
+                        onDismissStatus = onDismissGeohashStatus
+                    )
                 }
             }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -278,6 +279,7 @@ fun TopNeighborhoodBar(
     currentCell: GridCell?,
     discoveryRadiusMeters: Int,
     gpsEnabled: Boolean,
+    isLocating: Boolean = false,
     onCellClick: () -> Unit,
     onGpsToggle: () -> Unit,
     modifier: Modifier = Modifier
@@ -308,16 +310,19 @@ fun TopNeighborhoodBar(
                     modifier = Modifier
                         .size(9.dp)
                         .clip(CircleShape)
-                        .background(AccentLime)
+                        .background(if (isLocating) SlateBlue else AccentLime)
                         .border(1.dp, PrimaryText.copy(alpha = 0.2f), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = currentCell?.name ?: "Select Cell",
+                    text = if (isLocating) "Locating..." else currentCell?.name ?: "Local Area",
                     fontFamily = ManropeFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 13.sp,
-                    color = PrimaryText
+                    color = PrimaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 160.dp)
                 )
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
@@ -329,10 +334,10 @@ fun TopNeighborhoodBar(
 
             // Center: Compact cell code
             Text(
-                text = currentCell?.code ?: "#H3-8826",
+                text = currentCell?.code ?: "#GPS-LIVE",
                 fontFamily = ManropeFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 letterSpacing = 0.5.sp,
                 color = SlateBlue
             )

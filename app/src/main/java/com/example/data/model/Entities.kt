@@ -127,3 +127,18 @@ data class IntentMatchResult(
     val compatibilityPercent: Int,
     val matchReason: String
 )
+
+@Entity(tableName = "geohash_messages")
+data class GeohashMessage(
+    @PrimaryKey val id: String = "",
+    val userId: String = "",
+    val authorName: String = "",
+    val authorInitials: String = "N",
+    val text: String = "",
+    val geohash: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val timestamp: Long = System.currentTimeMillis(),
+    val localityName: String = "",
+    val isFromCurrentUser: Boolean = false
+)

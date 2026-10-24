@@ -105,6 +105,19 @@ service cloud.firestore {
              (!('meetingPoint' in data) || data.meetingPoint == null || (data.meetingPoint is string && data.meetingPoint.size() <= 200));
     }
 
+    // Validation for GeohashMessage
+    function isValidGeohashMessage(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+             data.geohash is string && data.geohash.size() > 0 && data.geohash.size() <= 32 &&
+             data.latitude is number &&
+             data.longitude is number &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+             (!('authorInitials' in data) || (data.authorInitials is string && data.authorInitials.size() <= 10)) &&
+             (!('localityName' in data) || (data.localityName is string && data.localityName.size() <= 100));
+    }
+
     // --- Users Collection ---
     match /users/{userId} {
       allow get, list: if isSignedIn();
@@ -187,6 +200,16 @@ service cloud.firestore {
                          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow update, delete: if false;
       }
+    }
+
+    // --- Geohash Messages (Broadcasts by Geohash) ---
+    match /geohash_messages/{messageId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isServerTimestamp(incoming().timestamp) &&
+                       isValidGeohashMessage(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
     }
   }
 }
