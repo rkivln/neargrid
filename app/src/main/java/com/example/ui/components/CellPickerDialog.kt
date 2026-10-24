@@ -100,19 +100,22 @@ fun CellPickerDialog(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 items(cells) { cell ->
                     val isSelected = cell.id == currentCell?.id
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .clickable {
                                 onSelectCell(cell)
                                 onDismiss()
                             }
                             .testTag("cell_option_${cell.id}"),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) SoftCream else PureWhite
                         ),
@@ -124,12 +127,12 @@ fun CellPickerDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(32.dp)
                                     .clip(CircleShape)
                                     .background(if (isSelected) PastelPeach else SoftCream),
                                 contentAlignment = Alignment.Center
@@ -138,21 +141,24 @@ fun CellPickerDialog(
                                     imageVector = Icons.Default.GridView,
                                     contentDescription = null,
                                     tint = PrimaryText,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(14.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
 
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f, fill = false)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = cell.name,
                                         fontFamily = DMSerifFontFamily,
-                                        fontSize = 17.sp,
-                                        color = PrimaryText
+                                        fontSize = 15.sp,
+                                        color = PrimaryText,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = SoftCream,
@@ -161,34 +167,39 @@ fun CellPickerDialog(
                                         Text(
                                             text = cell.code,
                                             fontFamily = DMSansFontFamily,
-                                            fontSize = 10.sp,
+                                            fontSize = 9.sp,
                                             color = SecondaryText,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
+                                if (cell.description.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = cell.description,
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 11.sp,
+                                        color = SecondaryText,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = cell.description,
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 12.sp,
-                                    color = SecondaryText
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${cell.activeNeighborsCount} neighbors • ${cell.openNeedsCount} needs • ${cell.openOffersCount} offers",
                                     fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     color = PastelCoral
                                 )
                             }
 
                             if (isSelected) {
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Selected",
                                     tint = PastelCoral,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }

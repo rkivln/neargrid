@@ -134,7 +134,7 @@ fun GeohashMessageComposer(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(14.dp)
         ) {
             // Header with Geohash Badge and Live GPS Coordinates
             Row(
@@ -201,7 +201,7 @@ fun GeohashMessageComposer(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
                         text = if (localityName.isNotBlank()) "$localityName • $coordinatesLabel" else coordinatesLabel,
@@ -237,21 +237,21 @@ fun GeohashMessageComposer(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = "Compose Geohash Broadcast",
                 fontFamily = DMSerifFontFamily,
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 color = PrimaryText
             )
 
             Text(
                 text = "Post an instant text message to neighbors in your active geohash cell with verified coordinates.",
                 fontFamily = DMSansFontFamily,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = SecondaryText,
-                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+                modifier = Modifier.padding(top = 1.dp, bottom = 8.dp)
             )
 
             // Quick Topic Chips
@@ -261,7 +261,7 @@ fun GeohashMessageComposer(
             ) {
                 items(quickTopics) { topic ->
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = SoftSurface,
                         border = BorderStroke(1.dp, CardBorderColor),
                         modifier = Modifier
@@ -276,13 +276,13 @@ fun GeohashMessageComposer(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = SlateBlue,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Main Text Message Composer Input
             OutlinedTextField(
@@ -299,13 +299,13 @@ fun GeohashMessageComposer(
                     Text(
                         text = "Share an update or notice with neighbors in geohash #$displayGeohash...",
                         fontFamily = DMSansFontFamily,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = SecondaryText
                     )
                 },
-                minLines = 3,
-                maxLines = 5,
-                shape = RoundedCornerShape(16.dp),
+                minLines = 2,
+                maxLines = 4,
+                shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = DeepNavy,
                     unfocusedBorderColor = CardBorderColor,

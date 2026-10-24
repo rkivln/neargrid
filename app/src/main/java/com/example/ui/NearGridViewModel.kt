@@ -69,7 +69,8 @@ data class NearGridUiState(
     val fuzzyCoordinateOffset: Boolean = false,
     val incognitoGridPresence: Boolean = false,
     val allowProximityMessaging: Boolean = true,
-    val showUserProfileEditor: Boolean = false
+    val showUserProfileEditor: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
@@ -133,12 +134,16 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
 
         // Immediately attempt fresh device GPS acquisition
-        refreshDeviceLocation()
+        refreshGridData()
     }
 
     fun refreshDeviceLocation() {
+        refreshGridData()
+    }
+
+    fun refreshGridData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLocating = true)
+            _uiState.value = _uiState.value.copy(isRefreshing = true, isLocating = true)
             val location = LocationHelper.getFreshDeviceLocation(getApplication())
             if (location != null) {
                 _currentLocation.value = location
@@ -167,10 +172,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     currentGeohash = computedGeohash,
                     selectedCell = dynamicCell,
                     isLocating = false,
+                    isRefreshing = false,
                     gpsModeEnabled = true
                 )
             } else {
-                _uiState.value = _uiState.value.copy(isLocating = false)
+                _uiState.value = _uiState.value.copy(isLocating = false, isRefreshing = false)
             }
         }
     }

@@ -77,8 +77,14 @@ import com.example.ui.theme.SoftCream
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmIvory
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     currentCell: GridCell?,
     discoveryRadiusMeters: Int,
     gpsEnabled: Boolean,
@@ -106,11 +112,16 @@ fun HomeScreen(
     onOpenCreateDialog: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(WarmIvory)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize().testTag("home_pull_to_refresh")
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(WarmIvory)
+        ) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             // Top Navigation & Coordinate Bar
             item {
@@ -129,8 +140,8 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(26.dp),
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = PureWhite),
                     border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                 ) {
@@ -139,7 +150,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(190.dp)
+                                .height(130.dp)
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.img_neighborhood_editorial),
@@ -170,15 +181,15 @@ fun HomeScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
-                                    .padding(14.dp)
+                                    .padding(10.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(7.dp)
+                                            .size(6.dp)
                                             .clip(CircleShape)
                                             .background(PastelMint)
                                     )
@@ -198,23 +209,23 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 16.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
                             Text(
                                 text = "Your neighborhood, coordinated.",
                                 fontFamily = DMSerifFontFamily,
-                                fontSize = 28.sp,
-                                lineHeight = 33.sp,
+                                fontSize = 22.sp,
+                                lineHeight = 26.sp,
                                 color = PrimaryText
                             )
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
                                 text = "A quiet, coordinate-aware network for sharing tools, lending hands, and organizing local life without revealing your home address.",
                                 fontFamily = DMSansFontFamily,
-                                fontSize = 13.sp,
-                                lineHeight = 19.sp,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
                                 color = SecondaryText
                             )
                         }
@@ -583,6 +594,7 @@ fun HomeScreen(
             }
         }
     }
+}
 }
 
 @Composable

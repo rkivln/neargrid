@@ -73,8 +73,14 @@ import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmDivider
 import com.example.ui.theme.WarmIvory
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LivingGridScreen(
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     cells: List<GridCell>,
     currentCell: GridCell?,
     discoveryRadiusMeters: Int,
@@ -85,11 +91,16 @@ fun LivingGridScreen(
     var activeLayer by remember { mutableStateOf("ALL") }
     var showCalibrationDialog by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(WarmIvory)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize().testTag("grid_pull_to_refresh")
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(WarmIvory)
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -197,9 +208,9 @@ fun LivingGridScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .height(310.dp)
+                    .height(180.dp)
                     .testTag("interactive_grid_canvas"),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = PureWhite),
                 border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
             ) {
@@ -228,7 +239,7 @@ fun LivingGridScreen(
 
                         // Delicate paper coordinate grid
                         val gridLineColor = Color(0xFFF0EFE8)
-                        val step = 32f
+                        val step = 28f
                         var x = 0f
                         while (x < w) {
                             drawLine(gridLineColor, Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
@@ -242,9 +253,9 @@ fun LivingGridScreen(
 
                         // Discovery Radius Rings in soft pastel cyan & peach
                         val ringRadius = when (discoveryRadiusMeters) {
-                            300 -> 65f
-                            800 -> 115f
-                            else -> 150f
+                            300 -> 38f
+                            800 -> 65f
+                            else -> 85f
                         }
 
                         drawCircle(
@@ -261,59 +272,59 @@ fun LivingGridScreen(
 
                         // Cell connection lines
                         val centerOffset = Offset(cx, cy)
-                        val elmwoodOffset = Offset(cx - 100f, cy - 45f)
-                        val pinecrestOffset = Offset(cx + 95f, cy + 55f)
-                        val sunsetOffset = Offset(cx - 20f, cy - 90f)
+                        val elmwoodOffset = Offset(cx - 80f, cy - 30f)
+                        val pinecrestOffset = Offset(cx + 75f, cy + 35f)
+                        val sunsetOffset = Offset(cx - 15f, cy - 55f)
 
                         val linkColor = Color(0xFFDCD8CC)
-                        drawLine(linkColor, centerOffset, elmwoodOffset, strokeWidth = 2f)
-                        drawLine(linkColor, centerOffset, pinecrestOffset, strokeWidth = 2f)
-                        drawLine(linkColor, centerOffset, sunsetOffset, strokeWidth = 2f)
+                        drawLine(linkColor, centerOffset, elmwoodOffset, strokeWidth = 1.5f)
+                        drawLine(linkColor, centerOffset, pinecrestOffset, strokeWidth = 1.5f)
+                        drawLine(linkColor, centerOffset, sunsetOffset, strokeWidth = 1.5f)
 
                         // Elmwood Cell
                         val isElmwood = currentCell?.id == "cell_elmwood_north"
                         drawCircle(
                             color = if (isElmwood) PastelSoftCyan else SoftCream,
-                            radius = 28f,
+                            radius = 20f,
                             center = elmwoodOffset
                         )
-                        drawCircle(PastelCoral.copy(alpha = 0.6f), radius = 28f, center = elmwoodOffset, style = Stroke(1.5f))
+                        drawCircle(PastelCoral.copy(alpha = 0.6f), radius = 20f, center = elmwoodOffset, style = Stroke(1.5f))
 
                         // Pinecrest Cell
                         val isPinecrest = currentCell?.id == "cell_pinecrest_park"
                         drawCircle(
                             color = if (isPinecrest) PastelSoftCyan else SoftCream,
-                            radius = 32f,
+                            radius = 22f,
                             center = pinecrestOffset
                         )
-                        drawCircle(PastelMint.copy(alpha = 0.8f), radius = 32f, center = pinecrestOffset, style = Stroke(1.5f))
+                        drawCircle(PastelMint.copy(alpha = 0.8f), radius = 22f, center = pinecrestOffset, style = Stroke(1.5f))
 
                         // Sunset Ridge Cell
                         val isSunset = currentCell?.id == "cell_sunset_ridge"
                         drawCircle(
                             color = if (isSunset) PastelSoftCyan else SoftCream,
-                            radius = 26f,
+                            radius = 18f,
                             center = sunsetOffset
                         )
-                        drawCircle(PastelPeach, radius = 26f, center = sunsetOffset, style = Stroke(1.5f))
+                        drawCircle(PastelPeach, radius = 18f, center = sunsetOffset, style = Stroke(1.5f))
 
-                        // Center Cell (Oakwood Grove)
+                        // Center Cell (Oakwood Grove / Local Area)
                         val isOakwood = currentCell?.id == "cell_oakwood_center" || currentCell == null
                         drawCircle(
                             color = if (isOakwood) PastelPeach.copy(alpha = 0.6f) else SoftCream,
-                            radius = 38f,
+                            radius = 26f,
                             center = centerOffset
                         )
-                        drawCircle(PastelCoral, radius = 38f, center = centerOffset, style = Stroke(2.5f))
+                        drawCircle(PastelCoral, radius = 26f, center = centerOffset, style = Stroke(2f))
 
                         // Safe Public Meeting Spots (Soft Butter Yellow Dots)
                         if (activeLayer == "ALL" || activeLayer == "SAFE_SPOTS") {
-                            val spot1 = Offset(cx + 42f, cy - 25f)
-                            val spot2 = Offset(cx - 52f, cy + 42f)
-                            drawCircle(PastelButterYellow, radius = 8f, center = spot1)
-                            drawCircle(PrimaryText, radius = 2.5f, center = spot1)
-                            drawCircle(PastelButterYellow, radius = 8f, center = spot2)
-                            drawCircle(PrimaryText, radius = 2.5f, center = spot2)
+                            val spot1 = Offset(cx + 32f, cy - 18f)
+                            val spot2 = Offset(cx - 38f, cy + 28f)
+                            drawCircle(PastelButterYellow, radius = 6f, center = spot1)
+                            drawCircle(PrimaryText, radius = 2f, center = spot1)
+                            drawCircle(PastelButterYellow, radius = 6f, center = spot2)
+                            drawCircle(PrimaryText, radius = 2f, center = spot2)
                         }
                     }
 
@@ -322,51 +333,53 @@ fun LivingGridScreen(
                         text = "${currentCell?.name ?: "Oakwood"}\n${currentCell?.code ?: "#H3-8826"}",
                         fontFamily = DMSansFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         color = PrimaryText,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .padding(bottom = 2.dp),
+                            .padding(horizontal = 12.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
 
                     // Safe Spot Legend Pill
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = SoftCream,
                         border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(14.dp)
+                            .padding(8.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(7.dp)
+                                    .size(6.dp)
                                     .clip(CircleShape)
                                     .background(PastelButterYellow)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Safe meeting spot",
                                 fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = PrimaryText
                             )
                         }
                     }
 
                     Text(
-                        text = "Tap any zone to focus radius",
+                        text = "Tap zone to focus",
                         fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         color = SecondaryText,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(14.dp)
+                            .padding(8.dp)
                     )
                 }
             }
@@ -613,13 +626,13 @@ fun LivingGridScreen(
             Spacer(modifier = Modifier.height(100.dp))
         }
 
-        // Section 8: Polished Progress Screen modal when calibrating
         if (showCalibrationDialog) {
             MeshCalibrationProgressDialog(
                 onDismiss = { showCalibrationDialog = false }
             )
         }
     }
+}
 }
 
 @Composable

@@ -285,6 +285,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             when (uiState.currentDestination) {
                 NavigationDestination.HOME -> {
                     HomeScreen(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refreshGridData() },
                         currentCell = uiState.selectedCell,
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
                         gpsEnabled = uiState.gpsModeEnabled,
@@ -296,7 +298,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         isPostingGeohashMessage = uiState.isPostingGeohashMessage,
                         geohashPostStatus = uiState.geohashPostStatus,
                         geohashMessages = geohashMessages,
-                        onRefreshLocation = { viewModel.refreshDeviceLocation() },
+                        onRefreshLocation = { viewModel.refreshGridData() },
                         onPostGeohashMessage = { viewModel.postGeohashMessage(it) },
                         onDismissGeohashStatus = { viewModel.clearGeohashPostStatus() },
                         posts = posts,
@@ -315,6 +317,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
 
                 NavigationDestination.GRID -> {
                     LivingGridScreen(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refreshGridData() },
                         cells = cells,
                         currentCell = uiState.selectedCell,
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
@@ -325,6 +329,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
 
                 NavigationDestination.COMMUNITY -> {
                     CommunityScreen(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refreshGridData() },
                         notices = notices,
                         issues = issues,
                         onToggleUpvote = { viewModel.toggleIssueUpvote(it) },

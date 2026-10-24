@@ -70,8 +70,14 @@ import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmDivider
 import com.example.ui.theme.WarmIvory
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     notices: List<CommunityNotice>,
     issues: List<CommunityIssue>,
     onToggleUpvote: (CommunityIssue) -> Unit,
@@ -82,11 +88,16 @@ fun CommunityScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Noticeboard, 1 = Issue Tracker
     var issueStatusFilter by remember { mutableStateOf("ALL") }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(WarmIvory)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize().testTag("community_pull_to_refresh")
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(WarmIvory)
+        ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Header
             Surface(
@@ -428,6 +439,7 @@ fun CommunityScreen(
             }
         }
     }
+}
 }
 
 @Composable
