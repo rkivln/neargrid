@@ -89,6 +89,7 @@ fun LivingGridScreen(
     onSelectCell: (GridCell) -> Unit,
     onRadiusChange: (Int) -> Unit,
     onShowCellQr: ((GridCell) -> Unit)? = null,
+    onScanQrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var activeLayer by remember { mutableStateOf("ALL") }
@@ -138,9 +139,41 @@ fun LivingGridScreen(
                         }
 
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (onScanQrClick != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = SoftCream,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { onScanQrClick() }
+                                        .testTag("living_grid_scan_qr_button")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.QrCode,
+                                            contentDescription = "Scan QR",
+                                            tint = PrimaryText,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Scan",
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = PrimaryText
+                                        )
+                                    }
+                                }
+                            }
+
                             if (currentCell != null && onShowCellQr != null) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
@@ -163,7 +196,7 @@ fun LivingGridScreen(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Invite QR",
+                                            text = "Invite",
                                             fontFamily = DMSansFontFamily,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 11.sp,

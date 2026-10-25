@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
@@ -284,6 +285,7 @@ fun TopNeighborhoodBar(
     onCellClick: () -> Unit,
     onGpsToggle: () -> Unit,
     onShowQrClick: (() -> Unit)? = null,
+    onScanQrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -324,7 +326,7 @@ fun TopNeighborhoodBar(
                     color = PrimaryText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 140.dp)
+                    modifier = Modifier.widthIn(max = 120.dp)
                 )
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
@@ -344,15 +346,35 @@ fun TopNeighborhoodBar(
                 color = SlateBlue
             )
 
-            // Right: Actions Row (QR Code Invite & GPS Toggle)
+            // Right: Actions Row (QR Code Scan, QR Code Invite & GPS Toggle)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (onScanQrClick != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(PrimarySurface)
+                            .border(1.dp, CardBorderColor, CircleShape)
+                            .clickable { onScanQrClick() }
+                            .testTag("top_bar_scan_qr_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan Grid QR",
+                            modifier = Modifier.size(18.dp),
+                            tint = PrimaryText
+                        )
+                    }
+                }
+
                 if (onShowQrClick != null) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(PrimarySurface)
                             .border(1.dp, CardBorderColor, CircleShape)

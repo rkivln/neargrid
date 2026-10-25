@@ -71,7 +71,8 @@ data class NearGridUiState(
     val allowProximityMessaging: Boolean = true,
     val showUserProfileEditor: Boolean = false,
     val isRefreshing: Boolean = false,
-    val selectedQrCell: GridCell? = null
+    val selectedQrCell: GridCell? = null,
+    val showQrScannerDialog: Boolean = false
 )
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
@@ -405,6 +406,38 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun dismissCellQrDialog() {
         _uiState.value = _uiState.value.copy(selectedQrCell = null)
+    }
+
+    fun openQrScannerDialog() {
+        _uiState.value = _uiState.value.copy(showQrScannerDialog = true)
+    }
+
+    fun closeQrScannerDialog() {
+        _uiState.value = _uiState.value.copy(showQrScannerDialog = false)
+    }
+
+    fun joinGridCellByCode(codeOrUrl: String) {
+        val cleanCode = when {
+            codeOrUrl.contains("cell=") -> "#" + codeOrUrl.substringAfter("cell=").substringBefore("&")
+            codeOrUrl.startsWith("#") -> codeOrUrl
+            else -> "#$codeOrUrl"
+        }
+
+        val matchingCell = _uiState.value.allCells.find { it.code.equals(cleanCode, ignoreCase = true) }
+            ?: GridCell(
+                id = "scanned_${cleanCode.lowercase().replace("#", "")}",
+                name = "Neighbor Grid $cleanCode",
+                code = cleanCode,
+                activeNeighborsCount = 18,
+                openNeedsCount = 3,
+                openOffersCount = 5,
+                description = "Neighborhood spatial grid joined via QR Invitation code scan."
+            )
+
+        _uiState.value = _uiState.value.copy(
+            selectedCell = matchingCell,
+            showQrScannerDialog = false
+        )
     }
 
     fun selectCell(cell: GridCell) {

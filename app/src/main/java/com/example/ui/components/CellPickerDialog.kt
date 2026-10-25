@@ -59,6 +59,7 @@ fun CellPickerDialog(
     currentCell: GridCell?,
     onSelectCell: (GridCell) -> Unit,
     onShowCellQr: ((GridCell) -> Unit)? = null,
+    onScanQrClick: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -100,7 +101,72 @@ fun CellPickerDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            if (onScanQrClick != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = SoftCream,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PastelCoral.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable {
+                            onDismiss()
+                            onScanQrClick()
+                        }
+                        .testTag("cell_picker_scan_qr_banner")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(PastelPeach),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode,
+                                contentDescription = null,
+                                tint = PrimaryText,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Scan Neighbor's QR Code",
+                                fontFamily = DMSerifFontFamily,
+                                fontSize = 15.sp,
+                                color = PrimaryText
+                            )
+                            Text(
+                                text = "Instantly join another grid cell by camera scan",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = SecondaryText
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = PrimaryText
+                        ) {
+                            Text(
+                                text = "Scan",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = PureWhite,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -53,6 +53,7 @@ import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
+import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InboxScreen
@@ -309,6 +310,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onCellClick = { showCellPickerDialog = true },
                         onGpsToggle = onToggleGps,
                         onShowQrClick = { uiState.selectedCell?.let { viewModel.showCellQrDialog(it) } },
+                        onScanQrClick = { viewModel.openQrScannerDialog() },
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
                         onFilterChange = { viewModel.setPostFilter(it) },
                         onCategoryChange = { viewModel.setCategoryFilter(it) },
@@ -326,7 +328,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
                         onSelectCell = { viewModel.selectCell(it) },
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
-                        onShowCellQr = { viewModel.showCellQrDialog(it) }
+                        onShowCellQr = { viewModel.showCellQrDialog(it) },
+                        onScanQrClick = { viewModel.openQrScannerDialog() }
                     )
                 }
 
@@ -384,6 +387,9 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             onShowCellQr = { cell ->
                 viewModel.showCellQrDialog(cell)
             },
+            onScanQrClick = {
+                viewModel.openQrScannerDialog()
+            },
             onDismiss = { showCellPickerDialog = false }
         )
     }
@@ -394,6 +400,17 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         GeohashQrInviteDialog(
             cell = qrCell,
             onDismiss = { viewModel.dismissCellQrDialog() }
+        )
+    }
+
+    // Modal Dialog for QR Code scanner
+    if (uiState.showQrScannerDialog) {
+        QrCodeScannerDialog(
+            sampleCells = cells,
+            onScannedGeohash = { geohash ->
+                viewModel.joinGridCellByCode(geohash)
+            },
+            onDismiss = { viewModel.closeQrScannerDialog() }
         )
     }
 
