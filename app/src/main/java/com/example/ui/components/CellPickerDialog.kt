@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
@@ -57,6 +58,7 @@ fun CellPickerDialog(
     cells: List<GridCell>,
     currentCell: GridCell?,
     onSelectCell: (GridCell) -> Unit,
+    onShowCellQr: ((GridCell) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -184,7 +186,7 @@ fun CellPickerDialog(
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "${cell.activeNeighborsCount} neighbors • ${cell.openNeedsCount} needs • ${cell.openOffersCount} offers",
                                     fontFamily = DMSansFontFamily,
@@ -193,14 +195,34 @@ fun CellPickerDialog(
                                 )
                             }
 
-                            if (isSelected) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = PastelCoral,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (onShowCellQr != null) {
+                                    IconButton(
+                                        onClick = { onShowCellQr(cell) },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("cell_qr_button_${cell.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.QrCode,
+                                            contentDescription = "Share Cell QR",
+                                            tint = PrimaryText,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = PastelCoral,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }

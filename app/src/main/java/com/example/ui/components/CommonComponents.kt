@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
@@ -282,6 +283,7 @@ fun TopNeighborhoodBar(
     isLocating: Boolean = false,
     onCellClick: () -> Unit,
     onGpsToggle: () -> Unit,
+    onShowQrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -322,7 +324,7 @@ fun TopNeighborhoodBar(
                     color = PrimaryText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 160.dp)
+                    modifier = Modifier.widthIn(max = 140.dp)
                 )
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
@@ -342,23 +344,48 @@ fun TopNeighborhoodBar(
                 color = SlateBlue
             )
 
-            // Right: Circular GPS Mode Toggle Button
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(if (gpsEnabled) AccentLime else PrimarySurface)
-                    .border(1.dp, if (gpsEnabled) LightLime else CardBorderColor, CircleShape)
-                    .clickable { onGpsToggle() }
-                    .testTag("gps_toggle_button"),
-                contentAlignment = Alignment.Center
+            // Right: Actions Row (QR Code Invite & GPS Toggle)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (gpsEnabled) Icons.Outlined.GpsFixed else Icons.Outlined.GpsNotFixed,
-                    contentDescription = "GPS Toggle",
-                    modifier = Modifier.size(18.dp),
-                    tint = PrimaryText
-                )
+                if (onShowQrClick != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(PrimarySurface)
+                            .border(1.dp, CardBorderColor, CircleShape)
+                            .clickable { onShowQrClick() }
+                            .testTag("top_bar_qr_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCode,
+                            contentDescription = "Share Cell QR",
+                            modifier = Modifier.size(18.dp),
+                            tint = PrimaryText
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(if (gpsEnabled) AccentLime else PrimarySurface)
+                        .border(1.dp, if (gpsEnabled) LightLime else CardBorderColor, CircleShape)
+                        .clickable { onGpsToggle() }
+                        .testTag("gps_toggle_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (gpsEnabled) Icons.Outlined.GpsFixed else Icons.Outlined.GpsNotFixed,
+                        contentDescription = "GPS Toggle",
+                        modifier = Modifier.size(18.dp),
+                        tint = PrimaryText
+                    )
+                }
             }
         }
     }

@@ -70,7 +70,8 @@ data class NearGridUiState(
     val incognitoGridPresence: Boolean = false,
     val allowProximityMessaging: Boolean = true,
     val showUserProfileEditor: Boolean = false,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val selectedQrCell: GridCell? = null
 )
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
@@ -396,6 +397,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun setDestination(dest: NavigationDestination) {
         _uiState.value = _uiState.value.copy(currentDestination = dest)
+    }
+
+    fun showCellQrDialog(cell: GridCell) {
+        _uiState.value = _uiState.value.copy(selectedQrCell = cell)
+    }
+
+    fun dismissCellQrDialog() {
+        _uiState.value = _uiState.value.copy(selectedQrCell = null)
     }
 
     fun selectCell(cell: GridCell) {

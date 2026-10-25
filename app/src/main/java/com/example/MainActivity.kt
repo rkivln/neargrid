@@ -52,6 +52,7 @@ import com.example.ui.components.AuthVerificationDialog
 import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
+import com.example.ui.components.GeohashQrInviteDialog
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InboxScreen
@@ -307,6 +308,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         selectedCategory = uiState.selectedCategory,
                         onCellClick = { showCellPickerDialog = true },
                         onGpsToggle = onToggleGps,
+                        onShowQrClick = { uiState.selectedCell?.let { viewModel.showCellQrDialog(it) } },
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
                         onFilterChange = { viewModel.setPostFilter(it) },
                         onCategoryChange = { viewModel.setCategoryFilter(it) },
@@ -323,7 +325,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         currentCell = uiState.selectedCell,
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
                         onSelectCell = { viewModel.selectCell(it) },
-                        onRadiusChange = { viewModel.setDiscoveryRadius(it) }
+                        onRadiusChange = { viewModel.setDiscoveryRadius(it) },
+                        onShowCellQr = { viewModel.showCellQrDialog(it) }
                     )
                 }
 
@@ -378,7 +381,19 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             cells = cells,
             currentCell = uiState.selectedCell,
             onSelectCell = { viewModel.selectCell(it) },
+            onShowCellQr = { cell ->
+                viewModel.showCellQrDialog(cell)
+            },
             onDismiss = { showCellPickerDialog = false }
+        )
+    }
+
+    // Modal Dialog for QR Code cell invitations
+    val qrCell = uiState.selectedQrCell
+    if (qrCell != null) {
+        GeohashQrInviteDialog(
+            cell = qrCell,
+            onDismiss = { viewModel.dismissCellQrDialog() }
         )
     }
 
