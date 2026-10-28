@@ -72,7 +72,8 @@ data class NearGridUiState(
     val showUserProfileEditor: Boolean = false,
     val isRefreshing: Boolean = false,
     val selectedQrCell: GridCell? = null,
-    val showQrScannerDialog: Boolean = false
+    val showQrScannerDialog: Boolean = false,
+    val showGridQrScreen: Boolean = false
 )
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
@@ -414,6 +415,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun closeQrScannerDialog() {
         _uiState.value = _uiState.value.copy(showQrScannerDialog = false)
+    }
+
+    fun openGridQrScreen() {
+        _uiState.value = _uiState.value.copy(showGridQrScreen = true)
+    }
+
+    fun closeGridQrScreen() {
+        _uiState.value = _uiState.value.copy(showGridQrScreen = false)
     }
 
     fun joinGridCellByCode(codeOrUrl: String) {

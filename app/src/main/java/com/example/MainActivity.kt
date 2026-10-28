@@ -55,6 +55,7 @@ import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
 import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.CommunityScreen
+import com.example.ui.screens.GridQrInviteScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
@@ -171,14 +172,28 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     }
 
     // Predictive Back Handling
-    BackHandler(enabled = uiState.showUserProfileEditor || uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
-        if (uiState.showUserProfileEditor) {
+    BackHandler(enabled = uiState.showGridQrScreen || uiState.showUserProfileEditor || uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
+        if (uiState.showGridQrScreen) {
+            viewModel.closeGridQrScreen()
+        } else if (uiState.showUserProfileEditor) {
             viewModel.closeUserProfileEditor()
         } else if (uiState.activeConversation != null) {
             viewModel.closeConversation()
         } else if (uiState.currentDestination != NavigationDestination.HOME) {
             viewModel.setDestination(NavigationDestination.HOME)
         }
+    }
+
+    // Full-screen Grid QR Code Pass & Invitation Screen
+    if (uiState.showGridQrScreen) {
+        GridQrInviteScreen(
+            currentCell = uiState.selectedCell,
+            currentGeohash = uiState.currentGeohash,
+            userNickname = uiState.userNickname,
+            onBackClick = { viewModel.closeGridQrScreen() },
+            onOpenScanner = { viewModel.openQrScannerDialog() }
+        )
+        return
     }
 
     // Full-screen User Profile & Privacy settings editor
@@ -369,6 +384,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         avatarUri = uiState.avatarUri,
                         avatarPresetIndex = uiState.avatarPresetIndex,
                         onEditProfile = { viewModel.openUserProfileEditor() },
+                        onOpenGridQrScreen = { viewModel.openGridQrScreen() },
                         onResetToFreshGrid = { viewModel.resetToFreshGrid() },
                         userEmail = currentUser?.email,
                         onSignOut = { viewModel.signOut(context) }

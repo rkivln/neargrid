@@ -29,7 +29,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.VolunteerActivism
@@ -98,6 +100,7 @@ fun ProfileScreen(
     avatarUri: String? = null,
     avatarPresetIndex: Int = 0,
     onEditProfile: () -> Unit = {},
+    onOpenGridQrScreen: () -> Unit = {},
     onResetToFreshGrid: () -> Unit = {},
     userEmail: String? = null,
     onSignOut: () -> Unit = {},
@@ -363,6 +366,67 @@ fun ProfileScreen(
                             )
                         }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Invite & Share Grid QR Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .clickable { onOpenGridQrScreen() }
+                    .testTag("profile_share_grid_qr_card"),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SoftCream),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(PastelCoral.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Share Grid QR Code",
+                            tint = PrimaryText,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Grid Pass & QR Invite Code",
+                            fontFamily = DMSerifFontFamily,
+                            fontSize = 16.sp,
+                            color = PrimaryText
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Generate printable QR code or invite link for ${currentCell?.name ?: "your grid"}",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 12.sp,
+                            color = SecondaryText
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Open",
+                        tint = PrimaryText,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
