@@ -75,7 +75,11 @@ import com.example.ui.theme.WarmBorder
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (ignored: Exception) {
+            // Edge-to-edge fallback for custom OEM ROMs
+        }
         setContent {
             NearGridTheme {
                 NearGridApp()

@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -94,6 +93,9 @@ fun SignInScreen(
             try {
                 val credentialManager = CredentialManager.create(context)
                 val serverClientId = context.getString(R.string.default_web_client_id)
+                if (serverClientId.isBlank() || serverClientId == "YOUR_DEFAULT_WEB_CLIENT_ID") {
+                    throw IllegalStateException("Google Sign-In is not configured. Missing valid Web Client ID.")
+                }
                 val googleOption = GetSignInWithGoogleOption.Builder(serverClientId = serverClientId)
                     .build()
 

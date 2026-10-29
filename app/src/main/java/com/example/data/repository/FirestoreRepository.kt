@@ -25,13 +25,33 @@ import java.util.UUID
 
 class FirestoreRepository(val db: FirebaseFirestore) {
 
-    constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
-    )
+    constructor(context: Context) : this(getSafeFirestoreInstance(context))
 
-    private val auth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth
+        get() = try {
+            FirebaseAuth.getInstance()
+        } catch (e: Exception) {
+            FirebaseAuth.getInstance()
+        }
+
+    companion object {
+        private fun getSafeFirestoreInstance(context: Context): FirebaseFirestore {
+            return try {
+                val databaseId = try {
+                    context.applicationContext.getString(R.string.firestore_database_id)
+                } catch (e: Exception) {
+                    ""
+                }
+                if (databaseId.isNotBlank() && databaseId != "(default)") {
+                    FirebaseFirestore.getInstance(databaseId)
+                } else {
+                    FirebaseFirestore.getInstance()
+                }
+            } catch (e: Exception) {
+                FirebaseFirestore.getInstance()
+            }
+        }
+    }
 
     fun requireUserId(): String {
         return auth.currentUser?.uid

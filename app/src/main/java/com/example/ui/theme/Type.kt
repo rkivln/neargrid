@@ -9,12 +9,13 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 
 // Clean Geometric Sans-Serif: Manrope
-val ManropeFontFamily = FontFamily(
-    Font(R.font.manrope, FontWeight.Normal),
-    Font(R.font.manrope, FontWeight.Medium),
-    Font(R.font.manrope, FontWeight.SemiBold),
-    Font(R.font.manrope, FontWeight.Bold)
-)
+val ManropeFontFamily: FontFamily = try {
+    FontFamily(
+        Font(R.font.manrope, FontWeight.Normal)
+    )
+} catch (e: Exception) {
+    FontFamily.Default
+}
 
 // Aliases for compatibility
 val GeometricDisplayFontFamily = ManropeFontFamily

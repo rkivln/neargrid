@@ -79,11 +79,11 @@ data class NearGridUiState(
 
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val auth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val firestoreRepository = FirestoreRepository(application)
     private val localRepository: NearGridRepository
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(try { auth.currentUser } catch (e: Exception) { null })
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     private val _currentLocation = MutableStateFlow<UserLocation?>(null)
