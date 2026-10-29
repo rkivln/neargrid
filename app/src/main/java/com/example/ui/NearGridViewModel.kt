@@ -159,15 +159,18 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         localRepository = NearGridRepository(db)
 
         viewModelScope.launch {
-            // Clear any lingering synthetic mock data
-            localRepository.seedInitialDataIfEmpty()
+            try {
+                localRepository.seedInitialDataIfEmpty()
+            } catch (ignored: Exception) {}
         }
 
-        auth.addAuthStateListener(authStateListener)
-        val initialUser = auth.currentUser
-        if (initialUser != null) {
-            syncUserSession(initialUser)
-        }
+        try {
+            auth.addAuthStateListener(authStateListener)
+            val initialUser = auth.currentUser
+            if (initialUser != null) {
+                syncUserSession(initialUser)
+            }
+        } catch (ignored: Exception) {}
 
         // Immediately attempt fresh device GPS acquisition
         refreshGridData()
@@ -217,62 +220,79 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun syncUserSession(user: FirebaseUser) {
+    private fun syncUserSession(user: FirebaseUser?) {
+        if (user == null) return
         viewModelScope.launch {
-            firestoreRepository.observeUserProfile(user.uid).collect { profile ->
-                if (profile != null) {
-                    _uiState.value = _uiState.value.copy(
-                        userNickname = profile.displayName.ifBlank { user.displayName ?: "Local Resident" },
-                        userHandle = profile.handle.ifBlank { "@${user.email?.substringBefore("@") ?: "resident"}" },
-                        userBio = profile.bio,
-                        avatarUri = profile.avatarUri ?: user.photoUrl?.toString(),
-                        avatarPresetIndex = profile.avatarPresetIndex,
-                        neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
-                        fuzzyCoordinateOffset = profile.fuzzyCoords,
-                        incognitoGridPresence = profile.incognito,
-                        allowProximityMessaging = profile.allowDMs
-                    )
-                } else {
-                    val defaultName = user.displayName?.ifBlank { "Local Resident" } ?: "Local Resident"
-                    val defaultHandle = "@${user.email?.substringBefore("@") ?: "resident"}"
-                    val loc = _currentLocation.value
-                    val newProfile = UserProfile(
-                        userId = user.uid,
-                        email = user.email ?: "",
-                        displayName = defaultName,
-                        handle = defaultHandle,
-                        bio = "Civic resident connected via Google Resident Pass.",
-                        cellId = _uiState.value.selectedCell?.id ?: "cell_local",
-                        cellName = loc?.displayAreaName ?: "My Neighborhood",
-                        avatarUri = user.photoUrl?.toString(),
-                        privacyRadiusMeters = 1000,
-                        fuzzyCoords = false,
-                        incognito = false,
-                        allowDMs = true
-                    )
-                    firestoreRepository.saveUserProfile(newProfile)
+            try {
+                firestoreRepository.observeUserProfile(user.uid).collect { profile ->
+                    if (profile != null) {
+                        _uiState.value = _uiState.value.copy(
+                            userNickname = profile.displayName.ifBlank { user.displayName ?: "Local Resident" },
+                            userHandle = profile.handle.ifBlank { "@${user.email?.substringBefore("@") ?: "resident"}" },
+                            userBio = profile.bio,
+                            avatarUri = profile.avatarUri ?: user.photoUrl?.toString(),
+                            avatarPresetIndex = profile.avatarPresetIndex,
+                            neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
+                            fuzzyCoordinateOffset = profile.fuzzyCoords,
+                            incognitoGridPresence = profile.incognito,
+                            allowProximityMessaging = profile.allowDMs
+                        )
+                    } else {
+                        val defaultName = user.displayName?.ifBlank { "Local Resident" } ?: "Local Resident"
+                        val defaultHandle = "@${user.email?.substringBefore("@") ?: "resident"}"
+                        val loc = _currentLocation.value
+                        val newProfile = UserProfile(
+                            userId = user.uid,
+                            email = user.email ?: "",
+                            displayName = defaultName,
+                            handle = defaultHandle,
+                            bio = "Civic resident connected via Google Resident Pass.",
+                            cellId = _uiState.value.selectedCell?.id ?: "cell_local",
+                            cellName = loc?.displayAreaName ?: "My Neighborhood",
+                            avatarUri = user.photoUrl?.toString(),
+                            privacyRadiusMeters = 1000,
+                            fuzzyCoords = false,
+                            incognito = false,
+                            allowDMs = true
+                        )
+                        try {
+                            firestoreRepository.saveUserProfile(newProfile)
+                        } catch (ignored: Exception) {}
+                    }
                 }
-            }
+            } catch (ignored: Exception) {}
         }
 
         // Live real-time posts from Firestore
         viewModelScope.launch {
-            firestoreRepository.observePosts().collect { posts ->
-                _firestorePosts.value = posts
+            try {
+                firestoreRepository.observePosts().collect { posts ->
+                    _firestorePosts.value = posts
+                }
+            } catch (ignored: Exception) {
+                _firestorePosts.value = emptyList()
             }
         }
 
         // Live real-time community issues from Firestore
         viewModelScope.launch {
-            firestoreRepository.observeIssues().collect { issuesList ->
-                _firestoreIssues.value = issuesList
+            try {
+                firestoreRepository.observeIssues().collect { issuesList ->
+                    _firestoreIssues.value = issuesList
+                }
+            } catch (ignored: Exception) {
+                _firestoreIssues.value = emptyList()
             }
         }
 
         // Live real-time conversations from Firestore
         viewModelScope.launch {
-            firestoreRepository.observeConversations().collect { convs ->
-                _firestoreConversations.value = convs
+            try {
+                firestoreRepository.observeConversations().collect { convs ->
+                    _firestoreConversations.value = convs
+                }
+            } catch (ignored: Exception) {
+                _firestoreConversations.value = emptyList()
             }
         }
     }
