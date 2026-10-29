@@ -27,41 +27,69 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     constructor(context: Context) : this(getSafeFirestoreInstance(context))
 
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth?
         get() = try {
             FirebaseAuth.getInstance()
         } catch (e: Exception) {
-            FirebaseAuth.getInstance()
+            android.util.Log.w("FirestoreRepository", "FirebaseAuth.getInstance() failed: ${e.message}")
+            null
         }
 
     companion object {
         private fun getSafeFirestoreInstance(context: Context): FirebaseFirestore {
-            return try {
-                val databaseId = try {
-                    context.applicationContext.getString(R.string.firestore_database_id)
+            // Ensure FirebaseApp is active before requesting Firestore
+            val appContext = context.applicationContext
+            if (com.google.firebase.FirebaseApp.getApps(appContext).isEmpty()) {
+                try {
+                    com.google.firebase.FirebaseApp.initializeApp(appContext)
                 } catch (e: Exception) {
-                    ""
+                    try {
+                        val options = com.google.firebase.FirebaseOptions.Builder()
+                            .setApplicationId("1:253737365034:android:858656ab161612d795dd53")
+                            .setProjectId("gen-lang-client-0509703417")
+                            .setApiKey("AIzaSyBSc8bWTsIYVL8Sj7kicx9zSZLOAcLD1LA")
+                            .setGcmSenderId("253737365034")
+                            .setStorageBucket("gen-lang-client-0509703417.firebasestorage.app")
+                            .build()
+                        com.google.firebase.FirebaseApp.initializeApp(appContext, options)
+                    } catch (ignored: Exception) {}
                 }
-                if (databaseId.isNotBlank() && databaseId != "(default)") {
-                    FirebaseFirestore.getInstance(databaseId)
-                } else {
-                    FirebaseFirestore.getInstance()
-                }
+            }
+
+            val databaseId = try {
+                appContext.getString(R.string.firestore_database_id)
             } catch (e: Exception) {
+                ""
+            }
+
+            if (databaseId.isNotBlank() && databaseId != "(default)") {
+                try {
+                    return FirebaseFirestore.getInstance(databaseId)
+                } catch (e: Exception) {
+                    android.util.Log.w("FirestoreRepository", "Named database ($databaseId) failed, falling back to default", e)
+                }
+            }
+
+            return try {
                 FirebaseFirestore.getInstance()
+            } catch (e: Exception) {
+                android.util.Log.e("FirestoreRepository", "Default Firestore instance failed, attempting app fallback", e)
+                val app = com.google.firebase.FirebaseApp.getApps(appContext).firstOrNull()
+                    ?: try { com.google.firebase.FirebaseApp.initializeApp(appContext) } catch (ignored: Exception) { null }
+                if (app != null) FirebaseFirestore.getInstance(app) else FirebaseFirestore.getInstance()
             }
         }
     }
 
     fun requireUserId(): String {
-        return auth.currentUser?.uid
+        return auth?.currentUser?.uid
             ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
     }
 
     // --- User Profile ---
 
     fun observeUserProfile(userId: String): Flow<UserProfile?> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null || userId.isBlank()) {
             trySend(null)
             close()
@@ -143,7 +171,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Posts (Needs / Offers / Meetups) ---
 
     fun observePosts(): Flow<List<NeighborPost>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
             close()
@@ -159,7 +187,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     close()
                     return@addSnapshotListener
                 }
-                val currentUid = auth.currentUser?.uid ?: ""
+                val currentUid = auth?.currentUser?.uid ?: ""
                 val items = snapshot?.documents?.mapNotNull { doc ->
                     try {
                         val data = doc.data ?: return@mapNotNull null
@@ -294,7 +322,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Community Issues ---
 
     fun observeIssues(): Flow<List<CommunityIssue>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
             close()
@@ -309,7 +337,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     close()
                     return@addSnapshotListener
                 }
-                val currentUid = auth.currentUser?.uid ?: ""
+                val currentUid = auth?.currentUser?.uid ?: ""
                 val items = snapshot?.documents?.mapNotNull { doc ->
                     try {
                         val data = doc.data ?: return@mapNotNull null
@@ -411,7 +439,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Conversations & Direct Coordination ---
 
     fun observeConversations(): Flow<List<Conversation>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
             close()
@@ -432,7 +460,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                         val data = doc.data ?: return@mapNotNull null
                         val pIds = (data["participantIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                         val pNames = (data["participantNames"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                        val otherName = pNames.firstOrNull { it != (auth.currentUser?.displayName ?: "") }
+                        val otherName = pNames.firstOrNull { it != (auth?.currentUser?.displayName ?: "") }
                             ?: pNames.firstOrNull() ?: "Neighbor"
 
                         Conversation(
@@ -457,7 +485,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     }
 
     fun observeMessages(conversationId: String): Flow<List<ChatMessage>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null || conversationId.isBlank()) {
             trySend(emptyList())
             close()
@@ -474,7 +502,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     close()
                     return@addSnapshotListener
                 }
-                val currentUid = auth.currentUser?.uid ?: ""
+                val currentUid = auth?.currentUser?.uid ?: ""
                 val items = snapshot?.documents?.mapNotNull { doc ->
                     try {
                         val data = doc.data ?: return@mapNotNull null
@@ -506,7 +534,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         meetingPoint: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = auth.currentUser?.displayName ?: "Neighbor"
+        val displayName = auth?.currentUser?.displayName ?: "Neighbor"
         val msgDoc = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
@@ -544,7 +572,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     suspend fun startConversationForPost(post: NeighborPost): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val currentUserName = auth.currentUser?.displayName ?: "Neighbor"
+        val currentUserName = auth?.currentUser?.displayName ?: "Neighbor"
         val convId = "conv_${post.id}_${uid.take(6)}"
         val convRef = db.collection("conversations").document(convId)
 
@@ -575,7 +603,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Geohash Messages (Broadcasts by Geohash Area) ---
 
     fun observeGeohashMessages(geohash: String? = null): Flow<List<GeohashMessage>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
             close()
@@ -595,7 +623,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 close()
                 return@addSnapshotListener
             }
-            val currentUid = auth.currentUser?.uid ?: ""
+            val currentUid = auth?.currentUser?.uid ?: ""
             val items = snapshot?.documents?.mapNotNull { doc ->
                 try {
                     val data = doc.data ?: return@mapNotNull null
@@ -635,7 +663,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         localityName: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = authorName.ifBlank { auth.currentUser?.displayName ?: "Neighbor" }
+        val displayName = authorName.ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }
         val initials = displayName.split(" ")
             .filter { it.isNotBlank() }
             .take(2)
@@ -672,7 +700,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     // --- Threaded Post Comments ---
 
     fun observePostComments(postId: String): Flow<List<PostComment>> = callbackFlow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid == null || postId.isBlank()) {
             trySend(emptyList())
             close()
@@ -716,7 +744,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         parentId: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = authorName.ifBlank { auth.currentUser?.displayName ?: "Neighbor" }
+        val displayName = authorName.ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }
         val initials = displayName.split(" ")
             .filter { it.isNotBlank() }
             .take(2)

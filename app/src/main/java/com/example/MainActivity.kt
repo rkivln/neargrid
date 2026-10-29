@@ -80,10 +80,14 @@ class MainActivity : ComponentActivity() {
         } catch (ignored: Exception) {
             // Edge-to-edge fallback for custom OEM ROMs
         }
-        setContent {
-            NearGridTheme {
-                NearGridApp()
+        try {
+            setContent {
+                NearGridTheme {
+                    NearGridApp()
+                }
             }
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "Fatal error during Activity setContent", t)
         }
     }
 }
@@ -98,7 +102,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val issues by viewModel.issues.collectAsStateWithLifecycle()
     val notices by viewModel.notices.collectAsStateWithLifecycle()
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
-    val chatMessages by viewModel.getChatMessagesForActive().collectAsStateWithLifecycle()
+    val chatMessages by viewModel.activeChatMessages.collectAsStateWithLifecycle()
     val geohashMessages by viewModel.geohashMessages.collectAsStateWithLifecycle()
     val activeCommentsPost by viewModel.activePostForComments.collectAsStateWithLifecycle()
     val postComments by viewModel.activePostComments.collectAsStateWithLifecycle()

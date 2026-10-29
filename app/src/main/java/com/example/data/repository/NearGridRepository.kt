@@ -8,8 +8,10 @@ import com.example.data.model.Conversation
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -24,14 +26,32 @@ class NearGridRepository(private val database: AppDatabase) {
     private val chatDao = database.chatMessageDao()
     private val cellDao = database.gridCellDao()
 
-    val allPosts: Flow<List<NeighborPost>> = postDao.getAllPosts()
-    val allIssues: Flow<List<CommunityIssue>> = issueDao.getAllIssues()
-    val allNotices: Flow<List<CommunityNotice>> = noticeDao.getAllNotices()
-    val allConversations: Flow<List<Conversation>> = conversationDao.getAllConversations()
-    val allCells: Flow<List<GridCell>> = cellDao.getAllCells()
+    val allPosts: Flow<List<NeighborPost>> = postDao.getAllPosts().catch { e ->
+        Log.e("NearGridRepository", "Failed reading posts from Room", e)
+        emit(emptyList())
+    }
+    val allIssues: Flow<List<CommunityIssue>> = issueDao.getAllIssues().catch { e ->
+        Log.e("NearGridRepository", "Failed reading issues from Room", e)
+        emit(emptyList())
+    }
+    val allNotices: Flow<List<CommunityNotice>> = noticeDao.getAllNotices().catch { e ->
+        Log.e("NearGridRepository", "Failed reading notices from Room", e)
+        emit(emptyList())
+    }
+    val allConversations: Flow<List<Conversation>> = conversationDao.getAllConversations().catch { e ->
+        Log.e("NearGridRepository", "Failed reading conversations from Room", e)
+        emit(emptyList())
+    }
+    val allCells: Flow<List<GridCell>> = cellDao.getAllCells().catch { e ->
+        Log.e("NearGridRepository", "Failed reading cells from Room", e)
+        emit(emptyList())
+    }
 
     fun getChatMessages(conversationId: String): Flow<List<ChatMessage>> {
-        return chatDao.getMessagesForConversation(conversationId)
+        return chatDao.getMessagesForConversation(conversationId).catch { e ->
+            Log.e("NearGridRepository", "Failed reading chat messages from Room", e)
+            emit(emptyList())
+        }
     }
 
     suspend fun createPost(
