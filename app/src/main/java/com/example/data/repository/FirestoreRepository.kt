@@ -7,6 +7,7 @@ import com.example.data.model.CommunityIssue
 import com.example.data.model.Conversation
 import com.example.data.model.GeohashMessage
 import com.example.data.model.NeighborPost
+import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
 import com.example.data.remote.OperationType
 import com.example.data.remote.handleFirestoreError
@@ -138,9 +139,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     close()
                     return@addSnapshotListener
                 }
+                val currentUid = auth.currentUser?.uid ?: ""
                 val items = snapshot?.documents?.mapNotNull { doc ->
                     try {
                         val data = doc.data ?: return@mapNotNull null
+                        val upvoters = (data["upvoterIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                         NeighborPost(
                             id = doc.id,
                             userId = data["userId"] as? String ?: "",
@@ -158,6 +161,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                             urgency = data["urgency"] as? String ?: "NORMAL",
                             expiresInHours = (data["expiresInHours"] as? Number)?.toInt() ?: 48,
                             status = data["status"] as? String ?: "ACTIVE",
+                            mediaUris = (data["mediaUris"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                            mediaTypes = (data["mediaTypes"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                            upvotesCount = (data["upvotesCount"] as? Number)?.toInt() ?: upvoters.size,
+                            hasUserUpvoted = upvoters.contains(currentUid),
+                            upvoterIds = upvoters,
                             createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
                         )
                     } catch (e: Exception) {
@@ -190,6 +198,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "urgency" to post.urgency,
             "expiresInHours" to post.expiresInHours,
             "status" to "ACTIVE",
+            "mediaUris" to post.mediaUris,
+            "mediaTypes" to post.mediaTypes,
+            "upvotesCount" to 0,
+            "upvoterIds" to emptyList<String>(),
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
@@ -198,6 +210,34 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             Result.success(docId)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun togglePostUpvote(postId: String, currentUpvotes: Int, currentlyUpvoted: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        val uid = requireUserId()
+        val docRef = db.collection("posts").document(postId)
+        try {
+            if (currentlyUpvoted) {
+                docRef.update(
+                    mapOf(
+                        "upvoterIds" to FieldValue.arrayRemove(uid),
+                        "upvotesCount" to FieldValue.increment(-1),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+            } else {
+                docRef.update(
+                    mapOf(
+                        "upvoterIds" to FieldValue.arrayUnion(uid),
+                        "upvotesCount" to FieldValue.increment(1),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
             Result.failure(e)
         }
     }
@@ -268,6 +308,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                             hasUserUpvoted = upvoters.contains(currentUid),
                             upvoterIds = upvoters,
                             assignedVolunteer = data["assignedVolunteer"] as? String,
+                            mediaUris = (data["mediaUris"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                            mediaTypes = (data["mediaTypes"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                             createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
                         )
                     } catch (e: Exception) {
@@ -295,6 +337,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "reporterId" to uid,
             "upvotesCount" to 1,
             "upvoterIds" to listOf(uid),
+            "mediaUris" to issue.mediaUris,
+            "mediaTypes" to issue.mediaTypes,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
@@ -598,6 +642,84 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
         try {
             docRef.set(payload).await()
+            Result.success(docId)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    // --- Threaded Post Comments ---
+
+    fun observePostComments(postId: String): Flow<List<PostComment>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null || postId.isBlank()) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val path = "posts/$postId/comments"
+        val listener = db.collection(path)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    handleFirestoreError(error, OperationType.LIST, path)
+                    trySend(emptyList())
+                    close()
+                    return@addSnapshotListener
+                }
+                val items = snapshot?.documents?.mapNotNull { doc ->
+                    try {
+                        val data = doc.data ?: return@mapNotNull null
+                        PostComment(
+                            id = doc.id,
+                            postId = postId,
+                            authorId = data["authorId"] as? String ?: "",
+                            authorName = data["authorName"] as? String ?: "Neighbor",
+                            authorInitials = data["authorInitials"] as? String ?: "N",
+                            text = data["text"] as? String ?: "",
+                            parentId = data["parentId"] as? String,
+                            timestamp = (data["timestamp"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                } ?: emptyList()
+                trySend(items.sortedBy { it.timestamp })
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun addPostComment(
+        postId: String,
+        text: String,
+        authorName: String = "",
+        parentId: String? = null
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val uid = requireUserId()
+        val displayName = authorName.ifBlank { auth.currentUser?.displayName ?: "Neighbor" }
+        val initials = displayName.split(" ")
+            .filter { it.isNotBlank() }
+            .take(2)
+            .map { it.first().uppercase() }
+            .joinToString("")
+            .ifEmpty { "N" }
+
+        val docId = UUID.randomUUID().toString()
+        val docRef = db.collection("posts").document(postId).collection("comments").document(docId)
+
+        val payload = hashMapOf<String, Any?>(
+            "id" to docId,
+            "postId" to postId,
+            "authorId" to uid,
+            "authorName" to displayName,
+            "authorInitials" to initials,
+            "text" to text.trim(),
+            "parentId" to parentId,
+            "timestamp" to FieldValue.serverTimestamp()
+        )
+
+        try {
+            docRef.set(payload.filterValues { it != null } as Map<String, Any>).await()
             Result.success(docId)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, docRef.path)

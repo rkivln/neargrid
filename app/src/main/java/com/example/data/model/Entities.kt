@@ -41,6 +41,11 @@ data class NeighborPost(
     val expiresInHours: Int = 48,
     val status: String = "ACTIVE", // ACTIVE, RESOLVED, CANCELLED
     val matchedItemId: String? = null,
+    val mediaUris: List<String> = emptyList(),
+    val mediaTypes: List<String> = emptyList(), // IMAGE, VIDEO
+    val upvotesCount: Int = 0,
+    val hasUserUpvoted: Boolean = false,
+    val upvoterIds: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -60,6 +65,8 @@ data class CommunityIssue(
     val hasUserUpvoted: Boolean = false,
     val upvoterIds: List<String> = emptyList(),
     val assignedVolunteer: String? = null,
+    val mediaUris: List<String> = emptyList(),
+    val mediaTypes: List<String> = emptyList(), // IMAGE, VIDEO
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -141,4 +148,16 @@ data class GeohashMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val localityName: String = "",
     val isFromCurrentUser: Boolean = false
+)
+
+@Entity(tableName = "post_comments")
+data class PostComment(
+    @PrimaryKey val id: String = "",
+    val postId: String = "",
+    val authorId: String = "",
+    val authorName: String = "",
+    val authorInitials: String = "N",
+    val text: String = "",
+    val parentId: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
 )

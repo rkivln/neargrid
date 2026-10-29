@@ -111,6 +111,8 @@ fun HomeScreen(
     onFilterChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onConnectPost: (NeighborPost) -> Unit,
+    onToggleUpvote: (NeighborPost) -> Unit = {},
+    onOpenComments: (NeighborPost) -> Unit = {},
     onOpenCreateDialog: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -556,7 +558,9 @@ fun HomeScreen(
                 items(posts, key = { it.id }) { post ->
                     PostCard(
                         post = post,
-                        onConnect = onConnectPost
+                        onConnect = onConnectPost,
+                        onToggleUpvote = onToggleUpvote,
+                        onOpenComments = onOpenComments
                     )
                 }
             }

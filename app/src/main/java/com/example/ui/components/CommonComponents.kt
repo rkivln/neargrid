@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.HomeRepairService
@@ -32,9 +33,11 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SportsCricket
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.GpsNotFixed
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -740,6 +743,8 @@ fun IntentMatchCard(
 fun PostCard(
     post: NeighborPost,
     onConnect: (NeighborPost) -> Unit,
+    onToggleUpvote: ((NeighborPost) -> Unit)? = null,
+    onOpenComments: ((NeighborPost) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isNeed = post.type == "NEED"
@@ -863,15 +868,26 @@ fun PostCard(
                 overflow = TextOverflow.Ellipsis
             )
 
+            if (post.mediaUris.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                PostMediaCarousel(
+                    mediaUris = post.mediaUris,
+                    mediaTypes = post.mediaTypes
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Footer Row: Author, Expiry countdown, Connect Button
+            // Footer Row: Author, Expiry countdown, Upvote & Connect Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(34.dp)
@@ -915,23 +931,91 @@ fun PostCard(
                     }
                 }
 
-                Button(
-                    onClick = { onConnect(post) },
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isNeed) DeepNavy else PrimaryText,
-                        contentColor = PureWhite
-                    ),
-                    modifier = Modifier.testTag("connect_post_${post.id}")
-                ) {
-                    Text(
-                        text = if (isNeed) "Offer help" else if (isOffer) "Borrow / Share" else "Join meetup",
-                        fontFamily = ManropeFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
-                        color = PureWhite
-                    )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onToggleUpvote != null) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (post.hasUserUpvoted) AccentLime else SoftSurface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (post.hasUserUpvoted) LightLime else CardBorderColor),
+                            modifier = Modifier
+                                .clickable { onToggleUpvote(post) }
+                                .testTag("post_upvote_button_${post.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (post.hasUserUpvoted) Icons.Default.ThumbUp else Icons.Outlined.ThumbUp,
+                                    contentDescription = "Upvote",
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${post.upvotesCount}",
+                                    fontFamily = ManropeFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = PrimaryText
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    if (onOpenComments != null) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = SoftSurface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderColor),
+                            modifier = Modifier
+                                .clickable { onOpenComments(post) }
+                                .testTag("post_comments_button_${post.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Forum,
+                                    contentDescription = "Discuss",
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Discuss",
+                                    fontFamily = ManropeFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = PrimaryText
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    Button(
+                        onClick = { onConnect(post) },
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isNeed) DeepNavy else PrimaryText,
+                            contentColor = PureWhite
+                        ),
+                        modifier = Modifier.testTag("connect_post_${post.id}")
+                    ) {
+                        Text(
+                            text = if (isNeed) "Offer help" else if (isOffer) "Borrow / Share" else "Join meetup",
+                            fontFamily = ManropeFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = PureWhite
+                        )
+                    }
                 }
             }
         }

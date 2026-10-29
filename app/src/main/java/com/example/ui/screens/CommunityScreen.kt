@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CommunityIssue
 import com.example.data.model.CommunityNotice
+import com.example.ui.components.PostMediaCarousel
 import com.example.ui.theme.DMSerifFontFamily
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.PaleWarmGray
@@ -627,6 +628,14 @@ fun IssueCard(
                     fontFamily = DMSansFontFamily,
                     fontSize = 11.sp,
                     color = PastelCoral
+                )
+            }
+
+            if (issue.mediaUris.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                PostMediaCarousel(
+                    mediaUris = issue.mediaUris,
+                    mediaTypes = issue.mediaTypes
                 )
             }
 

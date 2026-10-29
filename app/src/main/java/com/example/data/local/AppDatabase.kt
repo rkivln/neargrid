@@ -11,6 +11,7 @@ import com.example.data.model.CommunityNotice
 import com.example.data.model.Conversation
 import com.example.data.model.GridCell
 import com.example.data.model.NeighborPost
+import com.example.data.model.PostComment
 
 @Database(
     entities = [
@@ -19,9 +20,10 @@ import com.example.data.model.NeighborPost
         CommunityNotice::class,
         Conversation::class,
         ChatMessage::class,
-        GridCell::class
+        GridCell::class,
+        PostComment::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)

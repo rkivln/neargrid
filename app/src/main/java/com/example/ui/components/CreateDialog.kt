@@ -1,5 +1,8 @@
 package com.example.ui.components
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,18 +11,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +36,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -36,6 +45,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,10 +53,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.ui.theme.DMSerifFontFamily
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.PastelButterYellow
@@ -66,10 +78,10 @@ import com.example.ui.theme.WarmIvory
 fun CreateIntentSheet(
     initialType: String,
     onDismiss: () -> Unit,
-    onCreateNeed: (title: String, desc: String, category: String, urgency: String, expiryHours: Int) -> Unit,
-    onCreateOffer: (title: String, desc: String, category: String, expiryHours: Int) -> Unit,
-    onCreateIssue: (title: String, desc: String, location: String, category: String) -> Unit,
-    onCreateMeetup: (title: String, desc: String, category: String, hours: Int) -> Unit
+    onCreateNeed: (title: String, desc: String, category: String, urgency: String, expiryHours: Int, mediaUris: List<String>, mediaTypes: List<String>) -> Unit,
+    onCreateOffer: (title: String, desc: String, category: String, expiryHours: Int, mediaUris: List<String>, mediaTypes: List<String>) -> Unit,
+    onCreateIssue: (title: String, desc: String, location: String, category: String, mediaUris: List<String>, mediaTypes: List<String>) -> Unit,
+    onCreateMeetup: (title: String, desc: String, category: String, hours: Int, mediaUris: List<String>, mediaTypes: List<String>) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTab by remember {
@@ -89,6 +101,22 @@ fun CreateIntentSheet(
     var selectedCategory by remember { mutableStateOf("TOOLS") }
     var selectedUrgency by remember { mutableStateOf("NORMAL") }
     var selectedExpiryHours by remember { mutableIntStateOf(24) }
+
+    val mediaUris = remember { mutableStateListOf<String>() }
+    val mediaTypes = remember { mutableStateListOf<String>() }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(5)
+    ) { uris ->
+        uris.forEach { uri ->
+            val uStr = uri.toString()
+            if (!mediaUris.contains(uStr)) {
+                mediaUris.add(uStr)
+                val isVideo = uStr.contains("video", ignoreCase = true) || uStr.endsWith(".mp4", ignoreCase = true)
+                mediaTypes.add(if (isVideo) "VIDEO" else "IMAGE")
+            }
+        }
+    }
 
     val categories = listOf("TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
 
@@ -428,6 +456,112 @@ fun CreateIntentSheet(
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
+            // Photos & Videos Attachment Section
+            Text(
+                text = "Photos & Videos",
+                fontFamily = DMSerifFontFamily,
+                fontSize = 15.sp,
+                color = PrimaryText
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                    )
+                },
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("add_photos_videos_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddPhotoAlternate,
+                    contentDescription = null,
+                    tint = PrimaryText,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (mediaUris.isEmpty()) "Attach Photos or Videos" else "Add More Media (${mediaUris.size}/5)",
+                    fontFamily = DMSansFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = PrimaryText
+                )
+            }
+
+            if (mediaUris.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexed(mediaUris) { index, uriStr ->
+                        val isVideo = mediaTypes.getOrNull(index) == "VIDEO"
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SoftCream)
+                                .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
+                        ) {
+                            AsyncImage(
+                                model = uriStr,
+                                contentDescription = "Media preview $index",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            if (isVideo) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Videocam,
+                                        contentDescription = "Video",
+                                        tint = PureWhite,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            // Remove Button Overlay
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.7f))
+                                    .clickable {
+                                        mediaUris.removeAt(index)
+                                        if (index < mediaTypes.size) {
+                                            mediaTypes.removeAt(index)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove media",
+                                    tint = PureWhite,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             // Real-Time GPS Notice Badge
             Row(
                 modifier = Modifier
@@ -459,11 +593,13 @@ fun CreateIntentSheet(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
+                        val urisList = mediaUris.toList()
+                        val typesList = mediaTypes.toList()
                         when (selectedTab) {
-                            0 -> onCreateNeed(title, description, selectedCategory, selectedUrgency, selectedExpiryHours)
-                            1 -> onCreateOffer(title, description, selectedCategory, selectedExpiryHours)
-                            2 -> onCreateIssue(title, description, locationOrSpot.ifBlank { "Nearby street block" }, selectedCategory)
-                            3 -> onCreateMeetup(title, description, selectedCategory, selectedExpiryHours)
+                            0 -> onCreateNeed(title, description, selectedCategory, selectedUrgency, selectedExpiryHours, urisList, typesList)
+                            1 -> onCreateOffer(title, description, selectedCategory, selectedExpiryHours, urisList, typesList)
+                            2 -> onCreateIssue(title, description, locationOrSpot.ifBlank { "Nearby street block" }, selectedCategory, urisList, typesList)
+                            3 -> onCreateMeetup(title, description, selectedCategory, selectedExpiryHours, urisList, typesList)
                         }
                     }
                 },

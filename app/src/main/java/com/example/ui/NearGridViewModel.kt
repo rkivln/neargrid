@@ -15,6 +15,7 @@ import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
+import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
 import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
@@ -112,6 +113,38 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             firestoreRepository.observeGeohashMessages(hash.ifBlank { null })
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 100% Real-time Threaded Post Comments
+    private val _activePostForComments = MutableStateFlow<NeighborPost?>(null)
+    val activePostForComments: StateFlow<NeighborPost?> = _activePostForComments.asStateFlow()
+
+    val activePostComments: StateFlow<List<PostComment>> = _activePostForComments.flatMapLatest { post ->
+        if (post == null) flowOf(emptyList())
+        else firestoreRepository.observePostComments(post.id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun openPostComments(post: NeighborPost) {
+        _activePostForComments.value = post
+    }
+
+    fun closePostComments() {
+        _activePostForComments.value = null
+    }
+
+    fun sendPostComment(text: String, parentId: String? = null) {
+        val post = _activePostForComments.value ?: return
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val user = auth.currentUser
+            val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
+            firestoreRepository.addPostComment(
+                postId = post.id,
+                text = text.trim(),
+                authorName = author,
+                parentId = parentId
+            )
+        }
+    }
 
     private val authStateListener = FirebaseAuth.AuthStateListener { fbAuth ->
         val user = fbAuth.currentUser
@@ -594,6 +627,12 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun togglePostUpvote(post: NeighborPost) {
+        viewModelScope.launch {
+            firestoreRepository.togglePostUpvote(post.id, post.upvotesCount, post.hasUserUpvoted)
+        }
+    }
+
     fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?) {
         viewModelScope.launch {
             firestoreRepository.updateIssueStatus(issueId, newStatus, volunteer)
@@ -605,7 +644,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         description: String,
         category: String,
         urgency: String,
-        expiresInHours: Int
+        expiresInHours: Int,
+        mediaUris: List<String> = emptyList(),
+        mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             val user = auth.currentUser
@@ -632,7 +673,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 urgency = urgency,
                 expiresInHours = expiresInHours,
                 approxDistanceBand = "< 50 m",
-                status = "ACTIVE"
+                status = "ACTIVE",
+                mediaUris = mediaUris,
+                mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)
             closeCreateDialog()
@@ -643,7 +686,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         title: String,
         description: String,
         category: String,
-        expiresInHours: Int
+        expiresInHours: Int,
+        mediaUris: List<String> = emptyList(),
+        mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             val user = auth.currentUser
@@ -670,7 +715,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 urgency = "NORMAL",
                 expiresInHours = expiresInHours,
                 approxDistanceBand = "< 50 m",
-                status = "ACTIVE"
+                status = "ACTIVE",
+                mediaUris = mediaUris,
+                mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)
             closeCreateDialog()
@@ -681,7 +728,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         title: String,
         description: String,
         location: String,
-        category: String
+        category: String,
+        mediaUris: List<String> = emptyList(),
+        mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             val user = auth.currentUser
@@ -698,7 +747,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 cellId = cell?.id ?: "geo_${realLocName.lowercase(Locale.ROOT).replace("\\s+".toRegex(), "_")}",
                 category = category,
                 reporterName = author,
-                reporterId = user?.uid ?: ""
+                reporterId = user?.uid ?: "",
+                mediaUris = mediaUris,
+                mediaTypes = mediaTypes
             )
             firestoreRepository.createIssue(issue)
             closeCreateDialog()
@@ -710,7 +761,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         title: String,
         description: String,
         category: String,
-        timeframeHours: Int
+        timeframeHours: Int,
+        mediaUris: List<String> = emptyList(),
+        mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             val user = auth.currentUser
@@ -737,10 +790,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 urgency = "NORMAL",
                 expiresInHours = timeframeHours,
                 approxDistanceBand = "< 50 m",
-                status = "ACTIVE"
+                status = "ACTIVE",
+                mediaUris = mediaUris,
+                mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)
-            closeCreateDialog()
         }
     }
 

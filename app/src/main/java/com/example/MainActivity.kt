@@ -53,6 +53,7 @@ import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
+import com.example.ui.components.PostCommentsSheet
 import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.GridQrInviteScreen
@@ -95,6 +96,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
     val chatMessages by viewModel.getChatMessagesForActive().collectAsStateWithLifecycle()
     val geohashMessages by viewModel.geohashMessages.collectAsStateWithLifecycle()
+    val activeCommentsPost by viewModel.activePostForComments.collectAsStateWithLifecycle()
+    val postComments by viewModel.activePostComments.collectAsStateWithLifecycle()
 
     var showCellPickerDialog by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -330,6 +333,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onFilterChange = { viewModel.setPostFilter(it) },
                         onCategoryChange = { viewModel.setCategoryFilter(it) },
                         onConnectPost = { viewModel.connectFromPost(it) },
+                        onToggleUpvote = { viewModel.togglePostUpvote(it) },
+                        onOpenComments = { viewModel.openPostComments(it) },
                         onOpenCreateDialog = { viewModel.openCreateDialog(it) }
                     )
                 }
@@ -444,18 +449,31 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         CreateIntentSheet(
             initialType = uiState.createDialogInitialType,
             onDismiss = { viewModel.closeCreateDialog() },
-            onCreateNeed = { title, desc, cat, urg, exp ->
-                viewModel.createNeed(title, desc, cat, urg, exp)
+            onCreateNeed = { title, desc, cat, urg, exp, uris, types ->
+                viewModel.createNeed(title, desc, cat, urg, exp, uris, types)
             },
-            onCreateOffer = { title, desc, cat, exp ->
-                viewModel.createOffer(title, desc, cat, exp)
+            onCreateOffer = { title, desc, cat, exp, uris, types ->
+                viewModel.createOffer(title, desc, cat, exp, uris, types)
             },
-            onCreateIssue = { title, desc, loc, cat ->
-                viewModel.createIssue(title, desc, loc, cat)
+            onCreateIssue = { title, desc, loc, cat, uris, types ->
+                viewModel.createIssue(title, desc, loc, cat, uris, types)
             },
-            onCreateMeetup = { title, desc, cat, hours ->
-                viewModel.createMeetup(title, desc, cat, hours)
+            onCreateMeetup = { title, desc, cat, hours, uris, types ->
+                viewModel.createMeetup(title, desc, cat, hours, uris, types)
             }
+        )
+    }
+
+    // Modal Sheet for Threaded Post Comments
+    val activeCommentsPostVal = activeCommentsPost
+    if (activeCommentsPostVal != null) {
+        PostCommentsSheet(
+            post = activeCommentsPostVal,
+            comments = postComments,
+            onSendComment = { text, parentId ->
+                viewModel.sendPostComment(text, parentId)
+            },
+            onDismiss = { viewModel.closePostComments() }
         )
     }
 }
