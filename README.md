@@ -1,4 +1,4 @@
-# NearGrid 🌐🏠
+# NearGrid 
 
 > **Hyper-Local Neighborhood Mesh & Spatial Community Coordination for Android**
 
