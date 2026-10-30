@@ -8,6 +8,7 @@ import com.example.data.model.Conversation
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
+import com.example.data.model.PostComment
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,30 @@ class NearGridRepository(private val database: AppDatabase) {
     private val conversationDao = database.conversationDao()
     private val chatDao = database.chatMessageDao()
     private val cellDao = database.gridCellDao()
+    private val commentDao = database.postCommentDao()
+
+    fun getPostComments(postId: String): Flow<List<PostComment>> {
+        return commentDao.getCommentsForPost(postId).catch { e ->
+            Log.e("NearGridRepository", "Failed reading post comments from Room", e)
+            emit(emptyList())
+        }
+    }
+
+    suspend fun insertPostComment(comment: PostComment) = withContext(Dispatchers.IO) {
+        try {
+            commentDao.insertComment(comment)
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed inserting post comment into Room", e)
+        }
+    }
+
+    suspend fun insertPostComments(comments: List<PostComment>) = withContext(Dispatchers.IO) {
+        try {
+            commentDao.insertComments(comments)
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed inserting post comments into Room", e)
+        }
+    }
 
     val allPosts: Flow<List<NeighborPost>> = postDao.getAllPosts().catch { e ->
         Log.e("NearGridRepository", "Failed reading posts from Room", e)

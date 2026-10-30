@@ -563,61 +563,66 @@ fun LivingGridScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Selected Cell Metrics Details Card
+            // Selected Cell Metrics Details Card (Compact, right-sized layout)
             currentCell?.let { cell ->
+                val sanitizedName = cell.name.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim(' ', ',', '-')
+                val sanitizedDesc = cell.description.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim()
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = PureWhite),
                     border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                 ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.Top,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = cell.name,
-                                        fontFamily = DMSerifFontFamily,
-                                        fontSize = 20.sp,
-                                        color = PrimaryText
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = PastelSoftCyan.copy(alpha = 0.35f)
-                                    ) {
-                                        Text(
-                                            text = cell.code,
-                                            fontFamily = DMSansFontFamily,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 10.sp,
-                                            color = PrimaryText,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = cell.description,
+                                    text = sanitizedName.ifBlank { "Local Neighborhood" },
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 16.sp,
+                                    lineHeight = 21.sp,
+                                    color = PrimaryText,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = sanitizedDesc.ifBlank { "Active physical mesh at your current location." },
                                     fontFamily = DMSansFontFamily,
-                                    fontSize = 12.sp,
-                                    color = SecondaryText
+                                    fontSize = 11.sp,
+                                    color = SecondaryText,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = PastelSoftCyan.copy(alpha = 0.35f)
+                            ) {
+                                Text(
+                                    text = cell.code,
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 10.sp,
+                                    color = PrimaryText,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // 4 Metric Pills
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             MetricPill(
                                 label = "Neighbors",
@@ -641,28 +646,28 @@ fun LivingGridScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // Verified Safe Public Exchange Spots in this cell
                         Text(
                             text = "Verified Public Exchange Point",
                             fontFamily = DMSerifFontFamily,
-                            fontSize = 15.sp,
+                            fontSize = 13.sp,
                             color = PrimaryText
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(SoftCream)
-                                .border(1.dp, WarmBorder, RoundedCornerShape(14.dp))
-                                .padding(12.dp),
+                                .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
+                                .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(28.dp)
                                     .clip(CircleShape)
                                     .background(PastelMint.copy(alpha = 0.6f)),
                                 contentAlignment = Alignment.Center
@@ -671,23 +676,23 @@ fun LivingGridScreen(
                                     imageVector = Icons.Default.VerifiedUser,
                                     contentDescription = null,
                                     tint = PrimaryText,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
                                     text = "Oakwood Community Pavilion",
                                     fontFamily = DMSansFontFamily,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp,
+                                    fontSize = 12.sp,
                                     color = PrimaryText
                                 )
                                 Text(
                                     text = "Well-lit lobby and veranda with open daytime access for safe neighborhood exchanges.",
                                     fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp,
-                                    lineHeight = 15.sp,
+                                    fontSize = 10.sp,
+                                    lineHeight = 14.sp,
                                     color = SecondaryText
                                 )
                             }
@@ -716,25 +721,25 @@ fun MetricPill(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = SoftCream,
         border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
                 fontFamily = DMSerifFontFamily,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 color = PrimaryText
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = label,
                 fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 color = SecondaryText
             )
         }

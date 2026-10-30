@@ -147,6 +147,17 @@ service cloud.firestore {
                        isServerTimestamp(incoming().updatedAt) &&
                        isValidPost(incoming());
       allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      // --- Nested Post Comments ---
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() &&
+                         incoming().authorId == request.auth.uid &&
+                         incoming().postId == postId &&
+                         incoming().text is string && incoming().text.size() > 0 && incoming().text.size() <= 2000 &&
+                         isServerTimestamp(incoming().timestamp);
+        allow update, delete: if isSignedIn() && existing().authorId == request.auth.uid;
+      }
     }
 
     // --- Issues Collection ---

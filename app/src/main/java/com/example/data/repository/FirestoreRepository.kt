@@ -712,7 +712,6 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
                     trySend(emptyList())
-                    close()
                     return@addSnapshotListener
                 }
                 val items = snapshot?.documents?.mapNotNull { doc ->

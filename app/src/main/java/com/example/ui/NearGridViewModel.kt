@@ -151,13 +151,27 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 100% Real-time Threaded Post Comments
+    // 100% Real-time Threaded Post Comments with Offline Room Persistence
     private val _activePostForComments = MutableStateFlow<NeighborPost?>(null)
     val activePostForComments: StateFlow<NeighborPost?> = _activePostForComments.asStateFlow()
 
-    val activePostComments: StateFlow<List<PostComment>> = _activePostForComments.flatMapLatest { post ->
-        if (post == null) flowOf(emptyList())
-        else firestoreRepository.observePostComments(post.id)
+    val activePostComments: StateFlow<List<PostComment>> = _activePostForComments.flatMapLatest { post: NeighborPost? ->
+        if (post == null) {
+            flowOf(emptyList<PostComment>())
+        } else {
+            combine(
+                firestoreRepository.observePostComments(post.id),
+                localRepository.getPostComments(post.id)
+            ) { remoteComments: List<PostComment>, localComments: List<PostComment> ->
+                if (remoteComments.isNotEmpty()) {
+                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        localRepository.insertPostComments(remoteComments)
+                    }
+                }
+                val map = (localComments + remoteComments).associateBy { it.id }
+                map.values.toList().sortedBy { it.timestamp }
+            }
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Active conversation chat messages as a stable StateFlow
@@ -181,15 +195,40 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     fun sendPostComment(text: String, parentId: String? = null) {
         val post = _activePostForComments.value ?: return
         if (text.isBlank()) return
+        val user = auth.currentUser
+        val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
+        val initials = author.split(" ")
+            .filter { it.isNotBlank() }
+            .take(2)
+            .map { it.first().uppercase() }
+            .joinToString("")
+            .ifEmpty { "N" }
+        val commentId = UUID.randomUUID().toString()
+        val localComment = PostComment(
+            id = commentId,
+            postId = post.id,
+            authorId = user?.uid ?: "local_user",
+            authorName = author,
+            authorInitials = initials,
+            text = text.trim(),
+            parentId = parentId,
+            timestamp = System.currentTimeMillis()
+        )
+
         viewModelScope.launch(coroutineExceptionHandler) {
-            val user = auth.currentUser
-            val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
-            firestoreRepository.addPostComment(
-                postId = post.id,
-                text = text.trim(),
-                authorName = author,
-                parentId = parentId
-            )
+            localRepository.insertPostComment(localComment)
+            try {
+                if (user != null) {
+                    firestoreRepository.addPostComment(
+                        postId = post.id,
+                        text = text.trim(),
+                        authorName = author,
+                        parentId = parentId
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NearGridViewModel", "Failed syncing post comment to Firestore", e)
+            }
         }
     }
 

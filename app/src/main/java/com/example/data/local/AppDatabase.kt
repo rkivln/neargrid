@@ -38,6 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun conversationDao(): ConversationDao
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun gridCellDao(): GridCellDao
+    abstract fun postCommentDao(): PostCommentDao
 
     companion object {
         @Volatile

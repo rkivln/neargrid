@@ -30,12 +30,16 @@ data class UserLocation(
     val accuracyMeters: Float = 0f
 ) {
     val displayAreaName: String
-        get() = when {
-            subLocality.isNotBlank() && localityName.isNotBlank() && subLocality != localityName ->
-                "$subLocality, $localityName"
-            localityName.isNotBlank() -> localityName
-            subLocality.isNotBlank() -> subLocality
-            else -> "Local Coordinate Area"
+        get() {
+            val cleanSub = subLocality.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim(' ', ',', '-')
+            val cleanLoc = localityName.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim(' ', ',', '-')
+            return when {
+                cleanSub.isNotBlank() && cleanLoc.isNotBlank() && cleanSub != cleanLoc ->
+                    "$cleanSub, $cleanLoc"
+                cleanLoc.isNotBlank() -> cleanLoc
+                cleanSub.isNotBlank() -> cleanSub
+                else -> "Local Coordinate Area"
+            }
         }
 }
 
@@ -208,15 +212,18 @@ object LocationHelper {
     private fun extractLocalityPair(address: Address?): Pair<String, String> {
         if (address == null) return Pair("Local Area", "")
 
-        val locality = address.locality
+        val rawLocality = address.locality
             ?: address.subAdminArea
             ?: address.adminArea
             ?: "Local Area"
 
-        val subLocality = address.subLocality
+        val rawSubLocality = address.subLocality
             ?: address.thoroughfare
             ?: address.featureName
             ?: ""
+
+        val locality = rawLocality.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim(' ', ',', '-')
+        val subLocality = rawSubLocality.replace("[\r\n\t]+".toRegex(), " ").replace("\\s+".toRegex(), " ").trim(' ', ',', '-')
 
         return Pair(locality, subLocality)
     }
