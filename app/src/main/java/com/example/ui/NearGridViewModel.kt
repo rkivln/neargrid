@@ -24,10 +24,12 @@ import com.example.util.QrCodePayloadHelper
 import com.example.util.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -148,8 +150,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (user == null) {
             flowOf(emptyList())
         } else {
-            firestoreRepository.observeGeohashMessages(hash.ifBlank { null })
+            try {
+                firestoreRepository.observeGeohashMessages(hash.ifBlank { null })
+            } catch (e: Exception) {
+                flowOf(emptyList())
+            }
         }
+    }.catch {
+        emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 100% Real-time Threaded Post Comments with Offline Room Persistence
@@ -160,19 +168,25 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (post == null) {
             flowOf(emptyList<PostComment>())
         } else {
-            combine(
-                firestoreRepository.observePostComments(post.id),
-                localRepository.getPostComments(post.id)
-            ) { remoteComments: List<PostComment>, localComments: List<PostComment> ->
-                if (remoteComments.isNotEmpty()) {
-                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        localRepository.insertPostComments(remoteComments)
+            try {
+                combine(
+                    firestoreRepository.observePostComments(post.id),
+                    localRepository.getPostComments(post.id)
+                ) { remoteComments: List<PostComment>, localComments: List<PostComment> ->
+                    if (remoteComments.isNotEmpty()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            localRepository.insertPostComments(remoteComments)
+                        }
                     }
+                    val map = (localComments + remoteComments).associateBy { it.id }
+                    map.values.toList().sortedBy { it.timestamp }
                 }
-                val map = (localComments + remoteComments).associateBy { it.id }
-                map.values.toList().sortedBy { it.timestamp }
+            } catch (e: Exception) {
+                flowOf(emptyList())
             }
         }
+    }.catch {
+        emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Active conversation chat messages as a stable StateFlow
@@ -181,8 +195,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (activeId.isNullOrBlank()) {
             flowOf(emptyList())
         } else {
-            firestoreRepository.observeMessages(activeId)
+            try {
+                firestoreRepository.observeMessages(activeId)
+            } catch (e: Exception) {
+                flowOf(emptyList())
+            }
         }
+    }.catch {
+        emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun openPostComments(post: NeighborPost) {
