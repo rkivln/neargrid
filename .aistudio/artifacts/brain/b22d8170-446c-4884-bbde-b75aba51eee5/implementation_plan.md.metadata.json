@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for adding photo and video attachments to post creation with Android Photo Picker and interactive feed media carousels.",
-  "updatedAt":  "2026-10-29T02:32:58.109272219Z",
+  "summary":  "Implementation plan for redefining NearGrid QR codes from non-existent web URLs to a pure offline structured payload containing Geohash code, area name, and GPS coordinates for in-app scanning.",
+  "updatedAt":  "2026-10-31T06:30:29.963619480Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

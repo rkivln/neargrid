@@ -57,6 +57,7 @@ import com.example.ui.theme.SoftCream
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmIvory
 import com.example.util.QrCodeCanvas
+import com.example.util.QrCodePayloadHelper
 
 @Composable
 fun GeohashQrInviteDialog(
@@ -65,8 +66,18 @@ fun GeohashQrInviteDialog(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val inviteUrl = "https://neargrid.app/join?cell=${cell.code}"
-    val shareMessage = "Join my NearGrid neighbor cell #${cell.code} (${cell.name})! Download NearGrid to coordinate tools, favors, and civic updates with nearby neighbors without revealing your home address: $inviteUrl"
+    val qrPayload = QrCodePayloadHelper.buildPayload(
+        code = cell.code,
+        name = cell.name,
+        lat = cell.centerLat,
+        lng = cell.centerLng
+    )
+    val shareMessage = QrCodePayloadHelper.buildShareMessage(
+        code = cell.code,
+        name = cell.name,
+        lat = cell.centerLat,
+        lng = cell.centerLng
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -175,7 +186,7 @@ fun GeohashQrInviteDialog(
 
                 // QR Code Render Canvas
                 QrCodeCanvas(
-                    content = inviteUrl,
+                    content = qrPayload,
                     modifier = Modifier
                         .size(220.dp)
                         .testTag("qr_canvas_view"),
@@ -186,7 +197,7 @@ fun GeohashQrInviteDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Neighbors can scan this QR code with their camera to join ${cell.name} directly in NearGrid.",
+                    text = "Neighbors can scan this offline pass with NearGrid to join ${cell.name} directly. No internet or external web domain required.",
                     fontFamily = DMSansFontFamily,
                     fontSize = 12.sp,
                     color = SecondaryText,

@@ -20,6 +20,7 @@ import com.example.data.model.UserProfile
 import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
 import com.example.util.LocationHelper
+import com.example.util.QrCodePayloadHelper
 import com.example.util.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -569,22 +570,21 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(showGridQrScreen = false)
     }
 
-    fun joinGridCellByCode(codeOrUrl: String) {
-        val cleanCode = when {
-            codeOrUrl.contains("cell=") -> "#" + codeOrUrl.substringAfter("cell=").substringBefore("&")
-            codeOrUrl.startsWith("#") -> codeOrUrl
-            else -> "#$codeOrUrl"
-        }
+    fun joinGridCellByCode(codeOrPayload: String) {
+        val parsed = QrCodePayloadHelper.parsePayload(codeOrPayload)
+        val cleanCode = parsed.code
 
         val matchingCell = _uiState.value.allCells.find { it.code.equals(cleanCode, ignoreCase = true) }
             ?: GridCell(
                 id = "scanned_${cleanCode.lowercase().replace("#", "")}",
-                name = "Neighbor Grid $cleanCode",
+                name = parsed.name,
                 code = cleanCode,
                 activeNeighborsCount = 18,
                 openNeedsCount = 3,
                 openOffersCount = 5,
-                description = "Neighborhood spatial grid joined via QR Invitation code scan."
+                centerLat = parsed.lat,
+                centerLng = parsed.lng,
+                description = "Neighborhood spatial grid joined via offline QR grid pass."
             )
 
         _uiState.value = _uiState.value.copy(

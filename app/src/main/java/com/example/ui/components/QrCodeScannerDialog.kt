@@ -88,6 +88,7 @@ import com.example.ui.theme.SecondaryText
 import com.example.ui.theme.SoftCream
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmIvory
+import com.example.util.QrCodePayloadHelper
 
 @Composable
 fun QrCodeScannerDialog(
@@ -383,11 +384,11 @@ fun QrCodeScannerDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Manual Geohash Code / URL Input field
+                // Manual Geohash Code / Offline Pass Input field
                 OutlinedTextField(
                     value = manualInput,
                     onValueChange = { manualInput = it },
-                    placeholder = { Text("Paste code (e.g. #9q8yyk8 or URL)", fontSize = 12.sp) },
+                    placeholder = { Text("Paste code (e.g. #9q8yyk8 or NEARGRID pass)", fontSize = 12.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("qr_manual_input"),
@@ -420,6 +421,11 @@ fun QrCodeScannerDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val parsedActive = remember(detectedCellCode, manualInput) {
+                    val raw = detectedCellCode ?: manualInput.trim()
+                    if (raw.isNotBlank()) QrCodePayloadHelper.parsePayload(raw) else null
+                }
+
                 // Action Button
                 Button(
                     onClick = {
@@ -445,7 +451,7 @@ fun QrCodeScannerDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (detectedCellCode != null) "Join Grid Cell ($detectedCellCode)" else "Join Scanned Cell",
+                            text = if (parsedActive != null) "Join ${parsedActive.name} (${parsedActive.code})" else "Join Scanned Cell",
                             fontFamily = DMSansFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp,

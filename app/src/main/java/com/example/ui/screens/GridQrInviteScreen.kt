@@ -71,6 +71,7 @@ import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmDivider
 import com.example.ui.theme.WarmIvory
 import com.example.util.QrCodeCanvas
+import com.example.util.QrCodePayloadHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +89,21 @@ fun GridQrInviteScreen(
     val cellName = currentCell?.name ?: "Local Neighborhood Grid"
     val cellCode = currentCell?.code.takeIf { !it.isNullOrBlank() }
         ?: if (currentGeohash.isNotBlank()) "#$currentGeohash" else "#GPS-LOCAL"
-    val inviteUrl = "https://neargrid.app/join?cell=${cellCode.replace("#", "")}"
+    val cellLat = currentCell?.centerLat ?: 0.0
+    val cellLng = currentCell?.centerLng ?: 0.0
+
+    val qrPayload = QrCodePayloadHelper.buildPayload(
+        code = cellCode,
+        name = cellName,
+        lat = cellLat,
+        lng = cellLng
+    )
+    val shareMessage = QrCodePayloadHelper.buildShareMessage(
+        code = cellCode,
+        name = cellName,
+        lat = cellLat,
+        lng = cellLng
+    )
 
     val activeNeighbors = currentCell?.activeNeighborsCount ?: 12
     val openNeeds = currentCell?.openNeedsCount ?: 3
@@ -277,7 +292,7 @@ fun GridQrInviteScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         QrCodeCanvas(
-                            content = inviteUrl,
+                            content = qrPayload,
                             darkColor = DeepNavy,
                             lightColor = SoftCream
                         )
@@ -286,7 +301,7 @@ fun GridQrInviteScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Scan with NearGrid or camera app to instantly connect to this neighborhood grid",
+                        text = "Scan with NearGrid in-app scanner to instantly connect to this neighborhood grid (No internet or domain required)",
                         fontFamily = DMSansFontFamily,
                         fontSize = 12.sp,
                         color = SecondaryText,
@@ -343,7 +358,7 @@ fun GridQrInviteScreen(
                         )
                         putExtra(
                             Intent.EXTRA_TEXT,
-                            "Hey neighbor! Join our local neighborhood grid ($cellName, code: $cellCode) on NearGrid to share needs, offers, and local updates: $inviteUrl"
+                            shareMessage
                         )
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Grid Invitation"))
@@ -365,7 +380,7 @@ fun GridQrInviteScreen(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Share Invitation Link",
+                    text = "Share Grid Pass",
                     fontFamily = DMSansFontFamily,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
@@ -380,8 +395,8 @@ fun GridQrInviteScreen(
             ) {
                 OutlinedButton(
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(inviteUrl))
-                        Toast.makeText(context, "Grid invite code copied to clipboard!", Toast.LENGTH_SHORT).show()
+                        clipboardManager.setText(AnnotatedString(qrPayload))
+                        Toast.makeText(context, "Offline grid pass copied to clipboard!", Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(16.dp),
                     border = BorderStroke(1.dp, WarmBorder),
@@ -393,13 +408,13 @@ fun GridQrInviteScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy Code",
+                        contentDescription = "Copy Pass",
                         tint = PrimaryText,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Copy Code",
+                        text = "Copy Pass",
                         fontFamily = DMSansFontFamily,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
