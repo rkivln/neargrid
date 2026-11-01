@@ -64,4 +64,37 @@ class ExampleUnitTest {
     assertFalse("No dead neargrid.app", share.contains("neargrid.app"))
     assertTrue("Contains offline pass payload", share.contains("NEARGRID:v1"))
   }
+
+  @Test
+  fun nearGridPayload_serializesAndDeserializesWithMoshiAdapter() {
+    val original = com.example.data.model.NearGridPayload(
+        geohash = "9q8yyk8",
+        areaName = "Oakwood Pavilion",
+        latitude = 11.9341,
+        longitude = 79.8291
+    )
+
+    // Test serialization
+    val json = original.toJson()
+    assertTrue("JSON contains geohash", json.contains("\"geohash\":\"9q8yyk8\""))
+    assertTrue("JSON contains area_name", json.contains("\"area_name\":\"Oakwood Pavilion\""))
+    assertTrue("JSON contains latitude", json.contains("\"latitude\":11.9341"))
+    assertTrue("JSON contains longitude", json.contains("\"longitude\":79.8291"))
+
+    // Test deserialization
+    val parsed = com.example.data.model.NearGridPayload.fromJson(json)
+    assertNotNull(parsed)
+    assertEquals("9q8yyk8", parsed!!.geohash)
+    assertEquals("Oakwood Pavilion", parsed.areaName)
+    assertEquals(11.9341, parsed.latitude, 0.0001)
+    assertEquals(79.8291, parsed.longitude, 0.0001)
+
+    // Test integration with QrCodePayloadHelper.parsePayload
+    val parsedFromHelper = com.example.util.QrCodePayloadHelper.parsePayload(json)
+    assertEquals("#9q8yyk8", parsedFromHelper.code)
+    assertEquals("Oakwood Pavilion", parsedFromHelper.name)
+    assertEquals(11.9341, parsedFromHelper.lat, 0.0001)
+    assertEquals(79.8291, parsedFromHelper.lng, 0.0001)
+    assertTrue(parsedFromHelper.isValid)
+  }
 }

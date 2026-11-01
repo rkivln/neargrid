@@ -1,5 +1,6 @@
 package com.example.util
 
+import com.example.data.model.NearGridPayload
 import java.util.Locale
 
 /**
@@ -7,6 +8,7 @@ import java.util.Locale
  *
  * Payload format:
  * NEARGRID:v1;code=<geohash>;name=<area_name>;lat=<lat>;lng=<lng>
+ * or Moshi JSON formatted [NearGridPayload].
  */
 object QrCodePayloadHelper {
 
@@ -37,11 +39,43 @@ object QrCodePayloadHelper {
     }
 
     /**
+     * Builds a Moshi JSON string representation for the QR payload.
+     */
+    fun buildJsonPayload(
+        code: String,
+        name: String,
+        lat: Double,
+        lng: Double
+    ): String {
+        return NearGridPayload(
+            geohash = code.trim().removePrefix("#"),
+            areaName = name.trim(),
+            latitude = lat,
+            longitude = lng
+        ).toJson()
+    }
+
+    /**
      * Parses an incoming QR code content, scanned text, or pasted code.
-     * Supports structured NEARGRID:v1 format, query parameter format, and raw geohash codes.
+     * Supports structured NEARGRID:v1 format, Moshi JSON format, query parameter format, and raw geohash codes.
      */
     fun parsePayload(raw: String): ParsedGridInvite {
         val trimmed = raw.trim()
+
+        // Support JSON format via Moshi NearGridPayload adapter
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            val jsonPayload = NearGridPayload.fromJson(trimmed)
+            if (jsonPayload != null) {
+                val code = if (jsonPayload.geohash.startsWith("#")) jsonPayload.geohash else "#${jsonPayload.geohash}"
+                return ParsedGridInvite(
+                    code = code,
+                    name = jsonPayload.areaName,
+                    lat = jsonPayload.latitude,
+                    lng = jsonPayload.longitude,
+                    isValid = true
+                )
+            }
+        }
 
         if (trimmed.startsWith(PROTOCOL_PREFIX, ignoreCase = true)) {
             val content = trimmed.removePrefix(PROTOCOL_PREFIX).removePrefix(";").removePrefix("?")
