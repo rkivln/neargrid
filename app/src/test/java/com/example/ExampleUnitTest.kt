@@ -97,4 +97,57 @@ class ExampleUnitTest {
     assertEquals(79.8291, parsedFromHelper.lng, 0.0001)
     assertTrue(parsedFromHelper.isValid)
   }
+
+  @Test
+  fun appUpdateService_isNewerVersionCalculatesCorrectly() {
+    // Newer remote versions
+    assertTrue(com.example.data.update.AppUpdateService.isNewerVersion("v1.0.3", "1.0"))
+    assertTrue(com.example.data.update.AppUpdateService.isNewerVersion("1.0.3", "1.0.2"))
+    assertTrue(com.example.data.update.AppUpdateService.isNewerVersion("v2.0.0", "1.9.9"))
+    assertTrue(com.example.data.update.AppUpdateService.isNewerVersion("v1.1", "1.0"))
+
+    // Equal or older remote versions
+    assertFalse(com.example.data.update.AppUpdateService.isNewerVersion("v1.0.3", "1.0.3"))
+    assertFalse(com.example.data.update.AppUpdateService.isNewerVersion("1.0", "1.0"))
+    assertFalse(com.example.data.update.AppUpdateService.isNewerVersion("1.0.0", "1.0"))
+    assertFalse(com.example.data.update.AppUpdateService.isNewerVersion("v1.0.1", "1.0.3"))
+    assertFalse(com.example.data.update.AppUpdateService.isNewerVersion("", "1.0"))
+  }
+
+  @Test
+  fun appUpdateManager_checkForUpdateWithRetrofitServiceDetectsNewerVersion() = kotlinx.coroutines.runBlocking {
+    val fakeService = object : com.example.data.update.GitHubApiService {
+      override suspend fun getLatestRelease(owner: String, repo: String): com.example.data.update.GitHubRelease {
+        return com.example.data.update.GitHubRelease(
+          tagName = "v1.0.4",
+          name = "NearGrid v1.0.4",
+          body = "Faster local grid synchronization",
+          htmlUrl = "https://github.com/rkivln/neargrid/releases/tag/v1.0.4",
+          assets = listOf(
+            com.example.data.update.GitHubReleaseAsset(
+              name = "NearGrid.apk",
+              downloadUrl = "https://github.com/rkivln/neargrid/releases/download/v1.0.4/NearGrid.apk"
+            )
+          )
+        )
+      }
+    }
+
+    val manager = com.example.data.update.AppUpdateManager(apiService = fakeService)
+    val result = manager.checkForUpdate("1.0.3")
+
+    assertTrue(result.isSuccess)
+    val info = result.getOrNull()
+    assertNotNull(info)
+    assertTrue("Update must be detected as available", info!!.isUpdateAvailable)
+    assertEquals("1.0.4", info.latestVersion)
+    assertEquals("1.0.3", info.currentVersion)
+    assertEquals("NearGrid v1.0.4", info.releaseName)
+    assertEquals("https://github.com/rkivln/neargrid/releases/download/v1.0.4/NearGrid.apk", info.apkDownloadUrl)
+
+    // Check with equal or newer local version
+    val upToDateResult = manager.checkForUpdate("1.0.4")
+    assertTrue(upToDateResult.isSuccess)
+    assertFalse("Update must NOT be flagged when version is equal", upToDateResult.getOrNull()!!.isUpdateAvailable)
+  }
 }

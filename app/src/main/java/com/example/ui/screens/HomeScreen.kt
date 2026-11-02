@@ -52,11 +52,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalContext
 import com.example.R
 import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
+import com.example.data.update.AppUpdateInfo
 import com.example.ui.components.DiscoveryRadiusSelector
 import com.example.ui.components.GeohashMessageComposer
 import com.example.ui.components.IntentMatchCard
@@ -114,6 +122,9 @@ fun HomeScreen(
     onToggleUpvote: (NeighborPost) -> Unit = {},
     onOpenComments: (NeighborPost) -> Unit = {},
     onOpenCreateDialog: (String) -> Unit,
+    updateInfo: AppUpdateInfo? = null,
+    isUpdateBannerDismissed: Boolean = false,
+    onDismissUpdateBanner: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PullToRefreshBox(
@@ -138,6 +149,15 @@ fun HomeScreen(
                     onGpsToggle = onGpsToggle,
                     onShowQrClick = onShowQrClick,
                     onScanQrClick = onScanQrClick
+                )
+            }
+
+            // In-App Release Update Alert Banner
+            item(key = "app_update_banner") {
+                com.example.ui.components.UpdateBanner(
+                    updateInfoOverride = updateInfo,
+                    isDismissedOverride = isUpdateBannerDismissed,
+                    onDismissOverride = onDismissUpdateBanner
                 )
             }
 
@@ -665,6 +685,150 @@ fun ActionTile(
                 color = SecondaryText,
                 lineHeight = 15.sp
             )
+        }
+    }
+}
+
+@Composable
+fun AppUpdateBanner(
+    updateInfo: AppUpdateInfo,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .testTag("app_update_banner"),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SoftCream),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, PastelCoral.copy(alpha = 0.7f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(PastelCoral.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "New App Version",
+                            tint = PastelCoral,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "New Version Available: v${updateInfo.latestVersion}",
+                            fontFamily = DMSansFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = PrimaryText
+                        )
+                        Text(
+                            text = "Tap to update to the latest release",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 11.sp,
+                            color = SecondaryText
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .testTag("dismiss_update_banner_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss Banner",
+                        tint = SecondaryText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = {
+                        val targetUrl = updateInfo.apkDownloadUrl.ifBlank { updateInfo.releaseHtmlUrl }
+                        if (targetUrl.isNotBlank()) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                            context.startActivity(intent)
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryText,
+                        contentColor = PureWhite
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .testTag("download_update_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        tint = PureWhite,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Update APK (v${updateInfo.latestVersion})",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = PureWhite
+                    )
+                }
+
+                if (updateInfo.releaseHtmlUrl.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseHtmlUrl))
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
+                        modifier = Modifier
+                            .height(38.dp)
+                            .testTag("view_release_notes_button")
+                    ) {
+                        Text(
+                            text = "Release Notes",
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 11.sp,
+                            color = PrimaryText
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -47,16 +47,23 @@ import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import android.content.Intent
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.data.update.AppUpdateInfo
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -86,6 +93,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -165,6 +173,8 @@ fun UserProfileScreen(
         allowDMs: Boolean
     ) -> Unit,
     onBack: () -> Unit,
+    updateInfo: AppUpdateInfo? = null,
+    onCheckForUpdates: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
@@ -181,6 +191,7 @@ fun UserProfileScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Android Photo Picker Launcher (zero-permission compliant)
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -1007,6 +1018,242 @@ fun UserProfileScreen(
                             ),
                             modifier = Modifier.testTag("toggle_allow_dms")
                         )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION 6: APP RELEASES & UPDATES
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .testTag("app_version_card"),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = BorderStroke(1.dp, WarmBorder)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(PastelPeach.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Version & Updates",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 17.sp,
+                                    color = PrimaryText
+                                )
+                                Text(
+                                    text = "Installed build v${updateInfo?.currentVersion ?: "1.0"}",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 11.sp,
+                                    color = SecondaryText
+                                )
+                            }
+                        }
+
+                        if (updateInfo?.isUpdateAvailable == true) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PastelCoral.copy(alpha = 0.2f),
+                                border = BorderStroke(1.dp, PastelCoral.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = "v${updateInfo.latestVersion} Available",
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    color = PastelCoral,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PastelMint.copy(alpha = 0.3f),
+                                border = BorderStroke(1.dp, PastelMint)
+                            ) {
+                                Text(
+                                    text = "Up to Date",
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 10.sp,
+                                    color = PrimaryText,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (updateInfo?.isUpdateAvailable == true) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SoftCream),
+                            border = BorderStroke(1.dp, WarmBorder)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = updateInfo.releaseName.ifBlank { "Release v${updateInfo.latestVersion}" },
+                                    fontFamily = DMSansFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = PrimaryText
+                                )
+                                if (updateInfo.releaseNotes.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = updateInfo.releaseNotes,
+                                        fontFamily = DMSansFontFamily,
+                                        fontSize = 11.sp,
+                                        color = SecondaryText,
+                                        lineHeight = 15.sp,
+                                        maxLines = 3
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val url = updateInfo.apkDownloadUrl.ifBlank { updateInfo.releaseHtmlUrl }
+                                            if (url.isNotBlank()) {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryText,
+                                            contentColor = PureWhite
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(38.dp)
+                                            .testTag("profile_download_update_button")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = null,
+                                            tint = PureWhite,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Download APK",
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = PureWhite
+                                        )
+                                    }
+
+                                    if (updateInfo.releaseHtmlUrl.isNotBlank()) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseHtmlUrl)))
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            border = BorderStroke(1.dp, WarmBorder),
+                                            colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
+                                            modifier = Modifier.height(38.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.OpenInNew,
+                                                contentDescription = null,
+                                                tint = PrimaryText,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "GitHub",
+                                                fontFamily = DMSansFontFamily,
+                                                fontSize = 11.sp,
+                                                color = PrimaryText
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (updateInfo?.errorMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = updateInfo.errorMessage,
+                            fontFamily = DMSansFontFamily,
+                            fontSize = 10.sp,
+                            color = SecondaryText
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedButton(
+                        onClick = onCheckForUpdates,
+                        enabled = updateInfo?.isChecking != true,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, WarmBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp)
+                            .testTag("profile_check_updates_button")
+                    ) {
+                        if (updateInfo?.isChecking == true) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = PrimaryText
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Checking for Releases...",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = PrimaryText
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = PrimaryText,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Check for Updates Now",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp,
+                                color = PrimaryText
+                            )
+                        }
                     }
                 }
             }

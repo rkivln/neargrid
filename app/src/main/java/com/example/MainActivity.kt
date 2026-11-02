@@ -106,6 +106,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val geohashMessages by viewModel.geohashMessages.collectAsStateWithLifecycle()
     val activeCommentsPost by viewModel.activePostForComments.collectAsStateWithLifecycle()
     val postComments by viewModel.activePostComments.collectAsStateWithLifecycle()
+    val updateInfo by viewModel.updateInfo.collectAsStateWithLifecycle()
+    val isUpdateBannerDismissed by viewModel.isUpdateBannerDismissed.collectAsStateWithLifecycle()
 
     var showCellPickerDialog by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
@@ -233,7 +235,9 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     allowDMs = allowDMs
                 )
             },
-            onBack = { viewModel.closeUserProfileEditor() }
+            onBack = { viewModel.closeUserProfileEditor() },
+            updateInfo = updateInfo,
+            onCheckForUpdates = { viewModel.checkForUpdates(isManual = true) }
         )
         return
     }
@@ -343,7 +347,10 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onConnectPost = { viewModel.connectFromPost(it) },
                         onToggleUpvote = { viewModel.togglePostUpvote(it) },
                         onOpenComments = { viewModel.openPostComments(it) },
-                        onOpenCreateDialog = { viewModel.openCreateDialog(it) }
+                        onOpenCreateDialog = { viewModel.openCreateDialog(it) },
+                        updateInfo = updateInfo,
+                        isUpdateBannerDismissed = isUpdateBannerDismissed,
+                        onDismissUpdateBanner = { viewModel.dismissUpdateBanner() }
                     )
                 }
 

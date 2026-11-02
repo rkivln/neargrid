@@ -17,8 +17,11 @@ import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
 import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
+import com.example.BuildConfig
 import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
+import com.example.data.update.AppUpdateInfo
+import com.example.data.update.AppUpdateService
 import com.example.util.LocationHelper
 import com.example.util.QrCodePayloadHelper
 import com.example.util.UserLocation
@@ -205,6 +208,25 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // App Update Status & Notification State
+    private val _updateInfo = MutableStateFlow(AppUpdateInfo(currentVersion = BuildConfig.VERSION_NAME))
+    val updateInfo: StateFlow<AppUpdateInfo> = _updateInfo.asStateFlow()
+
+    private val _isUpdateBannerDismissed = MutableStateFlow(false)
+    val isUpdateBannerDismissed: StateFlow<Boolean> = _isUpdateBannerDismissed.asStateFlow()
+
+    fun checkForUpdates(isManual: Boolean = false) {
+        viewModelScope.launch {
+            _updateInfo.value = _updateInfo.value.copy(isChecking = true, errorMessage = null)
+            val result = AppUpdateService.checkUpdate(BuildConfig.VERSION_NAME)
+            _updateInfo.value = result
+        }
+    }
+
+    fun dismissUpdateBanner() {
+        _isUpdateBannerDismissed.value = true
+    }
+
     fun openPostComments(post: NeighborPost) {
         _activePostForComments.value = post
     }
@@ -286,6 +308,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         } catch (e: Exception) {
             android.util.Log.w("NearGridViewModel", "Initial refreshGridData failed", e)
         }
+
+        // Silently check for app releases on launch
+        checkForUpdates(isManual = false)
     }
 
     fun refreshDeviceLocation() {
