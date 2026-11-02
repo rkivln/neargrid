@@ -47,7 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.DarkNavy
 import com.example.ui.theme.DeepNavy
@@ -89,6 +91,7 @@ fun PostMediaCarousel(
                 ) {
                     AsyncImage(
                         model = uriString,
+                        error = painterResource(id = R.drawable.img_neighborhood_connection),
                         contentDescription = "Media attachment ${index + 1}",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -213,6 +216,7 @@ fun PostMediaCarousel(
                     ) {
                         AsyncImage(
                             model = viewerUri,
+                            error = painterResource(id = R.drawable.img_neighborhood_connection),
                             contentDescription = "Full-screen media view",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()

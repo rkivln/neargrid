@@ -1,5 +1,6 @@
 package com.example.data.update
 
+import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,15 +53,36 @@ class AppUpdateManager(
         _isBannerDismissed.value = false
     }
 
+    private fun logDebug(message: String) {
+        try {
+            Log.d("AppUpdateManager", message)
+        } catch (e: Throwable) {
+            println("[AppUpdateManager DEBUG] $message")
+        }
+    }
+
+    private fun logError(message: String, error: Throwable? = null) {
+        try {
+            Log.e("AppUpdateManager", message, error)
+        } catch (e: Throwable) {
+            println("[AppUpdateManager ERROR] $message : ${error?.message}")
+        }
+    }
+
     /**
      * Fetches the latest release from the GitHub API using Retrofit
      * and compares it with the local [versionName] to determine if an update is available.
      */
     suspend fun checkForUpdate(versionName: String): Result<AppUpdateInfo> {
+        logDebug("Checking for updates... Local versionName: '$versionName', Repo: '$owner/$repo'")
         return runCatching {
             val release = apiService.getLatestRelease(owner, repo)
             val latestTag = release.tagName.trim()
             val isAvailable = isNewerVersion(latestTag, versionName)
+
+            logDebug(
+                "GitHub release fetched: tag='$latestTag', releaseName='${release.name}', isUpdateAvailable=$isAvailable (local '$versionName' vs remote '$latestTag')"
+            )
 
             val apkAsset = release.assets.find { it.name.endsWith(".apk", ignoreCase = true) }
             val apkDownloadUrl = apkAsset?.downloadUrl?.ifBlank { null }
@@ -80,6 +102,7 @@ class AppUpdateManager(
             _updateState.value = info
             info
         }.onFailure { error ->
+            logError("Error checking for update (local versionName: '$versionName'): ${error.message}", error)
             _updateState.value = AppUpdateInfo(
                 currentVersion = versionName,
                 isChecking = false,

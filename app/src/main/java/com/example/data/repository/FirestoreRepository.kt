@@ -170,7 +170,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     // --- Posts (Needs / Offers / Meetups) ---
 
-    fun observePosts(): Flow<List<NeighborPost>> = callbackFlow {
+    fun observePosts(cellId: String? = null): Flow<List<NeighborPost>> = callbackFlow {
         val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
@@ -178,9 +178,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             return@callbackFlow
         }
         val path = "posts"
-        val listener = db.collection(path)
-            .whereEqualTo("status", "ACTIVE")
-            .addSnapshotListener { snapshot, error ->
+        var query: com.google.firebase.firestore.Query = db.collection(path).whereEqualTo("status", "ACTIVE")
+        if (!cellId.isNullOrBlank()) {
+            query = query.whereEqualTo("authorCellId", cellId)
+        }
+        val listener = query.addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
                     trySend(emptyList())
@@ -321,7 +323,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     // --- Community Issues ---
 
-    fun observeIssues(): Flow<List<CommunityIssue>> = callbackFlow {
+    fun observeIssues(cellId: String? = null): Flow<List<CommunityIssue>> = callbackFlow {
         val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
@@ -329,8 +331,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             return@callbackFlow
         }
         val path = "issues"
-        val listener = db.collection(path)
-            .addSnapshotListener { snapshot, error ->
+        var query: com.google.firebase.firestore.Query = db.collection(path)
+        if (!cellId.isNullOrBlank()) {
+            query = query.whereEqualTo("cellId", cellId)
+        }
+        val listener = query.addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleFirestoreError(error, OperationType.LIST, path)
                     trySend(emptyList())
@@ -471,6 +476,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                             relatedPostTitle = data["relatedPostTitle"] as? String ?: "",
                             relatedPostType = data["relatedPostType"] as? String ?: "NEED",
                             lastMessage = data["lastMessage"] as? String ?: "",
+                            lastMessageSenderId = data["lastMessageSenderId"] as? String ?: "",
                             lastMessageTime = (data["lastMessageTime"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis(),
                             distanceBand = data["distanceBand"] as? String ?: "within 300 m",
                             isResolved = data["isResolved"] as? Boolean ?: false
@@ -559,6 +565,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             db.collection("conversations").document(conversationId).update(
                 mapOf(
                     "lastMessage" to text,
+                    "lastMessageSenderId" to uid,
                     "lastMessageTime" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )

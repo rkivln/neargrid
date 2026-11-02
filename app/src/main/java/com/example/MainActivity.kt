@@ -124,8 +124,15 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         }
     }
 
+    // Notification Permission Launcher (Android 13+)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* Notification permission result */ }
+
+    val activity = context as? android.app.Activity
+
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        val hasPermission = ContextCompat.checkSelfPermission(
+        val hasLocationPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
@@ -133,7 +140,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (hasPermission) {
+        if (hasLocationPermission) {
             viewModel.refreshDeviceLocation()
         } else {
             permissionLauncher.launch(
@@ -142,6 +149,24 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    // Handle deep link notification click to open corresponding conversation directly
+    androidx.compose.runtime.LaunchedEffect(activity?.intent, conversations) {
+        val convId = activity?.intent?.getStringExtra(com.example.util.ChatNotificationManager.EXTRA_CONVERSATION_ID)
+        if (!convId.isNullOrBlank()) {
+            val matchingConv = conversations.find { it.id == convId }
+            if (matchingConv != null) {
+                viewModel.openConversation(matchingConv)
+                activity.intent?.removeExtra(com.example.util.ChatNotificationManager.EXTRA_CONVERSATION_ID)
+            }
         }
     }
 

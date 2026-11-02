@@ -150,4 +150,13 @@ class ExampleUnitTest {
     assertTrue(upToDateResult.isSuccess)
     assertFalse("Update must NOT be flagged when version is equal", upToDateResult.getOrNull()!!.isUpdateAvailable)
   }
+
+  @Test
+  fun mediaUploadHelper_formatsBase64DataUrlCorrectly() {
+    val sampleBytes = "Hello NearGrid".toByteArray()
+    val dataUrl = com.example.util.MediaUploadHelper.formatAsDataUrl(sampleBytes, "image/jpeg")
+
+    assertTrue("Data URL must start with data:image/jpeg;base64,", dataUrl.startsWith("data:image/jpeg;base64,"))
+    assertTrue("Data URL must contain non-empty base64 string", dataUrl.length > "data:image/jpeg;base64,".length)
+  }
 }

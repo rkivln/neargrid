@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for automated GitHub Releases in-app update detection, with a dismissible home screen update banner and a dedicated update management section in User Profile settings.",
-  "updatedAt":  "2026-11-02T03:40:33.024453343Z",
+  "summary":  "Implementation plan for fixing post media visibility across devices by compressing attached photos to 1024px Base64 Data URLs before saving to Firestore.",
+  "updatedAt":  "2026-11-02T06:03:31.210308226Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

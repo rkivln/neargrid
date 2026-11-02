@@ -56,6 +56,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalContext
@@ -488,87 +489,160 @@ fun HomeScreen(
             // Feed Items list
             if (posts.isEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 20.dp)
-                            .testTag("fresh_grid_empty_card"),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = PureWhite),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-                    ) {
-                        Column(
+                    if (!gpsEnabled || (latitude == 0.0 && longitude == 0.0)) {
+                        // Location Disabled / Pending Location Prompt
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(28.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(horizontal = 20.dp, vertical = 20.dp)
+                                .testTag("location_required_card"),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
                         ) {
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(PastelPeach.copy(alpha = 0.4f)),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.VolunteerActivism,
-                                    contentDescription = null,
-                                    tint = PastelCoral,
-                                    modifier = Modifier.size(28.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(PastelPeach.copy(alpha = 0.5f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOff,
+                                        contentDescription = null,
+                                        tint = PastelCoral,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Location Required for Local Grid",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 22.sp,
+                                    color = PrimaryText,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                 )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Your Neighborhood Grid is Fresh",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 22.sp,
-                                color = PrimaryText,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Be the pioneer neighbor on this block! Share a spare tool, lend a hand, or request assistance from your neighbors.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 13.sp,
-                                color = SecondaryText,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                lineHeight = 19.sp
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "To protect privacy and ensure you only see posts from your active location, NearGrid scopes all data strictly to your local geohash. Enable location access to view local posts on your block.",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 13.sp,
+                                    color = SecondaryText,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    lineHeight = 19.sp
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
                                 Button(
-                                    onClick = { onOpenCreateDialog("NEED") },
+                                    onClick = onGpsToggle,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = PrimaryText,
                                         contentColor = PureWhite
                                     ),
-                                    modifier = Modifier.weight(1f).testTag("fresh_ask_help_button")
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp)
+                                        .testTag("enable_gps_button")
                                 ) {
                                     Text(
-                                        text = "Ask for Help",
+                                        text = "Enable Location & Detect Grid",
                                         fontFamily = DMSansFontFamily,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
+                                        fontSize = 13.sp
                                     )
                                 }
-                                OutlinedButton(
-                                    onClick = { onOpenCreateDialog("OFFER") },
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
-                                    modifier = Modifier.weight(1f).testTag("fresh_offer_button")
+                            }
+                        }
+                    } else {
+                        // Location active but no posts in current cell yet
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 20.dp)
+                                .testTag("fresh_grid_empty_card"),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(PastelPeach.copy(alpha = 0.4f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "Lend an Item",
-                                        fontFamily = DMSansFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp,
-                                        color = PrimaryText
+                                    Icon(
+                                        imageVector = Icons.Default.VolunteerActivism,
+                                        contentDescription = null,
+                                        tint = PastelCoral,
+                                        modifier = Modifier.size(28.dp)
                                     )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Your Neighborhood Grid is Fresh",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 22.sp,
+                                    color = PrimaryText,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Be the pioneer neighbor on this block! Share a spare tool, lend a hand, or request assistance from your neighbors in ${localityName.ifBlank { "your cell" }}.",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 13.sp,
+                                    color = SecondaryText,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    lineHeight = 19.sp
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Button(
+                                        onClick = { onOpenCreateDialog("NEED") },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryText,
+                                            contentColor = PureWhite
+                                        ),
+                                        modifier = Modifier.weight(1f).testTag("fresh_ask_help_button")
+                                    ) {
+                                        Text(
+                                            text = "Ask for Help",
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    OutlinedButton(
+                                        onClick = { onOpenCreateDialog("OFFER") },
+                                        shape = RoundedCornerShape(14.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                                        modifier = Modifier.weight(1f).testTag("fresh_offer_button")
+                                    ) {
+                                        Text(
+                                            text = "Lend an Item",
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = PrimaryText
+                                        )
+                                    }
                                 }
                             }
                         }

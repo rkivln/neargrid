@@ -422,10 +422,41 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
-        // Live real-time conversations from Firestore
+        // Live real-time conversations from Firestore with Push Notification triggers
         viewModelScope.launch {
             try {
+                var isInitialLoad = true
+                val lastSeenTimes = mutableMapOf<String, Long>()
+
                 firestoreRepository.observeConversations().collect { convs ->
+                    val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    val activeConvId = _uiState.value.activeConversation?.id
+
+                    if (!isInitialLoad) {
+                        for (conv in convs) {
+                            val previousTime = lastSeenTimes[conv.id] ?: 0L
+                            if (conv.lastMessageTime > previousTime && conv.lastMessage.isNotBlank()) {
+                                val isFromOtherUser = conv.lastMessageSenderId.isNotBlank() && conv.lastMessageSenderId != currentUid
+                                val isNotActiveScreen = conv.id != activeConvId
+
+                                if (isFromOtherUser && isNotActiveScreen) {
+                                    com.example.util.ChatNotificationManager.showChatNotification(
+                                        context = getApplication(),
+                                        conversationId = conv.id,
+                                        senderName = conv.participantName,
+                                        messageText = conv.lastMessage
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        isInitialLoad = false
+                    }
+
+                    for (conv in convs) {
+                        lastSeenTimes[conv.id] = conv.lastMessageTime
+                    }
+
                     _firestoreConversations.value = convs
                 }
             } catch (ignored: Exception) {
@@ -503,14 +534,23 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 100% Real-Time Live Posts with Dynamic Real GPS Distance Calculation
+    // 100% Real-Time Live Posts with Strict Geohash & Location Isolation
     val filteredPosts: StateFlow<List<NeighborPost>> = combine(
         _firestorePosts,
         _currentLocation,
-        _uiState
-    ) { posts, location, state ->
+        _uiState,
+        _currentGeohash
+    ) { posts, location, state, geohash ->
+        // If GPS is disabled or location is unavailable, return empty list (prompt user to enable location)
+        if (!state.gpsModeEnabled || location == null) {
+            return@combine emptyList()
+        }
+
+        val currentCellId = state.selectedCell?.id ?: ""
+        val cleanGeohash = geohash.removePrefix("#").take(5)
+
         posts.map { post ->
-            val distanceM = if (location != null && post.lat != 0.0 && post.lng != 0.0) {
+            val distanceM = if (post.lat != 0.0 && post.lng != 0.0) {
                 LocationHelper.calculateDistanceMeters(
                     location.latitude,
                     location.longitude,
@@ -536,20 +576,23 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 else -> post.category.equals(state.selectedCategory, ignoreCase = true)
             }
 
-            // Proximity radius filter
-            val withinRadius = if (location != null && post.lat != 0.0 && post.lng != 0.0) {
-                val dist = LocationHelper.calculateDistanceMeters(
-                    location.latitude,
-                    location.longitude,
-                    post.lat,
-                    post.lng
-                )
-                dist <= state.discoveryRadiusMeters
-            } else {
-                true
+            // Strict Geohash & Location cell matching
+            val matchesLocationCell = when {
+                currentCellId.isNotBlank() && post.authorCellId.equals(currentCellId, ignoreCase = true) -> true
+                cleanGeohash.isNotBlank() && post.authorCellId.contains(cleanGeohash, ignoreCase = true) -> true
+                post.lat != 0.0 && post.lng != 0.0 -> {
+                    val dist = LocationHelper.calculateDistanceMeters(
+                        location.latitude,
+                        location.longitude,
+                        post.lat,
+                        post.lng
+                    )
+                    dist <= state.discoveryRadiusMeters
+                }
+                else -> false
             }
 
-            matchesType && matchesCategory && withinRadius
+            matchesType && matchesCategory && matchesLocationCell
         }.sortedWith(
             compareByDescending<NeighborPost> { it.urgency == "URGENT" }
                 .thenByDescending { it.createdAt }
@@ -798,6 +841,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
+            val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
@@ -823,7 +867,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = expiresInHours,
                 approxDistanceBand = "< 50 m",
                 status = "ACTIVE",
-                mediaUris = mediaUris,
+                mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)
@@ -840,6 +884,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
+            val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
@@ -865,7 +910,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = expiresInHours,
                 approxDistanceBand = "< 50 m",
                 status = "ACTIVE",
-                mediaUris = mediaUris,
+                mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)
@@ -882,6 +927,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
+            val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
@@ -897,7 +943,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 category = category,
                 reporterName = author,
                 reporterId = user?.uid ?: "",
-                mediaUris = mediaUris,
+                mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
             firestoreRepository.createIssue(issue)
@@ -915,6 +961,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaTypes: List<String> = emptyList()
     ) {
         viewModelScope.launch {
+            val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
@@ -940,7 +987,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 expiresInHours = timeframeHours,
                 approxDistanceBand = "< 50 m",
                 status = "ACTIVE",
-                mediaUris = mediaUris,
+                mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
             firestoreRepository.createPost(post)

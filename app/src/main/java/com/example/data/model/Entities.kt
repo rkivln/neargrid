@@ -94,6 +94,7 @@ data class Conversation(
     val relatedPostTitle: String = "",
     val relatedPostType: String = "",
     val lastMessage: String = "",
+    val lastMessageSenderId: String = "",
     val lastMessageTime: Long = System.currentTimeMillis(),
     val distanceBand: String = "within 300 m",
     val isResolved: Boolean = false,
