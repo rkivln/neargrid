@@ -159,4 +159,16 @@ class ExampleUnitTest {
     assertTrue("Data URL must start with data:image/jpeg;base64,", dataUrl.startsWith("data:image/jpeg;base64,"))
     assertTrue("Data URL must contain non-empty base64 string", dataUrl.length > "data:image/jpeg;base64,".length)
   }
+
+  @Test
+  fun geohashUtil_encodesAndCalculatesPrefixAccurately() {
+    val lat = 37.7749
+    val lng = -122.4194
+    val fullHash = com.example.util.GeohashUtil.encode(lat, lng, 7)
+    val prefix = com.example.util.GeohashUtil.getPrefix(lat, lng, 5)
+
+    assertEquals(7, fullHash.length)
+    assertEquals(5, prefix.length)
+    assertTrue("Prefix must match the first 5 characters of full geohash", fullHash.startsWith(prefix))
+  }
 }

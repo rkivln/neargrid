@@ -400,10 +400,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             } catch (ignored: Exception) {}
         }
 
-        // Live real-time posts from Firestore
+        // Live real-time posts from Firestore filtered by user's current geohash prefix
         viewModelScope.launch {
             try {
-                firestoreRepository.observePosts().collect { posts ->
+                _currentGeohash.flatMapLatest { rawGeohash ->
+                    val geohashPrefix = rawGeohash.removePrefix("#").take(5)
+                    firestoreRepository.observePosts(geohashPrefix = geohashPrefix)
+                }.collect { posts ->
                     _firestorePosts.value = posts
                 }
             } catch (ignored: Exception) {

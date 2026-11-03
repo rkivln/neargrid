@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import java.util.UUID
 
 class FirestoreRepository(val db: FirebaseFirestore) {
@@ -170,7 +171,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     // --- Posts (Needs / Offers / Meetups) ---
 
-    fun observePosts(cellId: String? = null): Flow<List<NeighborPost>> = callbackFlow {
+    fun observePosts(cellId: String? = null, geohashPrefix: String? = null): Flow<List<NeighborPost>> = callbackFlow {
         val uid = auth?.currentUser?.uid
         if (uid == null) {
             trySend(emptyList())
@@ -179,7 +180,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         }
         val path = "posts"
         var query: com.google.firebase.firestore.Query = db.collection(path).whereEqualTo("status", "ACTIVE")
-        if (!cellId.isNullOrBlank()) {
+        if (!geohashPrefix.isNullOrBlank()) {
+            val prefix = geohashPrefix.trim().lowercase(Locale.ROOT)
+            query = query.whereGreaterThanOrEqualTo("geohash", prefix)
+                .whereLessThanOrEqualTo("geohash", prefix + "\uf8ff")
+        } else if (!cellId.isNullOrBlank()) {
             query = query.whereEqualTo("authorCellId", cellId)
         }
         val listener = query.addSnapshotListener { snapshot, error ->
@@ -244,6 +249,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "cellName" to post.cellName,
             "lat" to post.lat,
             "lng" to post.lng,
+            "geohash" to com.example.util.GeohashUtil.encode(post.lat, post.lng, 7),
             "approxDistanceBand" to post.approxDistanceBand,
             "urgency" to post.urgency,
             "expiresInHours" to post.expiresInHours,
