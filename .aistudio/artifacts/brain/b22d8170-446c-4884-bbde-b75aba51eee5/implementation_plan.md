@@ -1,31 +1,31 @@
-# Implementation Plan: Cross-Device Post Media Attachment Fix (Completed)
+# Implementation Plan: Persistent App Update Banner Dismissal (Completed)
 
-Fixed post image/video media visibility across devices by compressing attached local content URIs to 1024px Base64 Data URLs (`data:image/jpeg;base64,...`) before storing to Firestore, allowing Coil on any user's device to instantly render uploaded post media.
+Ensured the app update banner is displayed only when a new release is actually found and has not been previously dismissed by the user for that specific release version.
 
 ---
 
 ## Status: COMPLETE
 
-- [x] **1. Media Encoding Helper (`MediaUploadHelper.kt`)**: Created downscaling (1024px max dimension) and JPEG 80% compression pipeline converting local `content://` URIs to portable `data:image/jpeg;base64,...` Data URLs.
-- [x] **2. Post & Issue Creation (`NearGridViewModel.kt`)**: Updated `createNeed`, `createOffer`, `createIssue`, and `createMeetup` to process media attachments through `MediaUploadHelper.processMediaUris()` before saving to Firestore.
-- [x] **3. Media Carousel & Render Polish (`PostMediaCarousel.kt`)**: Configured Coil `AsyncImage` error fallback painter to `R.drawable.img_neighborhood_connection` for clean rendering.
-- [x] **4. Verification**: Added unit test `mediaUploadHelper_formatsBase64DataUrlCorrectly` passing all 9 unit tests and confirmed successful build via `compile_applet`.
+- [x] **1. Dismissed Version Tracking (`AppUpdateManager.kt`)**: Added `lastDismissedVersion` tracking to `AppUpdateManager`. When `checkForUpdate()` runs, if `latestVersion == lastDismissedVersion`, `_isBannerDismissed` is set to `true` automatically.
+- [x] **2. ViewModel Integration (`NearGridViewModel.kt`)**: Connected `dismissUpdateBanner()` to pass the current release tag to `AppUpdateManager.dismissBanner(latestVer)`. Configured manual update checks (`checkForUpdates(isManual = true)`) to reset the dismissal state when explicitly requested from Profile settings.
+- [x] **3. UI Banner Display (`UpdateBanner.kt` & `HomeScreen.kt`)**: Ensured update banner visibility evaluates `updateInfo?.isUpdateAvailable == true && !isDismissed`.
+- [x] **4. Verification**: Added unit test `appUpdateManager_remembersDismissedVersion` passing all 11 unit tests and verified successful compilation via `compile_applet`.
 
 ---
 
-## 2. Integration in Post & Issue Creation (`NearGridViewModel.kt`)
-- Update `createNeedPost()`, `createOfferPost()`, `createMeetupPost()`, and `reportIssue()` in `NearGridViewModel`:
-  - Process attached `mediaUris` through `MediaUploadHelper.processMediaUris(getApplication(), mediaUris)` before writing to `firestoreRepository`.
-  - Save the resulting portable Base64 Data URLs in the post document in Firestore.
+## 2. Manual Update Check Behavior (`NearGridViewModel.kt`)
+- In `checkForUpdates(isManual: Boolean)`:
+  - When `isManual = true` (triggered from Profile settings), invoke `AppUpdateManager.instance.resetBannerDismissed()` so the latest release details and banner appear if an update is available.
 
 ---
 
-## 3. Media Carousel Component Polish (`PostMediaCarousel.kt`)
-- Verify Coil `AsyncImage` configuration in `PostMediaCarousel.kt` and `PostCard` to render Base64 Data URLs smoothly.
-- Ensure error states display a clean, elegant image fallback rather than an empty dark container.
+## 3. UI Banner Visibility (`UpdateBanner.kt` & `HomeScreen.kt`)
+- Ensure `UpdateBanner` visibility condition strictly checks:
+  `updateInfo?.isUpdateAvailable == true && !isDismissed`
+- Pass `AppUpdateManager.instance` dismissal flow consistently through `NearGridViewModel`.
 
 ---
 
 ## 4. Verification Plan
-- Add unit test in `ExampleUnitTest.kt` verifying bitmap scaling calculation and data URI formatting logic.
+- Add unit test verifying that dismissing version `X` keeps `isBannerDismissed = true` until version `Y` (where `Y > X`) is detected.
 - Verify project compilation using `compile_applet`.

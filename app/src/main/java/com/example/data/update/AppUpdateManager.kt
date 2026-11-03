@@ -45,7 +45,13 @@ class AppUpdateManager(
     private val _isBannerDismissed = MutableStateFlow(false)
     val isBannerDismissed: StateFlow<Boolean> = _isBannerDismissed.asStateFlow()
 
-    fun dismissBanner() {
+    private var lastDismissedVersion: String? = null
+
+    fun dismissBanner(versionStr: String? = null) {
+        val versionToDismiss = versionStr?.trim()?.removePrefix("v")?.removePrefix("V")
+        if (!versionToDismiss.isNullOrBlank()) {
+            lastDismissedVersion = versionToDismiss
+        }
         _isBannerDismissed.value = true
     }
 
@@ -79,9 +85,17 @@ class AppUpdateManager(
             val release = apiService.getLatestRelease(owner, repo)
             val latestTag = release.tagName.trim()
             val isAvailable = isNewerVersion(latestTag, versionName)
+            val cleanLatest = latestTag.removePrefix("v").removePrefix("V")
+
+            // Automatically hide update banner if user already dismissed this specific release version
+            val isAlreadyDismissed = !lastDismissedVersion.isNullOrBlank() &&
+                    cleanLatest.equals(lastDismissedVersion, ignoreCase = true)
+            if (isAlreadyDismissed) {
+                _isBannerDismissed.value = true
+            }
 
             logDebug(
-                "GitHub release fetched: tag='$latestTag', releaseName='${release.name}', isUpdateAvailable=$isAvailable (local '$versionName' vs remote '$latestTag')"
+                "GitHub release fetched: tag='$latestTag', releaseName='${release.name}', isUpdateAvailable=$isAvailable, isAlreadyDismissed=$isAlreadyDismissed"
             )
 
             val apkAsset = release.assets.find { it.name.endsWith(".apk", ignoreCase = true) }
@@ -90,7 +104,7 @@ class AppUpdateManager(
 
             val info = AppUpdateInfo(
                 currentVersion = versionName,
-                latestVersion = latestTag.removePrefix("v").removePrefix("V"),
+                latestVersion = cleanLatest,
                 releaseName = release.name ?: "Release $latestTag",
                 releaseNotes = release.body?.trim() ?: "Bug fixes and performance improvements.",
                 apkDownloadUrl = apkDownloadUrl,

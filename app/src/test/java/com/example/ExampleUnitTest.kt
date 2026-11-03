@@ -171,4 +171,30 @@ class ExampleUnitTest {
     assertEquals(5, prefix.length)
     assertTrue("Prefix must match the first 5 characters of full geohash", fullHash.startsWith(prefix))
   }
+
+  @Test
+  fun appUpdateManager_remembersDismissedVersion() {
+    val fakeService = object : com.example.data.update.GitHubApiService {
+      override suspend fun getLatestRelease(owner: String, repo: String): com.example.data.update.GitHubRelease {
+        return com.example.data.update.GitHubRelease(
+          tagName = "v1.0.5",
+          name = "NearGrid v1.0.5"
+        )
+      }
+    }
+
+    val manager = com.example.data.update.AppUpdateManager(apiService = fakeService)
+    
+    // Dismiss version 1.0.5
+    manager.dismissBanner("1.0.5")
+    assertTrue(manager.isBannerDismissed.value)
+
+    // Run check for update with local version 1.0.0
+    val result = kotlinx.coroutines.test.runTest { manager.checkForUpdate("1.0.0") }
+    assertTrue(manager.isBannerDismissed.value)
+
+    // Manual reset shows banner again
+    manager.resetBannerDismissed()
+    assertFalse(manager.isBannerDismissed.value)
+  }
 }

@@ -217,13 +217,20 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun checkForUpdates(isManual: Boolean = false) {
         viewModelScope.launch {
+            if (isManual) {
+                com.example.data.update.AppUpdateManager.instance.resetBannerDismissed()
+                _isUpdateBannerDismissed.value = false
+            }
             _updateInfo.value = _updateInfo.value.copy(isChecking = true, errorMessage = null)
-            val result = AppUpdateService.checkUpdate(BuildConfig.VERSION_NAME)
+            val result = com.example.data.update.AppUpdateService.checkUpdate(BuildConfig.VERSION_NAME)
             _updateInfo.value = result
+            _isUpdateBannerDismissed.value = com.example.data.update.AppUpdateManager.instance.isBannerDismissed.value
         }
     }
 
     fun dismissUpdateBanner() {
+        val latestVer = _updateInfo.value.latestVersion
+        com.example.data.update.AppUpdateManager.instance.dismissBanner(latestVer)
         _isUpdateBannerDismissed.value = true
     }
 

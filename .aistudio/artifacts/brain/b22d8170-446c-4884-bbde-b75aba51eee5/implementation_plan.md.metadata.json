@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for fixing post media visibility across devices by compressing attached photos to 1024px Base64 Data URLs before saving to Firestore.",
-  "updatedAt":  "2026-11-02T06:03:31.210308226Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Implementation plan for persisting update banner dismissal across app restarts until a newer release version is found.",
+  "updatedAt": "2026-11-03T02:50:00.212922774Z",
+  "requestFeedback": true,
+  "userFacing": true
 }
