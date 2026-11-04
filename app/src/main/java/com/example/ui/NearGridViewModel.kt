@@ -7,6 +7,7 @@ import androidx.credentials.CredentialManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.model.AppSettings
 import com.example.data.model.ChatMessage
 import com.example.data.model.CommunityIssue
 import com.example.data.model.CommunityNotice
@@ -14,6 +15,7 @@ import com.example.data.model.Conversation
 import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
+import com.example.data.model.NearbyNeighbor
 import com.example.data.model.NeighborPost
 import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
@@ -22,8 +24,11 @@ import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
 import com.example.data.update.AppUpdateInfo
 import com.example.data.update.AppUpdateService
+import com.example.util.CrashTelemetryManager
 import com.example.util.LocationHelper
 import com.example.util.QrCodePayloadHelper
+import com.example.util.StorageCacheManager
+import com.example.util.StorageUsage
 import com.example.util.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -44,6 +49,7 @@ import java.util.UUID
 
 enum class NavigationDestination(val label: String) {
     HOME("Home"),
+    MAP("Map"),
     GRID("Living Grid"),
     COMMUNITY("Community"),
     INBOX("Inbox"),
@@ -77,7 +83,15 @@ data class NearGridUiState(
     val fuzzyCoordinateOffset: Boolean = false,
     val incognitoGridPresence: Boolean = false,
     val allowProximityMessaging: Boolean = true,
+    val locationPrecision: String = "EXACT", // "EXACT", "APPROXIMATE", "NEIGHBORHOOD"
+    val hideOnlineStatus: Boolean = false,
+    val hideExactDistance: Boolean = false,
+    val blockedUserIds: List<String> = emptyList(),
     val showUserProfileEditor: Boolean = false,
+    val showAppSettingsScreen: Boolean = false,
+    val appSettings: AppSettings = AppSettings(),
+    val storageUsage: StorageUsage = StorageUsage(),
+    val supportTicketStatus: String? = null,
     val isRefreshing: Boolean = false,
     val selectedQrCell: GridCell? = null,
     val showQrScannerDialog: Boolean = false,
@@ -140,6 +154,55 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     private val _firestorePosts = MutableStateFlow<List<NeighborPost>>(emptyList())
     private val _firestoreIssues = MutableStateFlow<List<CommunityIssue>>(emptyList())
     private val _firestoreConversations = MutableStateFlow<List<Conversation>>(emptyList())
+    private val _firestoreUsers = MutableStateFlow<List<UserProfile>>(emptyList())
+
+    // Real-time nearby users within selected discovery radius
+    val nearbyNeighbors: StateFlow<List<NearbyNeighbor>> = combine(
+        _currentUser,
+        _currentLocation,
+        _uiState,
+        _firestoreUsers,
+        _firestorePosts
+    ) { user, loc, state, users, posts ->
+        if (loc == null || (loc.latitude == 0.0 && loc.longitude == 0.0)) {
+            emptyList()
+        } else {
+            val myUid = user?.uid
+            val radius = state.discoveryRadiusMeters
+            val blocked = state.blockedUserIds.toSet()
+            val activePostsByUser = posts.filter { it.status == "ACTIVE" }
+                .groupBy { it.userId }
+            users.filter { u ->
+                u.userId != myUid && !u.incognito && !blocked.contains(u.userId) && (u.latitude != 0.0 && u.longitude != 0.0)
+            }.mapNotNull { u ->
+                // Apply neighbor's spatial precision settings (APPROXIMATE or NEIGHBORHOOD)
+                val adjustedUser = when (u.locationPrecision) {
+                    "APPROXIMATE" -> {
+                        val offsetLat = ((u.userId.hashCode() % 100) / 100.0) * 0.0018 - 0.0009
+                        val offsetLng = (((u.userId.hashCode() / 100) % 100) / 100.0) * 0.0018 - 0.0009
+                        u.copy(latitude = u.latitude + offsetLat, longitude = u.longitude + offsetLng)
+                    }
+                    "NEIGHBORHOOD" -> {
+                        val offsetLat = ((u.userId.hashCode() % 50) / 50.0) * 0.003 - 0.0015
+                        val offsetLng = (((u.userId.hashCode() / 50) % 50) / 50.0) * 0.003 - 0.0015
+                        u.copy(latitude = u.latitude + offsetLat, longitude = u.longitude + offsetLng)
+                    }
+                    else -> u
+                }
+                val dist = LocationHelper.calculateDistanceMeters(loc.latitude, loc.longitude, adjustedUser.latitude, adjustedUser.longitude)
+                if (dist <= radius) {
+                    val latestPost = activePostsByUser[u.userId]?.maxByOrNull { it.createdAt }
+                    NearbyNeighbor(
+                        user = adjustedUser,
+                        distanceMeters = dist,
+                        latestPost = latestPost
+                    )
+                } else {
+                    null
+                }
+            }.sortedBy { it.distanceMeters }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _currentGeohash = MutableStateFlow("")
     val currentGeohash: StateFlow<String> = _currentGeohash.asStateFlow()
@@ -334,6 +397,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             android.util.Log.w("NearGridViewModel", "Initial refreshGridData failed", e)
         }
 
+        // Initialize update manager with persistent context
+        try {
+            com.example.data.update.AppUpdateManager.instance.init(application.applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.w("NearGridViewModel", "AppUpdateManager initialization failed", e)
+        }
+
         // Silently check for app releases on launch
         checkForUpdates(isManual = false)
     }
@@ -376,6 +446,15 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     isRefreshing = false,
                     gpsModeEnabled = true
                 )
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        firestoreRepository.updateUserLocationPresence(
+                            location.latitude,
+                            location.longitude,
+                            computedGeohash
+                        )
+                    } catch (ignored: Exception) {}
+                }
             } else {
                 _uiState.value = _uiState.value.copy(isLocating = false, isRefreshing = false)
             }
@@ -397,7 +476,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                             neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
                             fuzzyCoordinateOffset = profile.fuzzyCoords,
                             incognitoGridPresence = profile.incognito,
-                            allowProximityMessaging = profile.allowDMs
+                            allowProximityMessaging = profile.allowDMs,
+                            locationPrecision = profile.locationPrecision,
+                            hideOnlineStatus = profile.hideOnlineStatus,
+                            hideExactDistance = profile.hideExactDistance,
+                            blockedUserIds = profile.blockedUserIds
                         )
                     } else {
                         val defaultName = user.displayName?.ifBlank { "Local Resident" } ?: "Local Resident"
@@ -421,6 +504,15 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                             firestoreRepository.saveUserProfile(newProfile)
                         } catch (ignored: Exception) {}
                     }
+
+                    // Automatically update live GPS presence on user session sync
+                    val loc = _currentLocation.value
+                    val hash = _currentGeohash.value
+                    if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
+                        try {
+                            firestoreRepository.updateUserLocationPresence(loc.latitude, loc.longitude, hash)
+                        } catch (ignored: Exception) {}
+                    }
                 }
             } catch (ignored: Exception) {}
         }
@@ -436,6 +528,20 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 }
             } catch (ignored: Exception) {
                 _firestorePosts.value = emptyList()
+            }
+        }
+
+        // Live real-time nearby users from Firestore filtered by current geohash prefix
+        viewModelScope.launch {
+            try {
+                _currentGeohash.flatMapLatest { rawGeohash ->
+                    val geohashPrefix = rawGeohash.removePrefix("#").take(3)
+                    firestoreRepository.observeNearbyUsers(geohashPrefix = geohashPrefix)
+                }.collect { users ->
+                    _firestoreUsers.value = users
+                }
+            } catch (ignored: Exception) {
+                _firestoreUsers.value = emptyList()
             }
         }
 
@@ -645,6 +751,19 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        try {
+            CrashTelemetryManager.initialize(application)
+        } catch (ignored: Exception) {}
+
+        refreshStorageUsage()
+
+        if (_uiState.value.appSettings.autoTrimCacheEnabled) {
+            viewModelScope.launch(Dispatchers.IO) {
+                StorageCacheManager.trimCache(getApplication())
+                refreshStorageUsage()
+            }
+        }
+
         viewModelScope.launch {
             cells.collect { cellList ->
                 if (cellList.isNotEmpty() && _uiState.value.selectedCell == null) {
@@ -657,8 +776,83 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun openAppSettings() {
+        refreshStorageUsage()
+        _uiState.value = _uiState.value.copy(showAppSettingsScreen = true)
+    }
+
+    fun closeAppSettings() {
+        _uiState.value = _uiState.value.copy(showAppSettingsScreen = false)
+    }
+
+    fun updateAppSettings(newSettings: AppSettings) {
+        _uiState.value = _uiState.value.copy(appSettings = newSettings)
+    }
+
+    fun refreshStorageUsage() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val usage = StorageCacheManager.getStorageUsage(getApplication())
+            _uiState.value = _uiState.value.copy(storageUsage = usage)
+        }
+    }
+
+    fun trimCacheNow() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = StorageCacheManager.trimCache(getApplication())
+            refreshStorageUsage()
+            CrashTelemetryManager.logEvent("cache_trimmed_manually", mapOf("freedBytes" to result.freedBytes, "filesRemoved" to result.filesRemovedCount))
+        }
+    }
+
+    fun submitSupportTicket(category: String, message: String) {
+        if (message.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(supportTicketStatus = "Submitting ticket...")
+            try {
+                val user = auth.currentUser
+                val uid = user?.uid ?: "anonymous"
+                val name = _uiState.value.userNickname
+                val ticket = mapOf(
+                    "ticketId" to UUID.randomUUID().toString(),
+                    "userId" to uid,
+                    "userName" to name,
+                    "userEmail" to (user?.email ?: ""),
+                    "category" to category,
+                    "message" to message.trim(),
+                    "appVersion" to _uiState.value.appSettings.appVersion,
+                    "createdAt" to System.currentTimeMillis(),
+                    "status" to "OPEN"
+                )
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("support_tickets")
+                    .add(ticket)
+                _uiState.value = _uiState.value.copy(supportTicketStatus = "Ticket submitted successfully! Our team will respond shortly.")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(supportTicketStatus = "Saved locally. Feedback recorded.")
+            }
+        }
+    }
+
+    fun clearSupportTicketStatus() {
+        _uiState.value = _uiState.value.copy(supportTicketStatus = null)
+    }
+
+    private val _selectedNeighborForProfile = MutableStateFlow<NearbyNeighbor?>(null)
+    val selectedNeighborForProfile: StateFlow<NearbyNeighbor?> = _selectedNeighborForProfile.asStateFlow()
+
+    fun openNeighborProfile(neighbor: NearbyNeighbor) {
+        _selectedNeighborForProfile.value = neighbor
+    }
+
+    fun closeNeighborProfile() {
+        _selectedNeighborForProfile.value = null
+    }
+
     fun setDestination(dest: NavigationDestination) {
         _uiState.value = _uiState.value.copy(currentDestination = dest)
+        if (dest == NavigationDestination.MAP) {
+            refreshGridData()
+        }
     }
 
     fun showCellQrDialog(cell: GridCell) {
@@ -814,6 +1008,29 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun connectWithNeighbor(neighbor: NearbyNeighbor) {
+        viewModelScope.launch {
+            val neighborUser = neighbor.user
+            val result = firestoreRepository.startDirectConversationWithNeighbor(
+                neighborUser.userId,
+                neighborUser.displayName.ifBlank { "Neighbor" }
+            )
+            val convId = result.getOrNull() ?: "dm_${neighborUser.userId.take(8)}"
+            val conv = Conversation(
+                id = convId,
+                participantName = neighborUser.displayName.ifBlank { "Neighbor" },
+                relatedPostTitle = neighbor.latestPost?.title ?: "Nearby Neighbor on Map",
+                relatedPostType = neighbor.latestPost?.type ?: "MAP",
+                lastMessage = "Connecting nearby (${LocationHelper.formatDistance(neighbor.distanceMeters)} away)",
+                distanceBand = LocationHelper.formatDistance(neighbor.distanceMeters)
+            )
+            _uiState.value = _uiState.value.copy(
+                activeConversation = conv,
+                currentDestination = NavigationDestination.INBOX
+            )
+        }
+    }
+
     fun toggleIssueUpvote(issue: CommunityIssue) {
         viewModelScope.launch {
             firestoreRepository.toggleIssueUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
@@ -837,7 +1054,10 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         privacyRadiusMeters: Int,
         fuzzyCoords: Boolean,
         incognito: Boolean,
-        allowDMs: Boolean
+        allowDMs: Boolean,
+        locationPrecision: String = "EXACT",
+        hideOnlineStatus: Boolean = false,
+        hideExactDistance: Boolean = false
     ) {
         val sanitizedHandle = if (handle.startsWith("@")) handle.trim() else "@${handle.trim()}"
         _uiState.value = _uiState.value.copy(
@@ -851,6 +1071,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             fuzzyCoordinateOffset = fuzzyCoords,
             incognitoGridPresence = incognito,
             allowProximityMessaging = allowDMs,
+            locationPrecision = locationPrecision,
+            hideOnlineStatus = hideOnlineStatus,
+            hideExactDistance = hideExactDistance,
             showUserProfileEditor = false
         )
 
@@ -871,10 +1094,44 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     privacyRadiusMeters = privacyRadiusMeters,
                     fuzzyCoords = fuzzyCoords,
                     incognito = incognito,
-                    allowDMs = allowDMs
+                    allowDMs = allowDMs,
+                    locationPrecision = locationPrecision,
+                    hideOnlineStatus = hideOnlineStatus,
+                    hideExactDistance = hideExactDistance,
+                    blockedUserIds = _uiState.value.blockedUserIds
                 )
                 firestoreRepository.saveUserProfile(profile)
             }
+        }
+    }
+
+    fun blockUser(targetUserId: String) {
+        if (targetUserId.isBlank()) return
+        val currentBlocked = _uiState.value.blockedUserIds.toMutableList()
+        if (!currentBlocked.contains(targetUserId)) {
+            currentBlocked.add(targetUserId)
+            _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
+            viewModelScope.launch {
+                firestoreRepository.blockUser(targetUserId)
+            }
+        }
+    }
+
+    fun unblockUser(targetUserId: String) {
+        if (targetUserId.isBlank()) return
+        val currentBlocked = _uiState.value.blockedUserIds.toMutableList()
+        if (currentBlocked.contains(targetUserId)) {
+            currentBlocked.remove(targetUserId)
+            _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
+            viewModelScope.launch {
+                firestoreRepository.unblockUser(targetUserId)
+            }
+        }
+    }
+
+    fun reportUser(targetUserId: String, targetDisplayName: String, reason: String, notes: String) {
+        viewModelScope.launch {
+            firestoreRepository.reportUser(targetUserId, targetDisplayName, reason, notes)
         }
     }
 

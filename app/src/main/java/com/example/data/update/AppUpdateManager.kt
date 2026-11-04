@@ -1,5 +1,6 @@
 package com.example.data.update
 
+import android.content.Context
 import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -46,17 +47,59 @@ class AppUpdateManager(
     val isBannerDismissed: StateFlow<Boolean> = _isBannerDismissed.asStateFlow()
 
     private var lastDismissedVersion: String? = null
+    private var appContext: Context? = null
+
+    /**
+     * Initializes the manager with an application context to enable persistent
+     * storage of dismissed update versions across app restarts.
+     */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        loadPersistedDismissedVersion()
+    }
+
+    private fun loadPersistedDismissedVersion() {
+        try {
+            val saved = appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.getString(KEY_DISMISSED_VERSION, null)
+            if (!saved.isNullOrBlank()) {
+                lastDismissedVersion = saved
+                logDebug("Loaded persisted dismissed update version: $saved")
+            }
+        } catch (e: Throwable) {
+            logError("Failed to load persisted dismissed update version", e)
+        }
+    }
 
     fun dismissBanner(versionStr: String? = null) {
         val versionToDismiss = versionStr?.trim()?.removePrefix("v")?.removePrefix("V")
         if (!versionToDismiss.isNullOrBlank()) {
             lastDismissedVersion = versionToDismiss
+            try {
+                appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    ?.edit()
+                    ?.putString(KEY_DISMISSED_VERSION, versionToDismiss)
+                    ?.apply()
+                logDebug("Persisted dismissed update version: $versionToDismiss")
+            } catch (e: Throwable) {
+                logError("Failed to persist dismissed update version", e)
+            }
         }
         _isBannerDismissed.value = true
     }
 
     fun resetBannerDismissed() {
         _isBannerDismissed.value = false
+        lastDismissedVersion = null
+        try {
+            appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.edit()
+                ?.remove(KEY_DISMISSED_VERSION)
+                ?.apply()
+            logDebug("Cleared persisted dismissed update version")
+        } catch (e: Throwable) {
+            logError("Failed to clear persisted dismissed update version", e)
+        }
     }
 
     private fun logDebug(message: String) {
@@ -88,6 +131,9 @@ class AppUpdateManager(
             val cleanLatest = latestTag.removePrefix("v").removePrefix("V")
 
             // Automatically hide update banner if user already dismissed this specific release version
+            if (lastDismissedVersion.isNullOrBlank()) {
+                loadPersistedDismissedVersion()
+            }
             val isAlreadyDismissed = !lastDismissedVersion.isNullOrBlank() &&
                     cleanLatest.equals(lastDismissedVersion, ignoreCase = true)
             if (isAlreadyDismissed) {
@@ -152,6 +198,8 @@ class AppUpdateManager(
 
     companion object {
         private const val BASE_URL = "https://api.github.com/"
+        private const val PREFS_NAME = "neargrid_update_prefs"
+        private const val KEY_DISMISSED_VERSION = "key_dismissed_version"
 
         val defaultMoshi: Moshi by lazy {
             Moshi.Builder()

@@ -26,7 +26,7 @@ data class GitHubRelease(
 )
 
 data class AppUpdateInfo(
-    val currentVersion: String = "1.0",
+    val currentVersion: String = "1.0.3",
     val latestVersion: String = "",
     val releaseName: String = "",
     val releaseNotes: String = "",

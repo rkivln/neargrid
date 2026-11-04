@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.HomeRepairService
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
@@ -304,6 +305,7 @@ fun TopNeighborhoodBar(
     isLocating: Boolean = false,
     onCellClick: () -> Unit,
     onGpsToggle: () -> Unit,
+    onOpenMapClick: (() -> Unit)? = null,
     onShowQrClick: (() -> Unit)? = null,
     onScanQrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -366,11 +368,31 @@ fun TopNeighborhoodBar(
                 color = SlateBlue
             )
 
-            // Right: Actions Row (QR Code Scan, QR Code Invite & GPS Toggle)
+            // Right: Actions Row (Live Map, QR Code Scan, QR Code Invite & GPS Toggle)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (onOpenMapClick != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(PrimarySurface)
+                            .border(1.dp, CardBorderColor, CircleShape)
+                            .clickable { onOpenMapClick() }
+                            .testTag("top_bar_map_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = "Open Live Map",
+                            modifier = Modifier.size(18.dp),
+                            tint = PrimaryText
+                        )
+                    }
+                }
+
                 if (onScanQrClick != null) {
                     Box(
                         modifier = Modifier

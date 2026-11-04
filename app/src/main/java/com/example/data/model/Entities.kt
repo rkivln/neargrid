@@ -18,8 +18,23 @@ data class UserProfile(
     val fuzzyCoords: Boolean = true,
     val incognito: Boolean = false,
     val allowDMs: Boolean = true,
+    val locationPrecision: String = "EXACT", // "EXACT", "APPROXIMATE", "NEIGHBORHOOD"
+    val hideOnlineStatus: Boolean = false,
+    val hideExactDistance: Boolean = false,
+    val blockedUserIds: List<String> = emptyList(),
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val geohash: String = "",
+    val isOnline: Boolean = false,
+    val lastActiveAt: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
+)
+
+data class NearbyNeighbor(
+    val user: UserProfile,
+    val distanceMeters: Float,
+    val latestPost: NeighborPost? = null
 )
 
 @Entity(tableName = "neighbor_posts")

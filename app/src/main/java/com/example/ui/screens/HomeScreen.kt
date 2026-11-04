@@ -114,6 +114,7 @@ fun HomeScreen(
     selectedCategory: String,
     onCellClick: () -> Unit,
     onGpsToggle: () -> Unit,
+    onOpenMapClick: (() -> Unit)? = null,
     onShowQrClick: (() -> Unit)? = null,
     onScanQrClick: (() -> Unit)? = null,
     onRadiusChange: (Int) -> Unit,
@@ -151,6 +152,7 @@ fun HomeScreen(
                     isLocating = isLocating,
                     onCellClick = onCellClick,
                     onGpsToggle = onGpsToggle,
+                    onOpenMapClick = onOpenMapClick,
                     onShowQrClick = onShowQrClick,
                     onScanQrClick = onScanQrClick
                 )

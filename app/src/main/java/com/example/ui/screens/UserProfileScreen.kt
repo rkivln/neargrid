@@ -37,9 +37,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsBike
@@ -53,6 +55,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -102,6 +105,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.GridCell
 import com.example.ui.theme.DMSansFontFamily
 import com.example.ui.theme.DMSerifFontFamily
+import com.example.ui.theme.DarkNavy
 import com.example.ui.theme.PastelButterYellow
 import com.example.ui.theme.PastelCoral
 import com.example.ui.theme.PastelMint
@@ -160,6 +164,11 @@ fun UserProfileScreen(
     currentFuzzyCoords: Boolean,
     currentIncognito: Boolean,
     currentAllowDMs: Boolean,
+    currentLocationPrecision: String = "EXACT",
+    currentHideOnlineStatus: Boolean = false,
+    currentHideExactDistance: Boolean = false,
+    blockedUserIds: List<String> = emptyList(),
+    onUnblockUser: (String) -> Unit = {},
     currentCell: GridCell?,
     onSaveProfile: (
         nickname: String,
@@ -170,9 +179,13 @@ fun UserProfileScreen(
         privacyRadiusMeters: Int,
         fuzzyCoords: Boolean,
         incognito: Boolean,
-        allowDMs: Boolean
+        allowDMs: Boolean,
+        locationPrecision: String,
+        hideOnlineStatus: Boolean,
+        hideExactDistance: Boolean
     ) -> Unit,
     onBack: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     updateInfo: AppUpdateInfo? = null,
     onCheckForUpdates: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -188,6 +201,9 @@ fun UserProfileScreen(
     var fuzzyCoords by remember { mutableStateOf(currentFuzzyCoords) }
     var incognito by remember { mutableStateOf(currentIncognito) }
     var allowDMs by remember { mutableStateOf(currentAllowDMs) }
+    var locationPrecision by remember { mutableStateOf(currentLocationPrecision) }
+    var hideOnlineStatus by remember { mutableStateOf(currentHideOnlineStatus) }
+    var hideExactDistance by remember { mutableStateOf(currentHideExactDistance) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -267,46 +283,71 @@ fun UserProfileScreen(
                         }
                     }
 
-                    Button(
-                        onClick = {
-                            val cleanNick = nickname.trim().ifBlank { "Neighbor" }
-                            val cleanHandle = handle.trim().ifBlank { "resident" }
-                            onSaveProfile(
-                                cleanNick,
-                                cleanHandle,
-                                bio,
-                                avatarUri,
-                                presetIndex,
-                                selectedRadius,
-                                fuzzyCoords,
-                                incognito,
-                                allowDMs
-                            )
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Profile & privacy settings saved!")
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryText,
-                            contentColor = PureWhite
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("profile_top_save_button")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = PureWhite,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Save",
-                            fontFamily = DMSansFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = PureWhite
-                        )
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(SoftCream)
+                                .border(1.dp, WarmBorder, CircleShape)
+                                .testTag("open_settings_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "App Settings",
+                                tint = PrimaryText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val cleanNick = nickname.trim().ifBlank { "Neighbor" }
+                                val cleanHandle = handle.trim().ifBlank { "resident" }
+                                onSaveProfile(
+                                    cleanNick,
+                                    cleanHandle,
+                                    bio,
+                                    avatarUri,
+                                    presetIndex,
+                                    selectedRadius,
+                                    fuzzyCoords,
+                                    incognito,
+                                    allowDMs,
+                                    locationPrecision,
+                                    hideOnlineStatus,
+                                    hideExactDistance
+                                )
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Profile & privacy settings saved!")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryText,
+                                contentColor = PureWhite
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.testTag("profile_top_save_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = PureWhite,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Save",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = PureWhite
+                            )
+                        }
                     }
                 }
             }
@@ -895,9 +936,86 @@ fun UserProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Privacy Controls & Toggles
+                    // Privacy Controls & Spatial Precision
                     Text(
-                        text = "Spatial coordinate safeguards:",
+                        text = "Map location precision:",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = PrimaryText
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3-way Precision Cards (Exact, Approximate, Neighborhood)
+                    val precisionOptions = listOf(
+                        Triple("EXACT", "🎯 Exact Pin", "Live coordinate pinpoint on map"),
+                        Triple("APPROXIMATE", "🌐 Approximate (~200m)", "Fuzzes coordinates to protect home doorstep"),
+                        Triple("NEIGHBORHOOD", "🏘️ Neighborhood Only", "Displays at area center without exact location")
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        precisionOptions.forEach { (key, title, desc) ->
+                            val isSelected = locationPrecision == key
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) PastelPeach.copy(alpha = 0.35f) else SoftCream,
+                                border = BorderStroke(
+                                    if (isSelected) 1.5.dp else 1.dp,
+                                    if (isSelected) DarkNavy else WarmBorder
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { locationPrecision = key }
+                                    .testTag("precision_option_${key.lowercase()}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = title,
+                                            fontFamily = DMSansFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isSelected) DarkNavy else PrimaryText
+                                        )
+                                        Text(
+                                            text = desc,
+                                            fontFamily = DMSansFontFamily,
+                                            fontSize = 11.sp,
+                                            color = SecondaryText,
+                                            lineHeight = 15.sp
+                                        )
+                                    }
+                                    if (isSelected) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = DarkNavy,
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = PureWhite,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "Activity & presence indicators:",
                         fontFamily = DMSansFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
@@ -905,7 +1023,7 @@ fun UserProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Toggle 1: Hex-Cell Centroid Fuzzing
+                    // Toggle 1: Hide Online Status
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -913,14 +1031,14 @@ fun UserProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Hex-Cell Centroid Fuzzing",
+                                text = "Hide Online Status Badge",
                                 fontFamily = DMSansFontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
                                 color = PrimaryText
                             )
                             Text(
-                                text = "Displaces coordinates by up to 180m toward the nearest cell vertex. Your exact home door is mathematically untraceable.",
+                                text = "Conceals the green online indicator. Neighbors see you as 'Active in neighborhood' without revealing real-time usage.",
                                 fontFamily = DMSansFontFamily,
                                 fontSize = 11.sp,
                                 color = SecondaryText,
@@ -929,19 +1047,55 @@ fun UserProfileScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Switch(
-                            checked = fuzzyCoords,
-                            onCheckedChange = { fuzzyCoords = it },
+                            checked = hideOnlineStatus,
+                            onCheckedChange = { hideOnlineStatus = it },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = PureWhite,
                                 checkedTrackColor = PastelCoral
                             ),
-                            modifier = Modifier.testTag("toggle_fuzzy_coords")
+                            modifier = Modifier.testTag("toggle_hide_online_status")
                         )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Toggle 2: Incognito Grid Presence
+                    // Toggle 2: Hide Exact Distance
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Hide Exact Distance Meters",
+                                fontFamily = DMSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = PrimaryText
+                            )
+                            Text(
+                                text = "Displays a broad proximity band (e.g. '< 500 m' or 'In your neighborhood') instead of exact meters like '85 m away'.",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 11.sp,
+                                color = SecondaryText,
+                                lineHeight = 15.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = hideExactDistance,
+                            onCheckedChange = { hideExactDistance = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = PureWhite,
+                                checkedTrackColor = PastelCoral
+                            ),
+                            modifier = Modifier.testTag("toggle_hide_exact_distance")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Toggle 3: Incognito Grid Presence
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -950,7 +1104,7 @@ fun UserProfileScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Incognito Grid Presence",
+                                    text = "Ghost / Incognito Presence",
                                     fontFamily = DMSansFontFamily,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
@@ -965,7 +1119,7 @@ fun UserProfileScreen(
                                 )
                             }
                             Text(
-                                text = if (incognito) "You are hidden from the active Living Grid presence map." else "Your avatar appears as an active neighbor node inside your cell.",
+                                text = if (incognito) "Completely hidden from map radar and neighbor lists." else "Your avatar appears as an active neighbor node inside your cell.",
                                 fontFamily = DMSansFontFamily,
                                 fontSize = 11.sp,
                                 color = SecondaryText,
@@ -986,7 +1140,7 @@ fun UserProfileScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Toggle 3: Direct Proximity Messaging
+                    // Toggle 4: Direct Proximity Messaging
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1018,6 +1172,137 @@ fun UserProfileScreen(
                             ),
                             modifier = Modifier.testTag("toggle_allow_dms")
                         )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION: BLOCKED NEIGHBORS & SAFETY
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .testTag("blocked_neighbors_card"),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = BorderStroke(1.dp, WarmBorder)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = PastelCoral.copy(alpha = 0.2f),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Block,
+                                        contentDescription = null,
+                                        tint = DarkNavy,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Blocked Neighbors",
+                                    fontFamily = DMSerifFontFamily,
+                                    fontSize = 18.sp,
+                                    color = PrimaryText
+                                )
+                                Text(
+                                    text = "${blockedUserIds.size} accounts blocked",
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 11.sp,
+                                    color = SecondaryText
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Blocked neighbors cannot view your location on the map, see your posts, or send you private messages.",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 11.sp,
+                        color = SecondaryText,
+                        lineHeight = 15.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (blockedUserIds.isEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SoftCream,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No neighbors currently blocked. You can block or report any neighbor directly from their profile on the map.",
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 12.sp,
+                                color = SecondaryText,
+                                modifier = Modifier.padding(14.dp)
+                            )
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            blockedUserIds.forEach { blockedId ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = SoftCream,
+                                    border = BorderStroke(1.dp, WarmBorder),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = SecondaryText,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Neighbor #${blockedId.take(8)}",
+                                                fontFamily = DMSansFontFamily,
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 12.sp,
+                                                color = PrimaryText
+                                            )
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { onUnblockUser(blockedId) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            border = BorderStroke(1.dp, WarmBorder),
+                                            modifier = Modifier.testTag("unblock_button_$blockedId")
+                                        ) {
+                                            Text(
+                                                text = "Unblock",
+                                                fontFamily = DMSansFontFamily,
+                                                fontSize = 11.sp,
+                                                color = PrimaryText
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1067,7 +1352,7 @@ fun UserProfileScreen(
                                     color = PrimaryText
                                 )
                                 Text(
-                                    text = "Installed build v${updateInfo?.currentVersion ?: "1.0"}",
+                                    text = "Installed build v${updateInfo?.currentVersion ?: com.example.BuildConfig.VERSION_NAME}",
                                     fontFamily = DMSansFontFamily,
                                     fontSize = 11.sp,
                                     color = SecondaryText
@@ -1280,7 +1565,10 @@ fun UserProfileScreen(
                             selectedRadius,
                             fuzzyCoords,
                             incognito,
-                            allowDMs
+                            allowDMs,
+                            locationPrecision,
+                            hideOnlineStatus,
+                            hideExactDistance
                         )
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("Profile & privacy radius successfully updated!")

@@ -45,7 +45,16 @@ service cloud.firestore {
              (!('privacyRadiusMeters' in data) || data.privacyRadiusMeters is int) &&
              (!('fuzzyCoords' in data) || data.fuzzyCoords is bool) &&
              (!('incognito' in data) || data.incognito is bool) &&
-             (!('allowDMs' in data) || data.allowDMs is bool);
+             (!('allowDMs' in data) || data.allowDMs is bool) &&
+             (!('latitude' in data) || data.latitude is number) &&
+             (!('longitude' in data) || data.longitude is number) &&
+             (!('geohash' in data) || (data.geohash is string && data.geohash.size() <= 32)) &&
+             (!('isOnline' in data) || data.isOnline is bool) &&
+             (!('locationPrecision' in data) || data.locationPrecision in ['EXACT', 'APPROXIMATE', 'NEIGHBORHOOD']) &&
+             (!('hideOnlineStatus' in data) || data.hideOnlineStatus is bool) &&
+             (!('hideExactDistance' in data) || data.hideExactDistance is bool) &&
+             (!('blockedUserIds' in data) || (data.blockedUserIds is list && data.blockedUserIds.size() <= 200)) &&
+             (!('lastActiveAt' in data) || isServerTimestamp(data.lastActiveAt) || data.lastActiveAt is int || data.lastActiveAt is timestamp);
     }
 
     // Validation for Neighbor Post (Need, Offer, Meetup)
@@ -227,6 +236,15 @@ service cloud.firestore {
                        isServerTimestamp(incoming().timestamp) &&
                        isValidGeohashMessage(incoming());
       allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // --- Reports Collection (Safety & Moderation) ---
+    match /reports/{reportId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       incoming().reporterId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt);
+      allow update, delete: if false;
     }
   }
 }

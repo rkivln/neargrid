@@ -20,11 +20,13 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +57,7 @@ import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
 import com.example.ui.components.PostCommentsSheet
 import com.example.ui.components.QrCodeScannerDialog
+import com.example.ui.screens.AppSettingsScreen
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.GridQrInviteScreen
 import com.example.ui.screens.HomeScreen
@@ -62,6 +65,7 @@ import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.RealtimeMapScreen
 import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.UserProfileScreen
 import com.example.ui.theme.DMSansFontFamily
@@ -107,6 +111,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val geohashMessages by viewModel.geohashMessages.collectAsStateWithLifecycle()
     val activeCommentsPost by viewModel.activePostForComments.collectAsStateWithLifecycle()
     val postComments by viewModel.activePostComments.collectAsStateWithLifecycle()
+    val nearbyNeighbors by viewModel.nearbyNeighbors.collectAsStateWithLifecycle()
     val updateInfo by viewModel.updateInfo.collectAsStateWithLifecycle()
     val isUpdateBannerDismissed by viewModel.isUpdateBannerDismissed.collectAsStateWithLifecycle()
 
@@ -235,6 +240,21 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         return
     }
 
+    // Full-screen App Settings & Customization Hub
+    if (uiState.showAppSettingsScreen) {
+        AppSettingsScreen(
+            appSettings = uiState.appSettings,
+            storageUsage = uiState.storageUsage,
+            supportTicketStatus = uiState.supportTicketStatus,
+            onUpdateSettings = { viewModel.updateAppSettings(it) },
+            onTrimCacheNow = { viewModel.trimCacheNow() },
+            onSubmitSupportTicket = { cat, msg -> viewModel.submitSupportTicket(cat, msg) },
+            onClearSupportStatus = { viewModel.clearSupportTicketStatus() },
+            onBack = { viewModel.closeAppSettings() }
+        )
+        return
+    }
+
     // Full-screen User Profile & Privacy settings editor
     if (uiState.showUserProfileEditor) {
         UserProfileScreen(
@@ -247,8 +267,13 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             currentFuzzyCoords = uiState.fuzzyCoordinateOffset,
             currentIncognito = uiState.incognitoGridPresence,
             currentAllowDMs = uiState.allowProximityMessaging,
+            currentLocationPrecision = uiState.locationPrecision,
+            currentHideOnlineStatus = uiState.hideOnlineStatus,
+            currentHideExactDistance = uiState.hideExactDistance,
+            blockedUserIds = uiState.blockedUserIds,
+            onUnblockUser = { viewModel.unblockUser(it) },
             currentCell = uiState.selectedCell,
-            onSaveProfile = { nick, handle, bio, uri, preset, radius, fuzzy, incognito, allowDMs ->
+            onSaveProfile = { nick, handle, bio, uri, preset, radius, fuzzy, incognito, allowDMs, precision, hideOnline, hideDist ->
                 viewModel.updateUserProfile(
                     nickname = nick,
                     handle = handle,
@@ -258,10 +283,14 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     privacyRadiusMeters = radius,
                     fuzzyCoords = fuzzy,
                     incognito = incognito,
-                    allowDMs = allowDMs
+                    allowDMs = allowDMs,
+                    locationPrecision = precision,
+                    hideOnlineStatus = hideOnline,
+                    hideExactDistance = hideDist
                 )
             },
             onBack = { viewModel.closeUserProfileEditor() },
+            onOpenSettings = { viewModel.openAppSettings() },
             updateInfo = updateInfo,
             onCheckForUpdates = { viewModel.checkForUpdates(isManual = true) }
         )
@@ -303,6 +332,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     val isSelected = uiState.currentDestination == destination
                     val (iconFilled, iconOutlined) = when (destination) {
                         NavigationDestination.HOME -> Icons.Filled.Home to Icons.Outlined.Home
+                        NavigationDestination.MAP -> Icons.Filled.Map to Icons.Outlined.Map
                         NavigationDestination.GRID -> Icons.Filled.GridView to Icons.Outlined.GridView
                         NavigationDestination.COMMUNITY -> Icons.Filled.Campaign to Icons.Outlined.Campaign
                         NavigationDestination.INBOX -> Icons.Filled.ChatBubble to Icons.Outlined.ChatBubbleOutline
@@ -371,6 +401,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         selectedCategory = uiState.selectedCategory,
                         onCellClick = { showCellPickerDialog = true },
                         onGpsToggle = onToggleGps,
+                        onOpenMapClick = { viewModel.setDestination(NavigationDestination.MAP) },
                         onShowQrClick = { uiState.selectedCell?.let { viewModel.showCellQrDialog(it) } },
                         onScanQrClick = { viewModel.openQrScannerDialog() },
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
@@ -390,6 +421,27 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         updateInfo = updateInfo,
                         isUpdateBannerDismissed = isUpdateBannerDismissed,
                         onDismissUpdateBanner = { viewModel.dismissUpdateBanner() }
+                    )
+                }
+
+                NavigationDestination.MAP -> {
+                    RealtimeMapScreen(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refreshGridData() },
+                        userLocation = currentLocation,
+                        currentCell = uiState.selectedCell,
+                        discoveryRadiusMeters = uiState.discoveryRadiusMeters,
+                        nearbyNeighbors = nearbyNeighbors,
+                        posts = posts,
+                        issues = issues,
+                        onRadiusChange = { viewModel.setDiscoveryRadius(it) },
+                        onStartChatWithNeighbor = { viewModel.connectWithNeighbor(it) },
+                        onBlockNeighbor = { viewModel.blockUser(it) },
+                        onReportNeighbor = { targetUid, name, reason, notes ->
+                            viewModel.reportUser(targetUid, name, reason, notes)
+                        },
+                        onPostClick = { viewModel.connectFromPost(it) },
+                        onIssueClick = { viewModel.setDestination(NavigationDestination.COMMUNITY) }
                     )
                 }
 

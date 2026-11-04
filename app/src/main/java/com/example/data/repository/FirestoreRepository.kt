@@ -126,6 +126,15 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 fuzzyCoords = data["fuzzyCoords"] as? Boolean ?: true,
                 incognito = data["incognito"] as? Boolean ?: false,
                 allowDMs = data["allowDMs"] as? Boolean ?: true,
+                locationPrecision = data["locationPrecision"] as? String ?: "EXACT",
+                hideOnlineStatus = data["hideOnlineStatus"] as? Boolean ?: false,
+                hideExactDistance = data["hideExactDistance"] as? Boolean ?: false,
+                blockedUserIds = (data["blockedUserIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
+                longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
+                geohash = data["geohash"] as? String ?: "",
+                isOnline = data["isOnline"] as? Boolean ?: false,
+                lastActiveAt = (data["lastActiveAt"] as? Timestamp)?.toDate()?.time ?: (data["lastActiveAt"] as? Number)?.toLong() ?: 0L,
                 createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
             )
             trySend(profile)
@@ -149,10 +158,22 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "fuzzyCoords" to profile.fuzzyCoords,
             "incognito" to profile.incognito,
             "allowDMs" to profile.allowDMs,
+            "locationPrecision" to profile.locationPrecision,
+            "hideOnlineStatus" to profile.hideOnlineStatus,
+            "hideExactDistance" to profile.hideExactDistance,
+            "blockedUserIds" to profile.blockedUserIds,
+            "isOnline" to profile.isOnline,
             "updatedAt" to FieldValue.serverTimestamp()
         )
         if (profile.avatarUri != null) {
             payload["avatarUri"] = profile.avatarUri
+        }
+        if (profile.latitude != 0.0 && profile.longitude != 0.0) {
+            payload["latitude"] = profile.latitude
+            payload["longitude"] = profile.longitude
+        }
+        if (profile.geohash.isNotBlank()) {
+            payload["geohash"] = profile.geohash.removePrefix("#").lowercase(Locale.ROOT)
         }
         try {
             val snapshot = docRef.get().await()
@@ -165,6 +186,172 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             Result.success(Unit)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserLocationPresence(latitude: Double, longitude: Double, geohash: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        if (latitude == 0.0 && longitude == 0.0) return@withContext Result.success(Unit)
+        val docRef = db.collection("users").document(uid)
+        val cleanHash = geohash.removePrefix("#").lowercase(Locale.ROOT)
+        val updates = hashMapOf<String, Any>(
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "geohash" to cleanHash,
+            "isOnline" to true,
+            "lastActiveAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        try {
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                docRef.update(updates).await()
+            } else {
+                val user = auth?.currentUser
+                val initialProfile = hashMapOf<String, Any>(
+                    "userId" to uid,
+                    "email" to (user?.email ?: ""),
+                    "displayName" to (user?.displayName?.ifBlank { "Neighbor" } ?: "Neighbor"),
+                    "handle" to "@" + (user?.displayName?.replace(" ", "")?.lowercase(Locale.ROOT) ?: "resident"),
+                    "bio" to "Local neighbor on NearGrid",
+                    "cellId" to "cell_local",
+                    "cellName" to "Local Area",
+                    "avatarPresetIndex" to 0,
+                    "avatarUri" to (user?.photoUrl?.toString() ?: ""),
+                    "privacyRadiusMeters" to 500,
+                    "fuzzyCoords" to true,
+                    "incognito" to false,
+                    "allowDMs" to true,
+                    "locationPrecision" to "EXACT",
+                    "hideOnlineStatus" to false,
+                    "hideExactDistance" to false,
+                    "blockedUserIds" to emptyList<String>(),
+                    "latitude" to latitude,
+                    "longitude" to longitude,
+                    "geohash" to cleanHash,
+                    "isOnline" to true,
+                    "lastActiveAt" to FieldValue.serverTimestamp(),
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                docRef.set(initialProfile).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    fun observeNearbyUsers(geohashPrefix: String? = null): Flow<List<UserProfile>> = callbackFlow {
+        val uid = auth?.currentUser?.uid
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val cleanPrefix = geohashPrefix?.removePrefix("#")?.lowercase(Locale.ROOT)?.trim()
+        val baseQuery = db.collection("users")
+        val query = if (!cleanPrefix.isNullOrBlank() && cleanPrefix.length >= 3) {
+            val prefix = cleanPrefix.take(3)
+            baseQuery.whereGreaterThanOrEqualTo("geohash", prefix)
+                .whereLessThanOrEqualTo("geohash", prefix + "\uf8ff")
+                .limit(100)
+        } else {
+            baseQuery.limit(100)
+        }
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                handleFirestoreError(error, OperationType.LIST, "users")
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            if (snapshot == null) {
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            val users = snapshot.documents.mapNotNull { doc ->
+                val data = doc.data ?: return@mapNotNull null
+                UserProfile(
+                    userId = doc.id,
+                    email = data["email"] as? String ?: "",
+                    displayName = data["displayName"] as? String ?: "Neighbor",
+                    handle = data["handle"] as? String ?: "",
+                    bio = data["bio"] as? String ?: "",
+                    cellId = data["cellId"] as? String ?: "cell_oakwood_center",
+                    cellName = data["cellName"] as? String ?: "Local Area",
+                    avatarPresetIndex = (data["avatarPresetIndex"] as? Number)?.toInt() ?: 0,
+                    avatarUri = data["avatarUri"] as? String,
+                    privacyRadiusMeters = (data["privacyRadiusMeters"] as? Number)?.toInt() ?: 500,
+                    fuzzyCoords = data["fuzzyCoords"] as? Boolean ?: true,
+                    incognito = data["incognito"] as? Boolean ?: false,
+                    allowDMs = data["allowDMs"] as? Boolean ?: true,
+                    locationPrecision = data["locationPrecision"] as? String ?: "EXACT",
+                    hideOnlineStatus = data["hideOnlineStatus"] as? Boolean ?: false,
+                    hideExactDistance = data["hideExactDistance"] as? Boolean ?: false,
+                    blockedUserIds = (data["blockedUserIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                    latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
+                    longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
+                    geohash = data["geohash"] as? String ?: "",
+                    isOnline = data["isOnline"] as? Boolean ?: false,
+                    lastActiveAt = (data["lastActiveAt"] as? Timestamp)?.toDate()?.time ?: 0L,
+                    createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
+                )
+            }
+            trySend(users)
+        }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun blockUser(targetUserId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        val docRef = db.collection("users").document(uid)
+        try {
+            docRef.update("blockedUserIds", FieldValue.arrayUnion(targetUserId)).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unblockUser(targetUserId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        val docRef = db.collection("users").document(uid)
+        try {
+            docRef.update("blockedUserIds", FieldValue.arrayRemove(targetUserId)).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun reportUser(
+        targetUserId: String,
+        targetDisplayName: String,
+        reason: String,
+        notes: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        val reportId = UUID.randomUUID().toString()
+        val docRef = db.collection("reports").document(reportId)
+        val data = hashMapOf<String, Any>(
+            "id" to reportId,
+            "reporterId" to uid,
+            "targetUserId" to targetUserId,
+            "targetDisplayName" to targetDisplayName,
+            "reason" to reason,
+            "notes" to notes,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        try {
+            docRef.set(data).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
             Result.failure(e)
         }
     }
@@ -678,6 +865,33 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
         try {
             convRef.set(convPayload).await()
+            Result.success(convId)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, convRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun startDirectConversationWithNeighbor(neighborUserId: String, neighborName: String): Result<String> = withContext(Dispatchers.IO) {
+        val uid = requireUserId()
+        val currentUserName = auth?.currentUser?.displayName ?: "Neighbor"
+        val convId = if (uid < neighborUserId) "dm_${uid.take(8)}_${neighborUserId.take(8)}" else "dm_${neighborUserId.take(8)}_${uid.take(8)}"
+        val convRef = db.collection("conversations").document(convId)
+
+        val convPayload = hashMapOf<String, Any>(
+            "id" to convId,
+            "participantIds" to listOf(uid, neighborUserId),
+            "participantNames" to listOf(currentUserName, neighborName),
+            "lastMessage" to "Connecting nearby on the map",
+            "lastMessageTime" to FieldValue.serverTimestamp(),
+            "distanceBand" to "nearby on map",
+            "isResolved" to false,
+            "createdAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+
+        try {
+            convRef.set(convPayload, com.google.firebase.firestore.SetOptions.merge()).await()
             Result.success(convId)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, convRef.path)
