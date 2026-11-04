@@ -174,6 +174,41 @@ class NearGridRepository(private val database: AppDatabase) {
             conversationDao.updateLastMessage(conversationId, text, System.currentTimeMillis())
         }
 
+    suspend fun deletePost(postId: String) = withContext(Dispatchers.IO) {
+        try {
+            postDao.deletePost(postId)
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed deleting post from Room", e)
+        }
+    }
+
+    suspend fun updatePostContent(postId: String, title: String, description: String, category: String, urgency: String) = withContext(Dispatchers.IO) {
+        try {
+            val existing = postDao.getAllPosts().first().find { it.id == postId }
+            if (existing != null) {
+                postDao.updatePost(existing.copy(title = title, description = description, category = category, urgency = urgency))
+            }
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed updating post in Room", e)
+        }
+    }
+
+    suspend fun deleteChatMessage(messageId: String) = withContext(Dispatchers.IO) {
+        try {
+            chatDao.deleteMessage(messageId)
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed deleting chat message from Room", e)
+        }
+    }
+
+    suspend fun editChatMessage(messageId: String, newText: String) = withContext(Dispatchers.IO) {
+        try {
+            chatDao.updateMessageText(messageId, newText)
+        } catch (e: Exception) {
+            Log.e("NearGridRepository", "Failed updating chat message in Room", e)
+        }
+    }
+
     suspend fun startConversationForPost(post: NeighborPost): String = withContext(Dispatchers.IO) {
         val convId = "conv_${post.id}"
         val existing = conversationDao.getAllConversations().first().find { it.id == convId }

@@ -24,10 +24,20 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +48,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -78,10 +89,17 @@ fun ConversationChatView(
     conversation: Conversation,
     messages: List<ChatMessage>,
     onSendMessage: (text: String, isMeetingPoint: Boolean, meetingPoint: String?) -> Unit,
+    onEditMessage: ((messageId: String, newText: String) -> Unit)? = null,
+    onDeleteMessage: ((messageId: String) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+
+    var activeMessageForAction by remember { mutableStateOf<ChatMessage?>(null) }
+    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
+    val clipboardManager = LocalClipboardManager.current
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -357,25 +375,80 @@ fun ConversationChatView(
                         }
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isMe) 16.dp else 4.dp,
-                            bottomEnd = if (isMe) 4.dp else 16.dp
-                        ),
-                        color = if (isMe) PrimaryText else PureWhite,
-                        border = if (!isMe) androidx.compose.foundation.BorderStroke(1.dp, WarmBorder) else null,
-                        shadowElevation = 0.5.dp
-                    ) {
-                        Text(
-                            text = msg.text,
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = if (isMe) PureWhite else PrimaryText,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                        )
+                    Box {
+                        Surface(
+                            modifier = Modifier
+                                .pointerInput(msg.id) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            activeMessageForAction = msg
+                                        }
+                                    )
+                                }
+                                .testTag("chat_bubble_${msg.id}"),
+                            shape = RoundedCornerShape(
+                                topStart = 16.dp,
+                                topEnd = 16.dp,
+                                bottomStart = if (isMe) 16.dp else 4.dp,
+                                bottomEnd = if (isMe) 4.dp else 16.dp
+                            ),
+                            color = if (isMe) PrimaryText else PureWhite,
+                            border = if (!isMe) androidx.compose.foundation.BorderStroke(1.dp, WarmBorder) else null,
+                            shadowElevation = 0.5.dp
+                        ) {
+                            Text(
+                                text = msg.text,
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                color = if (isMe) PureWhite else PrimaryText,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = activeMessageForAction?.id == msg.id,
+                            onDismissRequest = { activeMessageForAction = null },
+                            modifier = Modifier.background(PureWhite)
+                        ) {
+                            if (isMe) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit message", fontFamily = DMSansFontFamily, color = PrimaryText) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = PastelCoral, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        val currentMsg = activeMessageForAction
+                                        activeMessageForAction = null
+                                        editingMessage = currentMsg
+                                    },
+                                    modifier = Modifier.testTag("chat_menu_edit_${msg.id}")
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete message", fontFamily = DMSansFontFamily, color = Color(0xFFD32F2F)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        val currentMsg = activeMessageForAction
+                                        activeMessageForAction = null
+                                        messageToDelete = currentMsg
+                                    },
+                                    modifier = Modifier.testTag("chat_menu_delete_${msg.id}")
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Copy text", fontFamily = DMSansFontFamily, color = PrimaryText) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(18.dp))
+                                },
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(msg.text))
+                                    activeMessageForAction = null
+                                },
+                                modifier = Modifier.testTag("chat_menu_copy_${msg.id}")
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(3.dp))
@@ -390,5 +463,106 @@ fun ConversationChatView(
                 }
             }
         }
+    }
+
+    if (editingMessage != null) {
+        val targetMsg = editingMessage!!
+        var editedContent by remember(targetMsg.id) { mutableStateOf(targetMsg.text) }
+
+        AlertDialog(
+            onDismissRequest = { editingMessage = null },
+            title = {
+                Text(
+                    text = "Edit Message",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 20.sp,
+                    color = PrimaryText
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = editedContent,
+                    onValueChange = { editedContent = it },
+                    label = { Text("Message text", fontFamily = DMSansFontFamily) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("edit_chat_message_input"),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editedContent.isNotBlank()) {
+                            val id = targetMsg.id
+                            editingMessage = null
+                            onEditMessage?.invoke(id, editedContent.trim())
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryText),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("save_edit_chat_message_button")
+                ) {
+                    Text("Save", color = PureWhite, fontFamily = DMSansFontFamily)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { editingMessage = null },
+                    modifier = Modifier.testTag("cancel_edit_chat_message_button")
+                ) {
+                    Text("Cancel", color = SecondaryText, fontFamily = DMSansFontFamily)
+                }
+            },
+            containerColor = PureWhite,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    if (messageToDelete != null) {
+        val targetMsg = messageToDelete!!
+        AlertDialog(
+            onDismissRequest = { messageToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Message?",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 18.sp,
+                    color = PrimaryText
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this message? This action cannot be undone.",
+                    fontFamily = DMSansFontFamily,
+                    fontSize = 13.sp,
+                    color = SecondaryText
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = targetMsg.id
+                        messageToDelete = null
+                        onDeleteMessage?.invoke(id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("confirm_delete_chat_message_button")
+                ) {
+                    Text("Delete", color = PureWhite, fontFamily = DMSansFontFamily)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { messageToDelete = null },
+                    modifier = Modifier.testTag("cancel_delete_chat_message_button")
+                ) {
+                    Text("Cancel", color = SecondaryText, fontFamily = DMSansFontFamily)
+                }
+            },
+            containerColor = PureWhite,
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }

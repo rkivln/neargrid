@@ -178,10 +178,15 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             close()
             return@callbackFlow
         }
+        if (geohashPrefix.isNullOrBlank() && cellId.isNullOrBlank()) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
         val path = "posts"
         var query: com.google.firebase.firestore.Query = db.collection(path).whereEqualTo("status", "ACTIVE")
         if (!geohashPrefix.isNullOrBlank()) {
-            val prefix = geohashPrefix.trim().lowercase(Locale.ROOT)
+            val prefix = geohashPrefix.trim().lowercase(Locale.ROOT).removePrefix("#")
             query = query.whereGreaterThanOrEqualTo("geohash", prefix)
                 .whereLessThanOrEqualTo("geohash", prefix + "\uf8ff")
         } else if (!cellId.isNullOrBlank()) {
@@ -305,6 +310,32 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             docRef.update(
                 mapOf(
                     "status" to status,
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updatePostContent(
+        postId: String,
+        title: String,
+        description: String,
+        category: String,
+        urgency: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        requireUserId()
+        val docRef = db.collection("posts").document(postId)
+        try {
+            docRef.update(
+                mapOf(
+                    "title" to title,
+                    "description" to description,
+                    "category" to category,
+                    "urgency" to urgency,
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()
@@ -583,6 +614,47 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         }
     }
 
+    suspend fun editChatMessage(
+        conversationId: String,
+        messageId: String,
+        newText: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        requireUserId()
+        val msgDoc = db.collection("conversations")
+            .document(conversationId)
+            .collection("messages")
+            .document(messageId)
+        try {
+            msgDoc.update(
+                mapOf(
+                    "text" to newText
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, msgDoc.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteChatMessage(
+        conversationId: String,
+        messageId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        requireUserId()
+        val msgDoc = db.collection("conversations")
+            .document(conversationId)
+            .collection("messages")
+            .document(messageId)
+        try {
+            msgDoc.delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.DELETE, msgDoc.path)
+            Result.failure(e)
+        }
+    }
+
     suspend fun startConversationForPost(post: NeighborPost): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
         val currentUserName = auth?.currentUser?.displayName ?: "Neighbor"
@@ -617,17 +689,17 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     fun observeGeohashMessages(geohash: String? = null): Flow<List<GeohashMessage>> = callbackFlow {
         val uid = auth?.currentUser?.uid
-        if (uid == null) {
+        if (uid == null || geohash.isNullOrBlank()) {
             trySend(emptyList())
             close()
             return@callbackFlow
         }
         val path = "geohash_messages"
-        val query = if (!geohash.isNullOrBlank()) {
-            db.collection(path).whereEqualTo("geohash", geohash)
-        } else {
-            db.collection(path)
-        }
+        val cleanHash = geohash.trim().lowercase(Locale.ROOT).removePrefix("#")
+        val prefix = cleanHash.take(4)
+        val query = db.collection(path)
+            .whereGreaterThanOrEqualTo("geohash", prefix)
+            .whereLessThanOrEqualTo("geohash", prefix + "\uf8ff")
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -693,7 +765,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "authorName" to displayName,
             "authorInitials" to initials,
             "text" to text.trim(),
-            "geohash" to geohash.trim().lowercase(),
+            "geohash" to geohash.trim().lowercase(Locale.ROOT).removePrefix("#"),
             "latitude" to latitude,
             "longitude" to longitude,
             "localityName" to localityName,

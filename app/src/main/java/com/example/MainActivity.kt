@@ -97,6 +97,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cells by viewModel.cells.collectAsStateWithLifecycle()
+    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
     val posts by viewModel.filteredPosts.collectAsStateWithLifecycle()
     val topIntentMatches by viewModel.topIntentMatches.collectAsStateWithLifecycle()
     val issues by viewModel.issues.collectAsStateWithLifecycle()
@@ -276,6 +277,12 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             onSendMessage = { text, isMeetingPoint, meetingPoint ->
                 viewModel.sendMessageToActive(text, isMeetingPoint, meetingPoint)
             },
+            onEditMessage = { messageId, newText ->
+                viewModel.editChatMessage(activeConv.id, messageId, newText)
+            },
+            onDeleteMessage = { messageId ->
+                viewModel.deleteChatMessage(activeConv.id, messageId)
+            },
             onBack = { viewModel.closeConversation() }
         )
         return
@@ -372,6 +379,13 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onConnectPost = { viewModel.connectFromPost(it) },
                         onToggleUpvote = { viewModel.togglePostUpvote(it) },
                         onOpenComments = { viewModel.openPostComments(it) },
+                        currentUserId = viewModel.currentUserId,
+                        onEditPost = { post, title, desc, category, urgency ->
+                            viewModel.editPost(post.id, title, desc, category, urgency)
+                        },
+                        onDeletePost = { post ->
+                            viewModel.deletePost(post.id)
+                        },
                         onOpenCreateDialog = { viewModel.openCreateDialog(it) },
                         updateInfo = updateInfo,
                         isUpdateBannerDismissed = isUpdateBannerDismissed,
@@ -386,6 +400,11 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         cells = cells,
                         currentCell = uiState.selectedCell,
                         discoveryRadiusMeters = uiState.discoveryRadiusMeters,
+                        userLocation = currentLocation,
+                        posts = posts,
+                        issues = issues,
+                        onPostClick = { viewModel.connectFromPost(it) },
+                        onIssueClick = { viewModel.setDestination(NavigationDestination.COMMUNITY) },
                         onSelectCell = { viewModel.selectCell(it) },
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
                         onShowCellQr = { viewModel.showCellQrDialog(it) },

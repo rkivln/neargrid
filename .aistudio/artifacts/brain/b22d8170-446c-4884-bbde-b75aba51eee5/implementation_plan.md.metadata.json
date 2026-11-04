@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for persisting update banner dismissal across app restarts until a newer release version is found.",
-  "updatedAt": "2026-11-03T02:50:00.212922774Z",
+  "summary": "Strict coordinate-based geolocation and geohash isolation between cities (such as Chennai and Puducherry):\n- Multi-source GPS location engine resolving actual device GPS coordinates with fallback across FusedLocation and LocationManager providers.\n- Guarded Firestore queries that immediately reject empty/blank geohash prefixes, preventing collection-wide data leakage.\n- Strict physical Haversine coordinate distance filtering in NearGridViewModel ensuring only posts and broadcasts within the selected discovery radius (default 1,000m, max 10,000m) are visible.\n- Verified coordinate isolation between Chennai (~13.08°N) and Puducherry (~11.94°N) (~135km apart) with unit test coverage.\n- UI guard preventing posting broadcasts or community needs/offers without a valid non-zero GPS lock.",
+  "updatedAt": "2026-11-04T02:17:52.177520299Z",
   "requestFeedback": true,
   "userFacing": true
 }

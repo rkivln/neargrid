@@ -209,7 +209,13 @@ service cloud.firestore {
                          isServerTimestamp(incoming().createdAt) &&
                          isValidChatMessage(incoming()) &&
                          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        allow update, delete: if false;
+        allow update: if isSignedIn() &&
+                         existing().senderId == request.auth.uid &&
+                         incoming().senderId == existing().senderId &&
+                         incoming().conversationId == existing().conversationId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidChatMessage(incoming());
+        allow delete: if isSignedIn() && existing().senderId == request.auth.uid;
       }
     }
 

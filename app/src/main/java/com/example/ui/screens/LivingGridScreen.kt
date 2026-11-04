@@ -75,6 +75,12 @@ import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmDivider
 import com.example.ui.theme.WarmIvory
 
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Map
+import com.example.data.model.CommunityIssue
+import com.example.data.model.NeighborPost
+import com.example.ui.components.OpenStreetMapView
+import com.example.util.UserLocation
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
@@ -86,6 +92,11 @@ fun LivingGridScreen(
     cells: List<GridCell>,
     currentCell: GridCell?,
     discoveryRadiusMeters: Int,
+    userLocation: UserLocation? = null,
+    posts: List<NeighborPost> = emptyList(),
+    issues: List<CommunityIssue> = emptyList(),
+    onPostClick: (NeighborPost) -> Unit = {},
+    onIssueClick: (CommunityIssue) -> Unit = {},
     onSelectCell: (GridCell) -> Unit,
     onRadiusChange: (Int) -> Unit,
     onShowCellQr: ((GridCell) -> Unit)? = null,
@@ -93,6 +104,7 @@ fun LivingGridScreen(
     modifier: Modifier = Modifier
 ) {
     var activeLayer by remember { mutableStateOf("ALL") }
+    var isMapViewActive by remember { mutableStateOf(false) }
     var showCalibrationDialog by remember { mutableStateOf(false) }
 
     PullToRefreshBox(
@@ -275,6 +287,87 @@ fun LivingGridScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // View Mode Selector Bar: Grid Matrix vs Interactive OSM Map
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .testTag("living_grid_view_mode_bar"),
+                shape = RoundedCornerShape(16.dp),
+                color = PureWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { isMapViewActive = false }
+                            .testTag("view_mode_grid_button"),
+                        color = if (!isMapViewActive) SoftCream else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp),
+                        border = if (!isMapViewActive) androidx.compose.foundation.BorderStroke(1.dp, WarmBorder) else null
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.GridView, contentDescription = null, tint = PrimaryText, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Grid Matrix", fontFamily = DMSansFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { isMapViewActive = true }
+                            .testTag("view_mode_map_button"),
+                        color = if (isMapViewActive) SoftCream else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp),
+                        border = if (isMapViewActive) androidx.compose.foundation.BorderStroke(1.dp, WarmBorder) else null
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.Map, contentDescription = null, tint = PrimaryText, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Interactive OSM Map", fontFamily = DMSansFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isMapViewActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(520.dp)
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .border(1.5.dp, WarmBorder, RoundedCornerShape(24.dp))
+                ) {
+                    OpenStreetMapView(
+                        userLocation = userLocation,
+                        posts = posts,
+                        issues = issues,
+                        onPostClick = onPostClick,
+                        onIssueClick = onIssueClick
+                    )
+                }
+            }
 
             // Interactive Spatial Grid Canvas Card
             Card(

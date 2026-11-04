@@ -122,6 +122,9 @@ fun HomeScreen(
     onConnectPost: (NeighborPost) -> Unit,
     onToggleUpvote: (NeighborPost) -> Unit = {},
     onOpenComments: (NeighborPost) -> Unit = {},
+    currentUserId: String? = null,
+    onEditPost: ((NeighborPost, String, String, String, String) -> Unit)? = null,
+    onDeletePost: ((NeighborPost) -> Unit)? = null,
     onOpenCreateDialog: (String) -> Unit,
     updateInfo: AppUpdateInfo? = null,
     isUpdateBannerDismissed: Boolean = false,
@@ -654,7 +657,10 @@ fun HomeScreen(
                         post = post,
                         onConnect = onConnectPost,
                         onToggleUpvote = onToggleUpvote,
-                        onOpenComments = onOpenComments
+                        onOpenComments = onOpenComments,
+                        currentUserId = currentUserId,
+                        onEditPost = onEditPost,
+                        onDeletePost = onDeletePost
                     )
                 }
             }

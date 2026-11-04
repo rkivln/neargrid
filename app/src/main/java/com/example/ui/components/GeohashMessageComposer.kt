@@ -109,15 +109,16 @@ fun GeohashMessageComposer(
         )
     }
 
-    val displayGeohash = currentGeohash.ifBlank {
-        if (latitude != 0.0 && longitude != 0.0) {
+    val hasGpsLock = latitude != 0.0 && longitude != 0.0
+    val displayGeohash = currentGeohash.removePrefix("#").ifBlank {
+        if (hasGpsLock) {
             LocationHelper.computeGeohash(latitude, longitude, 7)
         } else {
-            "9q8yyk8"
+            "..."
         }
     }
 
-    val coordinatesLabel = if (latitude != 0.0 && longitude != 0.0) {
+    val coordinatesLabel = if (hasGpsLock) {
         LocationHelper.formatCoordinates(latitude, longitude)
     } else {
         "Acquiring GPS fix..."
@@ -411,13 +412,13 @@ fun GeohashMessageComposer(
             // Post Button
             Button(
                 onClick = {
-                    if (textMessage.isNotBlank() && !isPosting) {
+                    if (hasGpsLock && textMessage.isNotBlank() && !isPosting) {
                         val messageToPost = textMessage
                         textMessage = ""
                         onPostMessage(messageToPost)
                     }
                 },
-                enabled = textMessage.isNotBlank() && !isPosting,
+                enabled = hasGpsLock && textMessage.isNotBlank() && !isPosting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -441,6 +442,20 @@ fun GeohashMessageComposer(
                         text = "Posting to Geohash Area...",
                         fontFamily = DMSansFontFamily,
                         fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                } else if (!hasGpsLock) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "GPS Required",
+                        modifier = Modifier.size(16.dp),
+                        tint = PureWhite.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Acquiring GPS fix to broadcast...",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                 } else {
@@ -498,7 +513,11 @@ fun GeohashMessageComposer(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     messages.take(4).forEach { msg ->
-                        GeohashMessageItem(message = msg)
+                        GeohashMessageItem(
+                            message = msg,
+                            userLatitude = latitude,
+                            userLongitude = longitude
+                        )
                     }
                 }
             }
@@ -509,11 +528,22 @@ fun GeohashMessageComposer(
 @Composable
 fun GeohashMessageItem(
     message: GeohashMessage,
+    userLatitude: Double = 0.0,
+    userLongitude: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     val timeFormatted = remember(message.timestamp) {
         val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
         sdf.format(Date(message.timestamp))
+    }
+
+    val distanceLabel = remember(message.latitude, message.longitude, userLatitude, userLongitude) {
+        if (userLatitude != 0.0 && userLongitude != 0.0 && message.latitude != 0.0 && message.longitude != 0.0) {
+            val dist = LocationHelper.calculateDistanceMeters(userLatitude, userLongitude, message.latitude, message.longitude)
+            LocationHelper.formatDistance(dist)
+        } else {
+            null
+        }
     }
 
     Surface(
@@ -561,6 +591,23 @@ fun GeohashMessageItem(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (distanceLabel != null) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = SoftSurface,
+                            border = BorderStroke(1.dp, CardBorderColor)
+                        ) {
+                            Text(
+                                text = distanceLabel,
+                                fontFamily = DMSansFontFamily,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = SlateBlue,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Text(
                         text = timeFormatted,
                         fontFamily = DMSansFontFamily,

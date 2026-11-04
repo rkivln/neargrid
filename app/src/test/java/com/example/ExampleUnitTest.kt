@@ -197,4 +197,115 @@ class ExampleUnitTest {
     manager.resetBannerDismissed()
     assertFalse(manager.isBannerDismissed.value)
   }
+
+  @Test
+  fun neighborPost_copyAndEditUpdatesFieldsAccurately() {
+    val post = com.example.data.model.NeighborPost(
+      id = "test_post_1",
+      userId = "user_123",
+      type = "NEED",
+      title = "Need lawn mower",
+      description = "Mowing lawn this Saturday",
+      category = "TOOLS",
+      authorName = "Alice",
+      authorInitials = "AL",
+      authorCellId = "cell_1",
+      cellName = "Oakwood Grove",
+      urgency = "NORMAL",
+      expiresInHours = 24
+    )
+
+    val updatedPost = post.copy(
+      title = "Need electric lawn mower",
+      description = "Updated description with battery power preference",
+      category = "HOUSEHOLD",
+      urgency = "URGENT"
+    )
+
+    assertEquals("test_post_1", updatedPost.id)
+    assertEquals("user_123", updatedPost.userId)
+    assertEquals("Need electric lawn mower", updatedPost.title)
+    assertEquals("Updated description with battery power preference", updatedPost.description)
+    assertEquals("HOUSEHOLD", updatedPost.category)
+    assertEquals("URGENT", updatedPost.urgency)
+  }
+
+  @Test
+  fun chatMessage_copyAndEditUpdatesMessageContent() {
+    val originalMessage = com.example.data.model.ChatMessage(
+      id = "msg_123",
+      conversationId = "conv_456",
+      senderId = "user_1",
+      senderName = "Alice",
+      isFromCurrentUser = true,
+      text = "Can we meet at 4 PM?",
+      timestamp = 1000L
+    )
+
+    val editedMessage = originalMessage.copy(
+      text = "Can we meet at 4:30 PM instead?"
+    )
+
+    assertEquals("msg_123", editedMessage.id)
+    assertEquals("conv_456", editedMessage.conversationId)
+    assertEquals("Can we meet at 4:30 PM instead?", editedMessage.text)
+    assertEquals(1000L, editedMessage.timestamp)
+    assertTrue(editedMessage.isFromCurrentUser)
+  }
+
+  @Test
+  fun coordinateFiltering_rejectsChennaiPostFromPuducherry() {
+    // Puducherry device location
+    val puducherryLat = 11.9416
+    val puducherryLng = 79.8083
+
+    // Chennai post location
+    val chennaiLat = 13.0827
+    val chennaiLng = 80.2707
+
+    val distanceMeters = com.example.util.LocationHelper.calculateDistanceMeters(
+      puducherryLat, puducherryLng,
+      chennaiLat, chennaiLng
+    )
+
+    // Chennai and Puducherry are ~135km apart
+    assertTrue("Distance between Chennai and Puducherry should be > 130 km, was: $distanceMeters", distanceMeters > 130_000f)
+
+    // Verification against typical discovery radii (1km, 5km, 10km)
+    val maxDiscoveryRadiusMeters = 10_000
+    assertFalse("Puducherry user must reject Chennai post under 10km radius", distanceMeters <= maxDiscoveryRadiusMeters)
+
+    // Geohash prefix separation check
+    val puducherryHash = com.example.util.LocationHelper.computeGeohash(puducherryLat, puducherryLng, 7)
+    val chennaiHash = com.example.util.LocationHelper.computeGeohash(chennaiLat, chennaiLng, 7)
+
+    assertFalse("Geohash prefixes must be completely distinct between Chennai and Puducherry",
+      chennaiHash.take(3) == puducherryHash.take(3)
+    )
+  }
+
+  @Test
+  fun coordinateFiltering_acceptsNearbyLocalPost() {
+    val userLat = 11.9416
+    val userLng = 79.8083
+
+    // Neighbor within ~200 meters in Puducherry
+    val neighborLat = 11.9430
+    val neighborLng = 79.8090
+
+    val distanceMeters = com.example.util.LocationHelper.calculateDistanceMeters(
+      userLat, userLng,
+      neighborLat, neighborLng
+    )
+
+    assertTrue("Neighbor within walking distance (< 500m), was: $distanceMeters", distanceMeters < 500f)
+
+    val userHash = com.example.util.LocationHelper.computeGeohash(userLat, userLng, 7)
+    val neighborHash = com.example.util.LocationHelper.computeGeohash(neighborLat, neighborLng, 7)
+
+    assertEquals("Local neighbors share 4-character geohash prefix",
+      userHash.take(4), neighborHash.take(4)
+    )
+  }
 }
+

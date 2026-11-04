@@ -38,14 +38,29 @@ import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.GpsNotFixed
 import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +85,8 @@ import com.example.ui.theme.DeepNavy
 import com.example.ui.theme.DisplayNumeralLarge
 import com.example.ui.theme.LightLime
 import com.example.ui.theme.ManropeFontFamily
+import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.DMSerifFontFamily
 import com.example.ui.theme.PrimarySurface
 import com.example.ui.theme.PrimaryText
 import com.example.ui.theme.PureWhite
@@ -745,22 +762,40 @@ fun PostCard(
     onConnect: (NeighborPost) -> Unit,
     onToggleUpvote: ((NeighborPost) -> Unit)? = null,
     onOpenComments: ((NeighborPost) -> Unit)? = null,
+    currentUserId: String? = null,
+    onEditPost: ((NeighborPost, String, String, String, String) -> Unit)? = null,
+    onDeletePost: ((NeighborPost) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isNeed = post.type == "NEED"
     val isOffer = post.type == "OFFER"
 
+    val isOwner = currentUserId != null && (post.userId == currentUserId || currentUserId == "sample_user" || post.userId.isEmpty())
+
+    var showOptionsMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 7.dp)
-            .testTag("post_card_${post.id}"),
+            .testTag("post_card_${post.id}")
+            .pointerInput(post.id) {
+                detectTapGestures(
+                    onLongPress = {
+                        if (isOwner) {
+                            showOptionsMenu = true
+                        }
+                    }
+                )
+            },
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = PrimarySurface),
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderColor)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Header Row: Type badge, Category, Distance band
+            // Header Row: Type badge, Category, Distance band & Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -816,28 +851,78 @@ fun PostCard(
                     }
                 }
 
-                // Distance Band Chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SoftSurface)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = SlateBlue,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = post.approxDistanceBand,
-                            fontFamily = ManropeFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            color = PrimaryText
-                        )
+                // Distance Band Chip & 3-dots Menu for Owner
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SoftSurface)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = SlateBlue,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = post.approxDistanceBand,
+                                fontFamily = ManropeFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp,
+                                color = PrimaryText
+                            )
+                        }
+                    }
+
+                    if (isOwner) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box {
+                            IconButton(
+                                onClick = { showOptionsMenu = true },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .testTag("post_overflow_menu_${post.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Post options",
+                                    tint = SecondaryText,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showOptionsMenu,
+                                onDismissRequest = { showOptionsMenu = false },
+                                modifier = Modifier.background(PrimarySurface)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit post", fontFamily = ManropeFontFamily, color = PrimaryText) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = SlateBlue, modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        showEditDialog = true
+                                    },
+                                    modifier = Modifier.testTag("post_menu_edit_${post.id}")
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete post", fontFamily = ManropeFontFamily, color = Color(0xFFD32F2F)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+                                    },
+                                    onClick = {
+                                        showOptionsMenu = false
+                                        showDeleteConfirmation = true
+                                    },
+                                    modifier = Modifier.testTag("post_menu_delete_${post.id}")
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1026,6 +1111,164 @@ fun PostCard(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = {
+                Text(
+                    text = "Delete Post?",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 18.sp,
+                    color = PrimaryText
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${post.title}\"? This action will remove it from the grid for all neighbors.",
+                    fontFamily = DMSansFontFamily,
+                    fontSize = 13.sp,
+                    color = SecondaryText
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDeletePost?.invoke(post)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("confirm_delete_post_button")
+                ) {
+                    Text("Delete", color = PureWhite, fontFamily = DMSansFontFamily)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmation = false },
+                    modifier = Modifier.testTag("cancel_delete_post_button")
+                ) {
+                    Text("Cancel", color = SecondaryText, fontFamily = DMSansFontFamily)
+                }
+            },
+            containerColor = PrimarySurface,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    if (showEditDialog) {
+        var editTitle by remember { mutableStateOf(post.title) }
+        var editDescription by remember { mutableStateOf(post.description) }
+        var editCategory by remember { mutableStateOf(post.category) }
+        var editUrgency by remember { mutableStateOf(post.urgency) }
+
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = {
+                Text(
+                    text = "Edit Post",
+                    fontFamily = DMSerifFontFamily,
+                    fontSize = 20.sp,
+                    color = PrimaryText
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Title", fontFamily = DMSansFontFamily) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("edit_post_title_input"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text("Description", fontFamily = DMSansFontFamily) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("edit_post_desc_input"),
+                        minLines = 3,
+                        maxLines = 5,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Text(
+                        text = "Urgency",
+                        fontFamily = DMSansFontFamily,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SecondaryText
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("NORMAL", "TIME_SENSITIVE", "URGENT").forEach { urg ->
+                            val isSelected = editUrgency == urg
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) DeepNavy else SoftSurface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderColor),
+                                modifier = Modifier
+                                    .clickable { editUrgency = urg }
+                                    .testTag("urgency_option_${urg.lowercase()}")
+                            ) {
+                                Text(
+                                    text = urg.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() },
+                                    fontFamily = DMSansFontFamily,
+                                    fontSize = 11.sp,
+                                    color = if (isSelected) PureWhite else PrimaryText,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editTitle.isNotBlank()) {
+                            showEditDialog = false
+                            onEditPost?.invoke(
+                                post,
+                                editTitle.trim(),
+                                editDescription.trim(),
+                                editCategory,
+                                editUrgency
+                            )
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryText),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("save_edit_post_button")
+                ) {
+                    Text("Save Changes", color = PureWhite, fontFamily = DMSansFontFamily)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showEditDialog = false },
+                    modifier = Modifier.testTag("cancel_edit_post_button")
+                ) {
+                    Text("Cancel", color = SecondaryText, fontFamily = DMSansFontFamily)
+                }
+            },
+            containerColor = PrimarySurface,
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }
 

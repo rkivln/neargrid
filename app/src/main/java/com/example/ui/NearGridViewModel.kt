@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -143,18 +144,35 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     private val _currentGeohash = MutableStateFlow("")
     val currentGeohash: StateFlow<String> = _currentGeohash.asStateFlow()
 
-    // 100% Real-time Firestore geohash messages
+    // 100% Real-time Firestore geohash messages with strict coordinate distance filtering
     val geohashMessages: StateFlow<List<GeohashMessage>> = combine(
         _currentUser,
-        _currentGeohash
-    ) { user, hash ->
-        user to hash
-    }.flatMapLatest { (user, hash) ->
-        if (user == null) {
+        _currentGeohash,
+        _currentLocation,
+        _uiState
+    ) { user, hash, location, state ->
+        Triple(user, hash, location to state.discoveryRadiusMeters)
+    }.flatMapLatest { (user, hash, locAndRadius) ->
+        val (location, radius) = locAndRadius
+        if (user == null || hash.isBlank() || location == null) {
             flowOf(emptyList())
         } else {
             try {
-                firestoreRepository.observeGeohashMessages(hash.ifBlank { null })
+                val cleanHash = hash.removePrefix("#")
+                firestoreRepository.observeGeohashMessages(cleanHash).map { list ->
+                    val userLat = location.latitude
+                    val userLng = location.longitude
+                    list.filter { msg ->
+                        if (msg.latitude != 0.0 && msg.longitude != 0.0 && userLat != 0.0 && userLng != 0.0) {
+                            val dist = LocationHelper.calculateDistanceMeters(userLat, userLng, msg.latitude, msg.longitude)
+                            dist <= radius
+                        } else {
+                            val msgPrefix = msg.geohash.removePrefix("#").take(4)
+                            val userPrefix = cleanHash.take(4)
+                            msgPrefix.isNotBlank() && msgPrefix.equals(userPrefix, ignoreCase = true)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 flowOf(emptyList())
             }
@@ -586,20 +604,19 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 else -> post.category.equals(state.selectedCategory, ignoreCase = true)
             }
 
-            // Strict Geohash & Location cell matching
-            val matchesLocationCell = when {
-                currentCellId.isNotBlank() && post.authorCellId.equals(currentCellId, ignoreCase = true) -> true
-                cleanGeohash.isNotBlank() && post.authorCellId.contains(cleanGeohash, ignoreCase = true) -> true
-                post.lat != 0.0 && post.lng != 0.0 -> {
-                    val dist = LocationHelper.calculateDistanceMeters(
-                        location.latitude,
-                        location.longitude,
-                        post.lat,
-                        post.lng
-                    )
-                    dist <= state.discoveryRadiusMeters
-                }
-                else -> false
+            // Strict physical coordinate distance filtering
+            val matchesLocationCell = if (post.lat != 0.0 && post.lng != 0.0) {
+                val dist = LocationHelper.calculateDistanceMeters(
+                    location.latitude,
+                    location.longitude,
+                    post.lat,
+                    post.lng
+                )
+                dist <= state.discoveryRadiusMeters
+            } else if (cleanGeohash.isNotBlank() && post.authorCellId.isNotBlank()) {
+                post.authorCellId.contains(cleanGeohash, ignoreCase = true)
+            } else {
+                false
             }
 
             matchesType && matchesCategory && matchesLocationCell
@@ -738,11 +755,43 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         return activeChatMessages
     }
 
+    val currentUserId: String
+        get() = auth.currentUser?.uid ?: ""
+
+    fun deletePost(postId: String) {
+        viewModelScope.launch {
+            firestoreRepository.deletePost(postId)
+            localRepository.deletePost(postId)
+        }
+    }
+
+    fun editPost(postId: String, title: String, description: String, category: String, urgency: String) {
+        viewModelScope.launch {
+            firestoreRepository.updatePostContent(postId, title, description, category, urgency)
+            localRepository.updatePostContent(postId, title, description, category, urgency)
+        }
+    }
+
     fun sendMessageToActive(text: String, isMeetingPoint: Boolean = false, meetingPoint: String? = null) {
         val active = _uiState.value.activeConversation ?: return
         if (text.isBlank()) return
         viewModelScope.launch {
             firestoreRepository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
+        }
+    }
+
+    fun deleteChatMessage(conversationId: String, messageId: String) {
+        viewModelScope.launch {
+            firestoreRepository.deleteChatMessage(conversationId, messageId)
+            localRepository.deleteChatMessage(messageId)
+        }
+    }
+
+    fun editChatMessage(conversationId: String, messageId: String, newText: String) {
+        if (newText.isBlank()) return
+        viewModelScope.launch {
+            firestoreRepository.editChatMessage(conversationId, messageId, newText.trim())
+            localRepository.editChatMessage(messageId, newText.trim())
         }
     }
 
@@ -854,11 +903,16 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
-            val cell = _uiState.value.selectedCell
+            if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
+                closeCreateDialog()
+                return@launch
+            }
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
-            val realLocName = loc?.displayAreaName ?: cell?.name ?: "Local Area"
-            val lat = loc?.latitude ?: 0.0
-            val lng = loc?.longitude ?: 0.0
+            val realLocName = loc.displayAreaName.ifBlank { "Local Area" }
+            val lat = loc.latitude
+            val lng = loc.longitude
+            val geohash = LocationHelper.computeGeohash(lat, lng, 7).removePrefix("#")
+            val authorCellId = "geo_${geohash.take(5)}"
 
             val post = NeighborPost(
                 id = UUID.randomUUID().toString(),
@@ -869,7 +923,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 category = category,
                 authorName = author,
                 authorInitials = author.split(" ").filter { it.isNotBlank() }.take(2).map { it.first().uppercase() }.joinToString("").ifEmpty { "ME" },
-                authorCellId = cell?.id ?: "geo_${realLocName.lowercase(Locale.ROOT).replace("\\s+".toRegex(), "_")}",
+                authorCellId = authorCellId,
                 cellName = realLocName,
                 lat = lat,
                 lng = lng,
@@ -897,11 +951,16 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
             val user = auth.currentUser
             val loc = _currentLocation.value
-            val cell = _uiState.value.selectedCell
+            if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
+                closeCreateDialog()
+                return@launch
+            }
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
-            val realLocName = loc?.displayAreaName ?: cell?.name ?: "Local Area"
-            val lat = loc?.latitude ?: 0.0
-            val lng = loc?.longitude ?: 0.0
+            val realLocName = loc.displayAreaName.ifBlank { "Local Area" }
+            val lat = loc.latitude
+            val lng = loc.longitude
+            val geohash = LocationHelper.computeGeohash(lat, lng, 7).removePrefix("#")
+            val authorCellId = "geo_${geohash.take(5)}"
 
             val post = NeighborPost(
                 id = UUID.randomUUID().toString(),
@@ -912,7 +971,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 category = category,
                 authorName = author,
                 authorInitials = author.split(" ").filter { it.isNotBlank() }.take(2).map { it.first().uppercase() }.joinToString("").ifEmpty { "ME" },
-                authorCellId = cell?.id ?: "geo_${realLocName.lowercase(Locale.ROOT).replace("\\s+".toRegex(), "_")}",
+                authorCellId = authorCellId,
                 cellName = realLocName,
                 lat = lat,
                 lng = lng,
@@ -1013,14 +1072,20 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPostingGeohashMessage = true, geohashPostStatus = null)
             val loc = _currentLocation.value
-            val lat = loc?.latitude ?: _uiState.value.selectedCell?.centerLat ?: 37.7749
-            val lon = loc?.longitude ?: _uiState.value.selectedCell?.centerLng ?: -122.4194
-            val geohash = _currentGeohash.value.ifBlank {
-                LocationHelper.computeGeohash(lat, lon, 7)
+            if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
+                _uiState.value = _uiState.value.copy(
+                    isPostingGeohashMessage = false,
+                    geohashPostStatus = "Error: Live GPS coordinates required to broadcast. Please wait for GPS lock."
+                )
+                onComplete?.invoke(Result.failure(IllegalStateException("Active device GPS required")))
+                return@launch
             }
+            val lat = loc.latitude
+            val lon = loc.longitude
+            val geohash = LocationHelper.computeGeohash(lat, lon, 7).removePrefix("#")
             val user = auth.currentUser
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
-            val locality = loc?.displayAreaName ?: _uiState.value.selectedCell?.name ?: "Local Area"
+            val locality = loc.displayAreaName.ifBlank { "Local Area" }
 
             val result = firestoreRepository.postGeohashMessage(
                 text = trimmed,
