@@ -195,8 +195,7 @@ fun RealtimeMapScreen(
                                     Text(
                                         text = "Neighborhood Radar",
                                         fontFamily = DMSerifFontFamily,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 26.sp,
                                         color = PrimaryText
                                     )
                                     Text(

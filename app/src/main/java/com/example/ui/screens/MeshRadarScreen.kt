@@ -129,8 +129,7 @@ fun MeshRadarScreen(
                                     Text(
                                         text = "Mesh Radar & Intent",
                                         fontFamily = DMSerifFontFamily,
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 26.sp,
                                         color = PrimaryText
                                     )
                                     Text(

@@ -6,25 +6,28 @@ NearGrid is a modern, privacy-first Android application that connects nearby nei
 
 ---
 
-## ✨ Features
+## ✨ Key Features & Architecture
 
-- 📍 **Geohash Spatial Grids**: Automatically groups nearby activity based on device GPS or selectable neighborhood cells without revealing exact home addresses.
+- 📍 **6-Tab Ergonomic Navigation**: Clean separation into **Home**, **Map**, **Mesh Radar**, **Community**, **Inbox**, and **Profile** tabs.
+- 📡 **Dedicated Mesh Radar Tab**: Hyperlocal geohash area broadcasts and quick intent action tiles (Ask Need, Offer/Lend, Host Meetup).
+- 🗺️ **Neighborhood Map & Radar**: Spatial discovery with 3-tier location precision (`EXACT`, `APPROXIMATE`, `NEIGHBORHOOD`), online status concealment, and distance masking.
 - 🤝 **Mutual Aid & Community Board**: Post urgent needs, share surplus resources/offers, track community issues with upvotes, and organize local meetups.
 - 🏷️ **Grid Pass & QR Invitations**: Generate custom printable resident badges and high-contrast QR codes to invite neighbors to your local grid cell.
 - 📷 **Instant QR Scanner**: Scan a neighbor's QR code via CameraX to instantly join their local geohash grid.
-- 🛡️ **Privacy-Preserving Radius**: Adjust discovery radius (300m, 1000m, 3000m, 10km) and toggle fuzzy coordinate offsets or incognito mode.
 - 💬 **Real-Time Neighborhood Messaging**: Powered by Firebase Firestore for instant live broadcasts and direct neighbor conversations.
-- 🎨 **Material 3 UI**: Clean, warm editorial design with smooth Jetpack Compose transitions and responsive layouts.
+- ⚙️ **Production Settings & Telemetry**: Theme accent palettes, layout density, storage usage meter, and silent Firestore telemetry logging.
+- 🎨 **Material 3 UI**: Clean editorial design with `DMSerifFontFamily` headers, smooth Jetpack Compose transitions, and responsive layouts.
 
 ---
 
-## 🛠️ Built With
+## 🛠️ Tech Stack
 
 - **Language**: [Kotlin](https://kotlinlang.org/)
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material Design 3 (M3)
 - **Architecture**: MVVM (Model-View-ViewModel) + Kotlin Coroutines & Flow
 - **Backend & Persistence**: Firebase Firestore & Firebase Authentication (Google Sign-In)
 - **Camera & Hardware**: Android CameraX (`camera-camera2`, `camera-lifecycle`, `camera-view`)
+- **Testing**: Robolectric & JUnit local JVM testing suite covering all 11 bug categories (UI, Functional, Performance, Crash, Network, Database, Security, Navigation, Compatibility, Battery, Memory)
 - **Build System**: Gradle (Kotlin DSL `.gradle.kts`)
 
 ---
@@ -54,6 +57,15 @@ NearGrid is a modern, privacy-first Android application that connects nearby nei
 
 ---
 
+## 🧪 Running Tests
+
+To run the comprehensive local Robolectric unit test suite:
+```bash
+gradle :app:testDebugUnitTest
+```
+
+---
+
 ## 📱 Publishing & GitHub Releases
 
 To host APK releases on GitHub:
@@ -68,6 +80,7 @@ To host APK releases on GitHub:
 NearGrid is designed around spatial privacy:
 - Exact latitude and longitude coordinates are masked into geohash zones.
 - Direct messaging and proximity presence can be toggled on or off anytime in settings.
+- Blocked user management and online status concealment.
 
 ---
 
