@@ -705,7 +705,7 @@ class ExampleUnitTest {
     assertEquals(6, dests.size)
     assertEquals("Home", com.example.ui.NavigationDestination.HOME.label)
     assertEquals("Map", com.example.ui.NavigationDestination.MAP.label)
-    assertEquals("Living Grid", com.example.ui.NavigationDestination.GRID.label)
+    assertEquals("Mesh Radar", com.example.ui.NavigationDestination.RADAR.label)
     assertEquals("Community", com.example.ui.NavigationDestination.COMMUNITY.label)
     assertEquals("Inbox", com.example.ui.NavigationDestination.INBOX.label)
     assertEquals("Profile", com.example.ui.NavigationDestination.PROFILE.label)

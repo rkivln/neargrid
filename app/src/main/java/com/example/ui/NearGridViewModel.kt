@@ -50,7 +50,7 @@ import java.util.UUID
 enum class NavigationDestination(val label: String) {
     HOME("Home"),
     MAP("Map"),
-    GRID("Living Grid"),
+    RADAR("Mesh Radar"),
     COMMUNITY("Community"),
     INBOX("Inbox"),
     PROFILE("Profile")

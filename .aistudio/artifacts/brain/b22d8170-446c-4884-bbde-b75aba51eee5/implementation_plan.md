@@ -1,98 +1,92 @@
-# Comprehensive Automated Bug Test Suite (11 Categories)
+# Reorganizing App Architecture into 6 Clean Navigation Tabs & Decluttering Home
 
-Create and execute an automated JVM unit test suite (`ExampleUnitTest.kt`) featuring automated assertions for all 11 bug categories depicted in the user's uploaded bug taxonomy list: **UI, Functional, Performance, Crash, Network, Database, Security, Navigation, Compatibility, Battery, and Memory**.
+Reorganize the application into **6 distinct, well-defined navigation destinations** and declutter the Home screen by creating a dedicated **Mesh Radar** tab (`MeshRadarScreen.kt`).
 
 ---
 
 ### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following decisions were confirmed during the clarifying interview:
-> - **Execution Mode**: Run automated unit test suite covering all 11 bug categories.
-> - **Verification Mechanism**: Automated assertions for UI, Security, Database, Network, Memory, Navigation, Battery, Performance, Compatibility, Crash, and Functional logic.
+> The following product decisions were confirmed during the clarifying interview:
+> - **6 Bottom Navigation Tabs**:
+>   1. 🏠 **Home**: Clean, spacious feed of AI intent matches, filter chips, and neighbor posts.
+>   2. 🗺️ **Map**: Interactive OSM map with live neighbor pins, distance radius filters, and layer toggles.
+>   3. 📡 **Mesh Radar**: Dedicated new screen for Hyperlocal Geohash Broadcasts and Quick Intent Creation (Need/Offer/Meetup).
+>   4. 📢 **Community**: Community notice board, municipal issue reporting, and upvoting.
+>   5. 💬 **Inbox**: Direct neighbor messages and private chat threads.
+>   6. 👤 **Profile**: User profile, spatial perimeter preferences, and App Settings.
+> - **Home Screen Decluttering**: Moved the heavy Geohash Broadcast Composer and Quick Intent Action Grid out of the Home screen and into the dedicated **Mesh Radar** screen.
 
 ---
 
-### 1. Overview & Test Mapping
-
-The automated test suite in `app/src/test/java/com/example/ExampleUnitTest.kt` will implement distinct, automated test methods for each of the 11 bug categories:
-
-| # | Bug Category | Automated Test Method | Scope & Assertion Focus |
-|---|---|---|---|
-| **1** | 🎨 **UI Bugs** | `testCategory1_UIBugs_verifiesTextFormattingAndAccessibilityTags()` | Validates string formatting, accessibility descriptions, and testTag contract stability. |
-| **2** | ⚙️ **Functional Bugs** | `testCategory2_FunctionalBugs_verifiesPostCreationAndUpvoteLogic()` | Validates post editing, category filtering, urgency flags, and upvote toggling. |
-| **3** | ⚡ **Performance Bugs** | `testCategory3_PerformanceBugs_verifiesGeohashComputationEfficiency()` | Asserts 1,000 geohash calculations complete in under 50ms without CPU lockup. |
-| **4** | 💥 **Crash Bugs** | `testCategory4_CrashBugs_verifiesGracefulHandlingOfMalformedInputs()` | Asserts `CrashTelemetryManager` and JSON parsers handle nulls, illegal coordinates, and malformed strings safely. |
-| **5** | 🌐 **Network Bugs** | `testCategory5_NetworkBugs_verifiesOfflineFallbackAndRetryBehavior()` | Validates offline payload encoding and fallback behavior during network failure. |
-| **6** | 🗄️ **Database Bugs** | `testCategory6_DatabaseBugs_verifiesMoshiAndJsonSchemaIntegrity()` | Asserts Moshi JSON serialization/deserialization schema integrity for data entities. |
-| **7** | 🛡️ **Security Bugs** | `testCategory7_SecurityBugs_verifiesZeroTrustPrivacyAndBlockedUserExclusion()` | Validates blocked user exclusion, approximate coordinate fuzzing, and distance masking. |
-| **8** | 🧭 **Navigation Bugs** | `testCategory8_NavigationBugs_verifiesNavigationDestinationsAndBackStackState()` | Validates `NavigationDestination` enum transitions and modal dismissal states. |
-| **9** | 📱 **Compatibility Bugs** | `testCategory9_CompatibilityBugs_verifiesAppUpdateVersionComparison()` | Asserts semantic version comparator (`v1.0.3` vs `v1.0.4` vs `v1.0.2`) across legacy formats. |
-| **10** | 🔋 **Battery Bugs** | `testCategory10_BatteryBugs_verifiesBackgroundSyncIntervalAndGpsModeThrottling()` | Validates background sync interval settings (15m, 30m, 60m, Manual) and GPS mode toggles to prevent battery drain. |
-| **11** | 💾 **Memory Bugs** | `testCategory11_MemoryBugs_verifiesStorageCacheTrimmingAndPercentageCalculations()` | Validates `StorageCacheManager` memory footprint calculation, percentage bounds, and cache file trimming. |
-
----
-
-### 2. Architecture & Execution Strategy
+### 1. Overview & Visual Redesign
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    ExampleUnitTest.kt                           │
-│  - Test 1: UI Bugs                                             │
-│  - Test 2: Functional Bugs                                     │
-│  - Test 3: Performance Bugs                                    │
-│  - Test 4: Crash Bugs                                          │
-│  - Test 5: Network Bugs                                        │
-│  - Test 6: Database Bugs                                       │
-│  - Test 7: Security Bugs                                       │
-│  - Test 8: Navigation Bugs                                     │
-│  - Test 9: Compatibility Bugs                                  │
-│  - Test 10: Battery Bugs                                       │
-│  - Test 11: Memory Bugs                                        │
+│                   6 Navigation Destinations                     │
+│  Home  │  Map  │  Mesh Radar  │  Community  │  Inbox  │ Profile │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              Gradle JVM Test Execution Command                  │
-│  gradle :app:testDebugUnitTest --tests "com.example.ExampleUnitTest"│
-└────────────────────────────────┬────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     compile_applet Verification                 │
-│  Verifies zero compilation errors and clean APK build           │
-└─────────────────────────────────────────────────────────────────┘
+            ┌────────────────────┴────────────────────┐
+            ▼                                         ▼
+┌───────────────────────────────┐         ┌───────────────────────────────┐
+│          HomeScreen           │         │       MeshRadarScreen         │
+│ - Top Neighborhood Bar        │         │ - Hyperlocal Geohash Composer │
+│ - Subtle Hero Editorial       │         │ - Live Area Broadcast Feed    │
+│ - Radius & Category Filters   │         │ - Quick Intent Action Grid    │
+│ - AI Intent Matches           │         │   (Need, Offer, Meetup)       │
+│ - Neighbor Needs & Offers     │         └───────────────────────────────┘
+└───────────────────────────────┘
 ```
 
 ---
 
-### 3. Proposed Changes
+### 2. Proposed Changes
 
-#### A. Automated Unit Test Suite (`app/src/test/java/com/example/ExampleUnitTest.kt`)
-- Add 11 explicit test cases named after each bug category from the user's uploaded checklist.
-- Include assertions verifying edge cases, boundary conditions, privacy constraints, performance benchmarks, and state transitions.
+#### A. Navigation Enum & ViewModel (`NearGridViewModel.kt`)
+- Update `enum class NavigationDestination`:
+  ```kotlin
+  enum class NavigationDestination(val label: String) {
+      HOME("Home"),
+      MAP("Map"),
+      RADAR("Mesh Radar"),
+      COMMUNITY("Community"),
+      INBOX("Inbox"),
+      PROFILE("Profile")
+  }
+  ```
 
-#### B. Execution & Verification
-- Execute `gradle :app:testDebugUnitTest --tests "com.example.ExampleUnitTest"` via `run_command`.
-- Execute `compile_applet` to confirm clean compilation and asset packaging.
+#### B. Dedicated Mesh Radar Screen (`MeshRadarScreen.kt`)
+- Create `MeshRadarScreen.kt`:
+  - Top header with local geohash code badge and location refresh button.
+  - Hyperlocal Geohash Message Composer card with live broadcast feed.
+  - Quick Intent Creation action grid (Numbered tiles: 01 Need, 02 Offer, 03 Meetup).
+
+#### C. Home Screen Decluttering (`HomeScreen.kt`)
+- Remove `GeohashMessageComposer` and Quick Intent Action Grid from `HomeScreen.kt`.
+- Keep the subtle hero banner, radius selector, category chips, AI intent matches, and post list for a clean, spacious feed.
+
+#### D. Bottom Navigation Bar Wiring (`MainActivity.kt`)
+- Wire `NavigationDestination.RADAR -> Icons.Filled.Radar to Icons.Outlined.Radar`.
+- Render `MeshRadarScreen` when `uiState.currentDestination == NavigationDestination.RADAR`.
+- Keep `alwaysShowLabel = false`, `maxLines = 1`, `fontSize = 10.sp`, and `overflow = TextOverflow.Ellipsis` on all 6 items.
+
+#### E. Unit Test Suite (`app/src/test/java/com/example/ExampleUnitTest.kt`)
+- Update `testCategory08_NavigationBugs_verifiesNavigationDestinationsAndBackStackState` to assert all 6 destinations (`Home`, `Map`, `Mesh Radar`, `Community`, `Inbox`, `Profile`).
 
 ---
 
-### 5. Verification & Completion Status
+### 3. Verification & Completion Status
 
-1. **Automated Unit Testing Execution (`app/src/test/java/com/example/ExampleUnitTest.kt`) - PASSED**:
-   - `testCategory01_UIBugs_verifiesTextFormattingAndAccessibilityTags`: **PASSED** (Validates string formatting, accessibility descriptions, and testTag contract stability).
-   - `testCategory02_FunctionalBugs_verifiesPostCreationAndUpvoteLogic`: **PASSED** (Validates post creation, editing, category filtering, and upvote toggles).
-   - `testCategory03_PerformanceBugs_verifiesGeohashComputationEfficiency`: **PASSED** (Asserts 1,000 geohash calculations complete in under 100ms without main thread lockup).
-   - `testCategory04_CrashBugs_verifiesGracefulHandlingOfMalformedInputs`: **PASSED** (Asserts `CrashTelemetryManager` and payload parsers handle nulls, empty input, and exceptions without JVM crashes).
-   - `testCategory05_NetworkBugs_verifiesOfflineFallbackAndRetryBehavior`: **PASSED** (Validates offline payload encoding and fallback behavior during network disconnects).
-   - `testCategory06_DatabaseBugs_verifiesMoshiAndJsonSchemaIntegrity`: **PASSED** (Asserts Moshi JSON serialization/deserialization schema integrity for data entities).
-   - `testCategory07_SecurityBugs_verifiesZeroTrustPrivacyAndBlockedUserExclusion`: **PASSED** (Validates blocked user exclusion, approximate coordinate fuzzing, and distance masking).
-   - `testCategory08_NavigationBugs_verifiesNavigationDestinationsAndBackStackState`: **PASSED** (Validates `NavigationDestination` enum transitions and modal dismissal states).
-   - `testCategory09_CompatibilityBugs_verifiesAppUpdateVersionComparison`: **PASSED** (Asserts semantic version comparator (`v1.0.3` vs `v1.0.4` vs `v1.0.2`) across legacy formats).
-   - `testCategory10_BatteryBugs_verifiesBackgroundSyncIntervalAndGpsModeThrottling`: **PASSED** (Validates background sync interval settings (15m, 30m, 60m, Manual) and GPS mode toggles to conserve battery).
-   - `testCategory11_MemoryBugs_verifiesStorageCacheTrimmingAndPercentageCalculations`: **PASSED** (Validates `StorageCacheManager` memory footprint calculation, percentage bounds, and cache file trimming).
-   - Ran `gradle :app:testDebugUnitTest --tests "com.example.ExampleUnitTest"` -> **All 35 unit tests passed with 0 failures**.
+1. **Unit Testing Execution (`app/src/test/java/com/example/ExampleUnitTest.kt`) - PASSED**:
+   - `testCategory08_NavigationBugs_verifiesNavigationDestinationsAndBackStackState`: Verified all 6 clean destinations (`Home`, `Map`, `Mesh Radar`, `Community`, `Inbox`, `Profile`).
+   - Ran `gradle :app:testDebugUnitTest --tests "com.example.ExampleUnitTest"` -> **All 35 unit tests passed**.
 
 2. **Compilation - PASSED**:
    - Executed `compile_applet` -> **Build succeeded - the applet is compiled**.
+
+3. **Completed Improvements**:
+   - [x] Updated `NavigationDestination` enum in `NearGridViewModel.kt` to include 6 distinct destinations (`HOME`, `MAP`, `RADAR`, `COMMUNITY`, `INBOX`, `PROFILE`).
+   - [x] Created `MeshRadarScreen.kt` for dedicated Geohash Broadcast Area messaging, live area broadcasts, and quick intent creation tiles (Need, Offer, Meetup).
+   - [x] Decluttered `HomeScreen.kt`, leaving a clean, spacious feed of AI matches, category filters, and neighbor posts.
+   - [x] Updated `MainActivity.kt`'s bottom navigation bar with active-only single-line label formatting (`alwaysShowLabel = false`, `maxLines = 1`, `fontSize = 10.sp`) across all 6 navigation items.

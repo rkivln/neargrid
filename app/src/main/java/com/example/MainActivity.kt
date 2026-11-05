@@ -22,12 +22,14 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Radar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -43,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -63,6 +66,7 @@ import com.example.ui.screens.GridQrInviteScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InboxScreen
 import com.example.ui.screens.LivingGridScreen
+import com.example.ui.screens.MeshRadarScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.RealtimeMapScreen
@@ -333,7 +337,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     val (iconFilled, iconOutlined) = when (destination) {
                         NavigationDestination.HOME -> Icons.Filled.Home to Icons.Outlined.Home
                         NavigationDestination.MAP -> Icons.Filled.Map to Icons.Outlined.Map
-                        NavigationDestination.GRID -> Icons.Filled.GridView to Icons.Outlined.GridView
+                        NavigationDestination.RADAR -> Icons.Filled.Radar to Icons.Outlined.Radar
                         NavigationDestination.COMMUNITY -> Icons.Filled.Campaign to Icons.Outlined.Campaign
                         NavigationDestination.INBOX -> Icons.Filled.ChatBubble to Icons.Outlined.ChatBubbleOutline
                         NavigationDestination.PROFILE -> Icons.Filled.Person to Icons.Outlined.Person
@@ -341,6 +345,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
 
                     NavigationBarItem(
                         selected = isSelected,
+                        alwaysShowLabel = false,
                         onClick = { viewModel.setDestination(destination) },
                         icon = {
                             Icon(
@@ -353,8 +358,11 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                             Text(
                                 text = destination.label,
                                 fontFamily = DMSansFontFamily,
-                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
-                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
                                 color = if (isSelected) PrimaryText else SecondaryText
                             )
                         },
@@ -445,22 +453,23 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                     )
                 }
 
-                NavigationDestination.GRID -> {
-                    LivingGridScreen(
+                NavigationDestination.RADAR -> {
+                    MeshRadarScreen(
                         isRefreshing = uiState.isRefreshing,
                         onRefresh = { viewModel.refreshGridData() },
-                        cells = cells,
                         currentCell = uiState.selectedCell,
-                        discoveryRadiusMeters = uiState.discoveryRadiusMeters,
-                        userLocation = currentLocation,
-                        posts = posts,
-                        issues = issues,
-                        onPostClick = { viewModel.connectFromPost(it) },
-                        onIssueClick = { viewModel.setDestination(NavigationDestination.COMMUNITY) },
-                        onSelectCell = { viewModel.selectCell(it) },
-                        onRadiusChange = { viewModel.setDiscoveryRadius(it) },
-                        onShowCellQr = { viewModel.showCellQrDialog(it) },
-                        onScanQrClick = { viewModel.openQrScannerDialog() }
+                        currentGeohash = uiState.currentGeohash,
+                        latitude = currentLocation?.latitude ?: 0.0,
+                        longitude = currentLocation?.longitude ?: 0.0,
+                        localityName = currentLocation?.localityName ?: "",
+                        isLocating = uiState.isLocating,
+                        isPostingGeohashMessage = uiState.isPostingGeohashMessage,
+                        geohashPostStatus = uiState.geohashPostStatus,
+                        geohashMessages = geohashMessages,
+                        onRefreshLocation = { viewModel.refreshDeviceLocation() },
+                        onPostGeohashMessage = { viewModel.postGeohashMessage(it) },
+                        onDismissGeohashStatus = { viewModel.clearGeohashPostStatus() },
+                        onOpenCreateDialog = { viewModel.openCreateDialog(it) }
                     )
                 }
 
