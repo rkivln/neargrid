@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,12 +18,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.HelpOutline
@@ -310,46 +318,45 @@ fun TopNeighborhoodBar(
     onScanQrClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = Color.Transparent
+    var actionsExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Left: Circular cell/neighborhood selector
+            // Left: Minimalist text label without background pill
             Row(
                 modifier = Modifier
-                    .clip(CircleShape)
-                    .background(PrimarySurface)
-                    .border(1.dp, CardBorderColor, CircleShape)
+                    .clip(RoundedCornerShape(8.dp))
                     .clickable { onCellClick() }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .padding(vertical = 4.dp, horizontal = 2.dp)
                     .testTag("cell_selector_chip"),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(9.dp)
+                        .size(8.dp)
                         .clip(CircleShape)
                         .background(if (isLocating) SlateBlue else AccentLime)
-                        .border(1.dp, PrimaryText.copy(alpha = 0.2f), CircleShape)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (isLocating) "Locating..." else currentCell?.name ?: "Local Area",
                     fontFamily = ManropeFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
                     color = PrimaryText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 120.dp)
+                    modifier = Modifier.widthIn(max = 180.dp)
                 )
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = "Change cell",
@@ -358,97 +365,193 @@ fun TopNeighborhoodBar(
                 )
             }
 
-            // Center: Compact cell code
-            Text(
-                text = currentCell?.code ?: "#GPS-LIVE",
-                fontFamily = ManropeFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                letterSpacing = 0.5.sp,
-                color = SlateBlue
-            )
-
-            // Right: Actions Row (Live Map, QR Code Scan, QR Code Invite & GPS Toggle)
+            // Right: Collapsible Actions Toggle (replaces clumsy button row)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (onOpenMapClick != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(PrimarySurface)
-                            .border(1.dp, CardBorderColor, CircleShape)
-                            .clickable { onOpenMapClick() }
-                            .testTag("top_bar_map_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Open Live Map",
-                            modifier = Modifier.size(18.dp),
-                            tint = PrimaryText
-                        )
-                    }
-                }
+                Text(
+                    text = currentCell?.code ?: "#GPS-LIVE",
+                    fontFamily = ManropeFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    color = SecondaryText
+                )
 
-                if (onScanQrClick != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(PrimarySurface)
-                            .border(1.dp, CardBorderColor, CircleShape)
-                            .clickable { onScanQrClick() }
-                            .testTag("top_bar_scan_qr_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Scan Grid QR",
-                            modifier = Modifier.size(18.dp),
-                            tint = PrimaryText
-                        )
-                    }
-                }
-
-                if (onShowQrClick != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(PrimarySurface)
-                            .border(1.dp, CardBorderColor, CircleShape)
-                            .clickable { onShowQrClick() }
-                            .testTag("top_bar_qr_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCode,
-                            contentDescription = "Share Cell QR",
-                            modifier = Modifier.size(18.dp),
-                            tint = PrimaryText
-                        )
-                    }
-                }
-
-                Box(
+                Surface(
+                    shape = CircleShape,
+                    color = PrimarySurface,
+                    border = BorderStroke(1.dp, CardBorderColor),
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (gpsEnabled) AccentLime else PrimarySurface)
-                        .border(1.dp, if (gpsEnabled) LightLime else CardBorderColor, CircleShape)
-                        .clickable { onGpsToggle() }
-                        .testTag("gps_toggle_button"),
-                    contentAlignment = Alignment.Center
+                        .clickable { actionsExpanded = !actionsExpanded }
+                        .testTag("top_bar_actions_toggle")
                 ) {
-                    Icon(
-                        imageVector = if (gpsEnabled) Icons.Outlined.GpsFixed else Icons.Outlined.GpsNotFixed,
-                        contentDescription = "GPS Toggle",
-                        modifier = Modifier.size(18.dp),
-                        tint = PrimaryText
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (actionsExpanded) Icons.Default.Close else Icons.Default.Tune,
+                            contentDescription = "Quick Actions",
+                            tint = PrimaryText,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Expandable Quick Actions Panel (holding GPS toggle, Map, Scan QR, Share QR safely)
+        AnimatedVisibility(
+            visible = actionsExpanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = PrimarySurface,
+                border = BorderStroke(1.dp, CardBorderColor),
+                shadowElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // GPS Toggle (neatly inside panel, no stray green button on refresh)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onGpsToggle() }
+                            .padding(8.dp)
+                            .testTag("gps_toggle_button")
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (gpsEnabled) AccentLime else SoftSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (gpsEnabled) Icons.Outlined.GpsFixed else Icons.Outlined.GpsNotFixed,
+                                contentDescription = "GPS Toggle",
+                                tint = PrimaryText,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (gpsEnabled) "GPS On" else "GPS Off",
+                            fontSize = 10.sp,
+                            fontFamily = ManropeFontFamily,
+                            color = PrimaryText
+                        )
+                    }
+
+                    if (onOpenMapClick != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onOpenMapClick(); actionsExpanded = false }
+                                .padding(8.dp)
+                                .testTag("top_bar_map_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(SoftSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Map,
+                                    contentDescription = "Map",
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Live Map",
+                                fontSize = 10.sp,
+                                fontFamily = ManropeFontFamily,
+                                color = PrimaryText
+                            )
+                        }
+                    }
+
+                    if (onScanQrClick != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onScanQrClick(); actionsExpanded = false }
+                                .padding(8.dp)
+                                .testTag("top_bar_scan_qr_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(SoftSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCodeScanner,
+                                    contentDescription = "Scan QR",
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Scan Pass",
+                                fontSize = 10.sp,
+                                fontFamily = ManropeFontFamily,
+                                color = PrimaryText
+                            )
+                        }
+                    }
+
+                    if (onShowQrClick != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onShowQrClick(); actionsExpanded = false }
+                                .padding(8.dp)
+                                .testTag("top_bar_qr_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(SoftSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCode,
+                                    contentDescription = "Share QR",
+                                    tint = PrimaryText,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Grid Pass",
+                                fontSize = 10.sp,
+                                fontFamily = ManropeFontFamily,
+                                color = PrimaryText
+                            )
+                        }
+                    }
                 }
             }
         }
