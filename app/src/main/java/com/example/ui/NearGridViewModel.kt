@@ -400,6 +400,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         // Initialize update manager with persistent context
         try {
             com.example.data.update.AppUpdateManager.instance.init(application.applicationContext)
+            _isUpdateBannerDismissed.value = com.example.data.update.AppUpdateManager.instance.isBannerDismissed.value
         } catch (e: Exception) {
             android.util.Log.w("NearGridViewModel", "AppUpdateManager initialization failed", e)
         }

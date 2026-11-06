@@ -156,14 +156,14 @@ class ExampleUnitTest {
     val liveGitHubService = object : com.example.data.update.GitHubApiService {
       override suspend fun getLatestRelease(owner: String, repo: String): com.example.data.update.GitHubRelease {
         return com.example.data.update.GitHubRelease(
-          tagName = "v1.0.3",
-          name = "NearGrid v1.0.3",
+          tagName = "v1.0.4",
+          name = "NearGrid v1.0.4",
           body = "Latest release",
-          htmlUrl = "https://github.com/rkivln/neargrid/releases/tag/v1.0.3",
+          htmlUrl = "https://github.com/rkivln/neargrid/releases/tag/v1.0.4",
           assets = listOf(
             com.example.data.update.GitHubReleaseAsset(
-              name = "NearGrid.apk",
-              downloadUrl = "https://github.com/rkivln/neargrid/releases/download/v1.0.3/NearGrid.apk"
+              name = "NearGrid.v1.0.4.apk",
+              downloadUrl = "https://github.com/rkivln/neargrid/releases/download/v1.0.4/NearGrid.v1.0.4.apk"
             )
           )
         )
@@ -171,15 +171,16 @@ class ExampleUnitTest {
     }
 
     val manager = com.example.data.update.AppUpdateManager(apiService = liveGitHubService)
-    val result = manager.checkForUpdate("1.0.3")
+    val result = manager.checkForUpdate("1.0.4")
 
     assertTrue(result.isSuccess)
     val info = result.getOrNull()
     assertNotNull(info)
-    assertFalse("Update banner must NOT appear when installed version matches latest release v1.0.3", info!!.isUpdateAvailable)
+    assertFalse("Update banner must NOT appear when installed version matches latest release v1.0.4", info!!.isUpdateAvailable)
+    assertTrue("Banner must be automatically dismissed when installed version matches latest release", manager.isBannerDismissed.value)
 
     // Test dismissal
-    manager.dismissBanner("v1.0.3")
+    manager.dismissBanner("v1.0.4")
     assertTrue("Banner is marked as dismissed", manager.isBannerDismissed.value)
   }
 
@@ -713,14 +714,14 @@ class ExampleUnitTest {
 
   @Test
   fun testCategory09_CompatibilityBugs_verifiesAppUpdateVersionComparison() {
-    val isNewer = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.4", "v1.0.3")
-    assertTrue("v1.0.4 is newer than current v1.0.3", isNewer)
+    val isNewer = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.5", "v1.0.4")
+    assertTrue("v1.0.5 is newer than current v1.0.4", isNewer)
 
-    val isCurrent = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.3", "v1.0.3")
-    assertFalse("v1.0.3 is equal to current v1.0.3", isCurrent)
+    val isCurrent = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.4", "v1.0.4")
+    assertFalse("v1.0.4 is equal to current v1.0.4", isCurrent)
 
-    val isOlder = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.2", "v1.0.3")
-    assertFalse("v1.0.2 is older than current v1.0.3", isOlder)
+    val isOlder = com.example.data.update.AppUpdateService.isNewerVersion("v1.0.3", "v1.0.4")
+    assertFalse("v1.0.3 is older than current v1.0.4", isOlder)
   }
 
   @Test

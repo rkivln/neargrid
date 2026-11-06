@@ -131,12 +131,13 @@ class AppUpdateManager(
             val cleanLatest = latestTag.removePrefix("v").removePrefix("V")
 
             // Automatically hide update banner if user already dismissed this specific release version
+            // or if the current installed version already matches or exceeds the release
             if (lastDismissedVersion.isNullOrBlank()) {
                 loadPersistedDismissedVersion()
             }
             val isAlreadyDismissed = !lastDismissedVersion.isNullOrBlank() &&
-                    cleanLatest.equals(lastDismissedVersion, ignoreCase = true)
-            if (isAlreadyDismissed) {
+                    (cleanLatest.equals(lastDismissedVersion, ignoreCase = true) || !isNewerVersion(cleanLatest, lastDismissedVersion!!))
+            if (!isAvailable || isAlreadyDismissed) {
                 _isBannerDismissed.value = true
             }
 
