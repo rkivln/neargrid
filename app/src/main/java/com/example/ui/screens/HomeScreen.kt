@@ -24,7 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +43,10 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,21 +148,60 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(WarmIvory)
         ) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            // Top Navigation & Coordinate Bar
-            item {
-                TopNeighborhoodBar(
-                    currentCell = currentCell,
-                    discoveryRadiusMeters = discoveryRadiusMeters,
-                    gpsEnabled = gpsEnabled,
-                    isLocating = isLocating,
-                    onCellClick = onCellClick,
-                    onGpsToggle = onGpsToggle,
-                    onOpenMapClick = onOpenMapClick,
-                    onShowQrClick = onShowQrClick,
-                    onScanQrClick = onScanQrClick
-                )
-            }
+            var isNearbyFeedMode by remember { mutableStateOf(false) }
+
+            if (isNearbyFeedMode) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    TopNeighborhoodBar(
+                        currentCell = currentCell,
+                        discoveryRadiusMeters = discoveryRadiusMeters,
+                        gpsEnabled = gpsEnabled,
+                        isLocating = isLocating,
+                        onCellClick = onCellClick,
+                        onGpsToggle = onGpsToggle,
+                        onOpenMapClick = onOpenMapClick,
+                        onShowQrClick = onShowQrClick,
+                        onScanQrClick = onScanQrClick
+                    )
+
+                    FeedModeToggleBar(
+                        isNearbyFeedMode = true,
+                        onToggle = { isNearbyFeedMode = it }
+                    )
+
+                    NearbyFeedComponent(
+                        userLatitude = latitude,
+                        userLongitude = longitude,
+                        initialRadiusMeters = discoveryRadiusMeters,
+                        onConnectPost = onConnectPost,
+                        onOpenComments = onOpenComments,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    // Top Navigation & Coordinate Bar
+                    item {
+                        TopNeighborhoodBar(
+                            currentCell = currentCell,
+                            discoveryRadiusMeters = discoveryRadiusMeters,
+                            gpsEnabled = gpsEnabled,
+                            isLocating = isLocating,
+                            onCellClick = onCellClick,
+                            onGpsToggle = onGpsToggle,
+                            onOpenMapClick = onOpenMapClick,
+                            onShowQrClick = onShowQrClick,
+                            onScanQrClick = onScanQrClick
+                        )
+                    }
+
+                    // Feed Mode Switcher (Grid vs Nearby Feed)
+                    item {
+                        FeedModeToggleBar(
+                            isNearbyFeedMode = false,
+                            onToggle = { isNearbyFeedMode = it }
+                        )
+                    }
 
             // In-App Release Update Alert Banner
             item(key = "app_update_banner") {
@@ -557,40 +602,126 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
+    }
 
-        // Floating Action Button
-        FloatingActionButton(
-            onClick = { onOpenCreateDialog("NEED") },
-            containerColor = PrimaryText,
-            contentColor = PureWhite,
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp)
-                .testTag("fab_create_post")
+    // Floating Action Button
+    FloatingActionButton(
+        onClick = { onOpenCreateDialog("NEED") },
+        containerColor = PrimaryText,
+        contentColor = PureWhite,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(20.dp)
+            .testTag("fab_create_post")
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create Action",
-                    tint = PureWhite,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "New coordination",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                    color = PureWhite
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Create Action",
+                tint = PureWhite,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "New coordination",
+                fontFamily = DMSansFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = PureWhite
+            )
         }
     }
 }
+}
+}
+
+@Composable
+fun FeedModeToggleBar(
+    isNearbyFeedMode: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = PureWhite,
+        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onToggle(false) }
+                    .testTag("feed_mode_grid"),
+                shape = RoundedCornerShape(12.dp),
+                color = if (!isNearbyFeedMode) PrimaryText else PureWhite
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GridView,
+                        contentDescription = "Grid Feed",
+                        tint = if (!isNearbyFeedMode) PureWhite else SecondaryText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Grid Overview",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = if (!isNearbyFeedMode) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = if (!isNearbyFeedMode) PureWhite else SecondaryText
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onToggle(true) }
+                    .testTag("feed_mode_nearby"),
+                shape = RoundedCornerShape(12.dp),
+                color = if (isNearbyFeedMode) PrimaryText else PureWhite
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NearMe,
+                        contentDescription = "Nearby Feed",
+                        tint = if (isNearbyFeedMode) PureWhite else SecondaryText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Nearby Feed",
+                        fontFamily = DMSansFontFamily,
+                        fontWeight = if (isNearbyFeedMode) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = if (isNearbyFeedMode) PureWhite else SecondaryText
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
