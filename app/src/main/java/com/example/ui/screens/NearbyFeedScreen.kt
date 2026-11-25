@@ -1,11 +1,5 @@
 package com.example.ui.screens
 
-import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,29 +29,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Handyman
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,13 +55,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,39 +70,48 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.NeighborPost
-import com.example.ui.theme.AccentLime
-import com.example.ui.theme.BackgroundCanvas
-import com.example.ui.theme.BlueGray
-import com.example.ui.theme.CardBorderColor
-import com.example.ui.theme.DarkNavy
-import com.example.ui.theme.DeepNavy
-import com.example.ui.theme.LightLime
-import com.example.ui.theme.ManropeFontFamily
-import com.example.ui.theme.PrimarySurface
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.LiquidGlassBackButton
+import com.example.ui.components.PillPrimaryButton
+import com.example.ui.theme.AmberGlow
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltBorder
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltHeroGradient
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SlateBlue
-import com.example.ui.theme.SoftLimeSurface
-import com.example.ui.theme.SoftSurface
-import com.example.ui.theme.SubtleDivider
 import com.example.util.LocationHelper
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-/**
- * NearbyFeedScreen is a production-ready Jetpack Compose screen that fetches local
- * content in real-time from Firestore based on the user's current coordinates and
- * displays them in a scrollable list with image previews, distance badges, and filters.
- */
 @Composable
 fun NearbyFeedScreen(
     userLatitude: Double,
@@ -129,12 +122,11 @@ fun NearbyFeedScreen(
     onOpenComments: ((NeighborPost) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = BackgroundCanvas
+    AuraMeshBackground(
+        variant = AuraVariant.MIXED,
+        modifier = modifier.fillMaxSize()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Screen Header
             NearbyFeedTopHeader(
                 userLatitude = userLatitude,
                 userLongitude = userLongitude,
@@ -142,7 +134,6 @@ fun NearbyFeedScreen(
                 onBackClick = onBackClick
             )
 
-            // Core Nearby Feed Component
             NearbyFeedComponent(
                 userLatitude = userLatitude,
                 userLongitude = userLongitude,
@@ -154,10 +145,6 @@ fun NearbyFeedScreen(
     }
 }
 
-/**
- * Reusable NearbyFeedComponent that can be embedded anywhere.
- * Manages Firestore coordinate query, distance calculation, filtering, and scrollable list.
- */
 @Composable
 fun NearbyFeedComponent(
     userLatitude: Double,
@@ -169,20 +156,18 @@ fun NearbyFeedComponent(
 ) {
     val context = LocalContext.current
     var selectedRadiusMeters by remember { mutableIntStateOf(initialRadiusMeters) }
-    var selectedTypeFilter by remember { mutableStateOf("ALL") } // ALL, NEED, OFFER, MEETUP
+    var selectedTypeFilter by remember { mutableStateOf("ALL") }
     var onlyWithPhotos by remember { mutableStateOf(false) }
-    var sortByDistance by remember { mutableStateOf(true) } // true = closest, false = newest
+    var sortByDistance by remember { mutableStateOf(true) }
 
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val rawPosts = remember { mutableStateListOf<NeighborPost>() }
 
-    // Selected image for full-screen viewer lightbox
     var activeViewerImageUri by remember { mutableStateOf<String?>(null) }
     var activeViewerTitle by remember { mutableStateOf("") }
 
-    // Fetch and stream posts from Firestore based on coordinates
     val coroutineScope = rememberCoroutineScope()
 
     fun loadFirestorePosts() {
@@ -249,7 +234,6 @@ fun NearbyFeedComponent(
                         rawPosts.clear()
                         rawPosts.addAll(items)
                     } else if (rawPosts.isEmpty()) {
-                        // If Firestore collection has no items yet, load curated seed posts around current coordinates
                         rawPosts.clear()
                         rawPosts.addAll(generateSeedPostsForCoordinates(userLatitude, userLongitude))
                     }
@@ -269,12 +253,10 @@ fun NearbyFeedComponent(
         }
     }
 
-    // Load on launch and when coordinates update
     LaunchedEffect(userLatitude, userLongitude) {
         loadFirestorePosts()
     }
 
-    // Attach real-time snapshot listener
     DisposableEffect(Unit) {
         var listenerRegistration: ListenerRegistration? = null
         try {
@@ -325,7 +307,7 @@ fun NearbyFeedComponent(
                     }
                 }
         } catch (e: Throwable) {
-            // Graceful fallback for non-Firebase environments
+            // Graceful fallback
         }
 
         onDispose {
@@ -333,7 +315,6 @@ fun NearbyFeedComponent(
         }
     }
 
-    // Filter and sort items based on coordinates and active filter settings
     val filteredPosts = remember(rawPosts.toList(), userLatitude, userLongitude, selectedRadiusMeters, selectedTypeFilter, onlyWithPhotos, sortByDistance) {
         rawPosts.map { post ->
             val distMeters = if (userLatitude != 0.0 && userLongitude != 0.0 && post.lat != 0.0 && post.lng != 0.0) {
@@ -364,10 +345,7 @@ fun NearbyFeedComponent(
 
     Box(modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Coordinate Banner & Distance Range Selector
             NearbyControlsBar(
-                userLatitude = userLatitude,
-                userLongitude = userLongitude,
                 selectedRadiusMeters = selectedRadiusMeters,
                 onRadiusSelect = { selectedRadiusMeters = it },
                 selectedType = selectedTypeFilter,
@@ -381,7 +359,6 @@ fun NearbyFeedComponent(
                 onRefresh = { loadFirestorePosts() }
             )
 
-            // Content Feed
             if (isLoading) {
                 NearbyFeedLoadingSkeleton()
             } else if (filteredPosts.isEmpty()) {
@@ -400,7 +377,7 @@ fun NearbyFeedComponent(
                         .fillMaxSize()
                         .testTag("nearby_feed_list"),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredPosts, key = { it.id }) { post ->
                         NearbyFeedCard(
@@ -415,13 +392,16 @@ fun NearbyFeedComponent(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(
+                            modifier = Modifier
+                                .height(110.dp)
+                                .navigationBarsPadding()
+                        )
                     }
                 }
             }
         }
 
-        // Fullscreen Lightbox Image Viewer Modal
         if (activeViewerImageUri != null) {
             FullScreenImageViewerDialog(
                 imageUri = activeViewerImageUri!!,
@@ -432,9 +412,6 @@ fun NearbyFeedComponent(
     }
 }
 
-/**
- * Top Header bar with back action and locality coordinates info.
- */
 @Composable
 fun NearbyFeedTopHeader(
     userLatitude: Double,
@@ -442,109 +419,84 @@ fun NearbyFeedTopHeader(
     localityName: String,
     onBackClick: (() -> Unit)? = null
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = PrimarySurface,
-        border = BorderStroke(1.dp, CardBorderColor)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.weight(1f)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                if (onBackClick != null) {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(SoftSurface)
-                            .testTag("nearby_feed_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = PrimaryText,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                }
-
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(AccentLime)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Nearby Feed",
-                            fontFamily = ManropeFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = PrimaryText
-                        )
-                    }
-                    Text(
-                        text = if (localityName.isNotBlank()) {
-                            "$localityName • ${String.format(Locale.US, "%.3f, %.3f", userLatitude, userLongitude)}"
-                        } else {
-                            String.format(Locale.US, "GPS: %.4f, %.4f", userLatitude, userLongitude)
-                        },
-                        fontFamily = ManropeFontFamily,
-                        fontSize = 11.sp,
-                        color = SecondaryText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            if (onBackClick != null) {
+                LiquidGlassBackButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.testTag("nearby_feed_back_button")
+                )
+                Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = SoftSurface,
-                border = BorderStroke(1.dp, CardBorderColor)
+            Column {
+                Text(
+                    text = "PROXIMITY WIRE · LIVE",
+                    style = AuraKickerStyle,
+                    color = CobaltGlow
+                )
+                Text(
+                    text = "Nearby Feed",
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 25.sp,
+                    color = ObsidianInk
+                )
+                Text(
+                    text = if (localityName.isNotBlank()) {
+                        "$localityName · ${String.format(Locale.US, "%.3f, %.3f", userLatitude, userLongitude)}"
+                    } else {
+                        String.format(Locale.US, "GPS: %.4f, %.4f", userLatitude, userLongitude)
+                    },
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 11.sp,
+                    color = MutedSlate,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Surface(
+            shape = CircleShape,
+            color = EmeraldSoft,
+            border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.55f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GpsFixed,
-                        contentDescription = "Live GPS",
-                        tint = SlateBlue,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "LIVE",
-                        fontFamily = ManropeFontFamily,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SlateBlue
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.GpsFixed,
+                    contentDescription = "Live GPS",
+                    tint = EmeraldLight,
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = "LIVE",
+                    fontFamily = PlusJakartaFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = EmeraldLight
+                )
             }
         }
     }
 }
 
-/**
- * Filter and Controls Bar for Distance Radius, Intent Filter, and Photo Toggle.
- */
 @Composable
 fun NearbyControlsBar(
-    userLatitude: Double,
-    userLongitude: Double,
     selectedRadiusMeters: Int,
     onRadiusSelect: (Int) -> Unit,
     selectedType: String,
@@ -557,198 +509,170 @@ fun NearbyControlsBar(
     isRefreshing: Boolean,
     onRefresh: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = PrimarySurface,
-        border = BorderStroke(1.dp, SubtleDivider)
+    DarkGlassCard(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        cornerRadius = 22.dp,
+        containerColor = DarkGlassCard.copy(alpha = 0.92f),
+        borderColor = HairlineGlassBorder,
+        contentPadding = PaddingValues(14.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Distance Radius Capsule Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Text(
+                text = "RADIUS",
+                style = AuraKickerStyle,
+                color = MutedSlate
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Text(
-                    text = "Proximity Radius",
-                    fontFamily = ManropeFontFamily,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PrimaryText
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
-                    radiusOptions.forEach { (meters, label) ->
-                        val isSelected = selectedRadiusMeters == meters
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isSelected) PrimaryText else SoftSurface,
-                            border = BorderStroke(1.dp, if (isSelected) PrimaryText else CardBorderColor),
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable { onRadiusSelect(meters) }
-                                .testTag("radius_chip_$label")
-                        ) {
-                            Text(
-                                text = label,
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) PureWhite else PrimaryText,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Filter Chips and Actions Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    val types = listOf(
-                        "ALL" to "All",
-                        "NEED" to "Needs",
-                        "OFFER" to "Offers",
-                        "MEETUP" to "Meetups"
-                    )
-                    items(types) { (key, label) ->
-                        val isSelected = selectedType == key
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) SlateBlue else SoftSurface,
-                            border = BorderStroke(1.dp, if (isSelected) SlateBlue else CardBorderColor),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onTypeSelect(key) }
-                                .testTag("type_filter_$key")
-                        ) {
-                            Text(
-                                text = label,
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isSelected) PureWhite else PrimaryText,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-
-                    // Photos Only Filter Pill
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (onlyWithPhotos) AccentLime else SoftSurface,
-                            border = BorderStroke(1.dp, if (onlyWithPhotos) LightLime else CardBorderColor),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onTogglePhotos() }
-                                .testTag("photos_only_filter_button")
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = null,
-                                    tint = PrimaryText,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Photos Only",
-                                    fontFamily = ManropeFontFamily,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = PrimaryText
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Sort and Refresh Controls
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onToggleSort,
+                val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
+                items(radiusOptions) { (meters, label) ->
+                    val isSelected = selectedRadiusMeters == meters
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isSelected) ElectricCobalt else ElevatedGlassSurface,
+                        border = BorderStroke(1.dp, if (isSelected) CobaltGlow else HairlineGlassBorder),
                         modifier = Modifier
-                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(SoftSurface)
-                            .testTag("nearby_feed_sort_button")
+                            .clickable { onRadiusSelect(meters) }
+                            .testTag("radius_chip_$label")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Sort,
-                            contentDescription = if (sortByDistance) "Sorted by Distance" else "Sorted by Date",
-                            tint = if (sortByDistance) SlateBlue else PrimaryText,
-                            modifier = Modifier.size(16.dp)
+                        Text(
+                            text = label,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) PureWhite else ObsidianInk,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
+                }
+            }
+        }
 
-                    Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-                    IconButton(
-                        onClick = onRefresh,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                val types = listOf(
+                    "ALL" to "All",
+                    "NEED" to "Needs",
+                    "OFFER" to "Offers",
+                    "MEETUP" to "Meetups"
+                )
+                items(types) { (key, label) ->
+                    val isSelected = selectedType == key
+                    val selectedBg = when (key) {
+                        "NEED" -> FieryCoral
+                        "OFFER" -> EmeraldMint
+                        "MEETUP" -> AmberGlow
+                        else -> ElectricCobalt
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isSelected) selectedBg else ElevatedGlassSurface,
+                        border = BorderStroke(1.dp, if (isSelected) selectedBg else HairlineGlassBorder),
                         modifier = Modifier
-                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(SoftSurface)
-                            .testTag("nearby_feed_refresh_button")
+                            .clickable { onTypeSelect(key) }
+                            .testTag("type_filter_$key")
                     ) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
-                                color = SlateBlue
-                            )
-                        } else {
+                        Text(
+                            text = label,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) PureWhite else ObsidianInk,
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                item {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (onlyWithPhotos) AmberSoft else ElevatedGlassSurface,
+                        border = BorderStroke(1.dp, if (onlyWithPhotos) AmberGlow else HairlineGlassBorder),
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable { onTogglePhotos() }
+                            .testTag("photos_only_filter_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh",
-                                tint = PrimaryText,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.Image,
+                                contentDescription = null,
+                                tint = if (onlyWithPhotos) AmberLight else ObsidianInk,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Photos",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 11.sp,
+                                fontWeight = if (onlyWithPhotos) FontWeight.Bold else FontWeight.Medium,
+                                color = if (onlyWithPhotos) AmberLight else ObsidianInk
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Count summary readout
-            Text(
-                text = "$itemCount posts found within ${LocationHelper.formatDistance(selectedRadiusMeters.toFloat())}",
-                fontFamily = ManropeFontFamily,
-                fontSize = 10.sp,
-                color = SecondaryText
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularOutlineIconButton(
+                    icon = Icons.Default.Sort,
+                    contentDescription = if (sortByDistance) "Sorted by Distance" else "Sorted by Date",
+                    onClick = onToggleSort,
+                    size = 38.dp,
+                    containerColor = if (sortByDistance) CobaltSoft else ElevatedGlassSurface,
+                    borderColor = if (sortByDistance) CobaltBorder else HairlineGlassBorder,
+                    iconTint = if (sortByDistance) CobaltGlow else ObsidianInk,
+                    modifier = Modifier.testTag("nearby_feed_sort_button")
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                CircularOutlineIconButton(
+                    icon = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    onClick = onRefresh,
+                    size = 38.dp,
+                    containerColor = ElevatedGlassSurface,
+                    borderColor = HairlineGlassBorder,
+                    iconTint = PureWhite,
+                    modifier = Modifier.testTag("nearby_feed_refresh_button")
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "$itemCount posts found within ${LocationHelper.formatDistance(selectedRadiusMeters.toFloat())}",
+            fontFamily = PlusJakartaFontFamily,
+            fontSize = 11.sp,
+            color = MutedSlate
+        )
     }
 }
 
-/**
- * Individual Card in the Nearby Feed with Prominent Image Previews,
- * Proximity Badge, Category Pill, and Action Buttons.
- */
 @Composable
 fun NearbyFeedCard(
     post: NeighborPost,
@@ -762,11 +686,12 @@ fun NearbyFeedCard(
 
     val isOffer = post.type == "OFFER"
     val isMeetup = post.type == "MEETUP"
+    val isNeed = post.type == "NEED" || (!isOffer && !isMeetup)
 
-    val typeColor = when {
-        isOffer -> AccentLime
-        isMeetup -> BlueGray
-        else -> SlateBlue
+    val (badgeBg, badgeBorder, badgeText) = when {
+        isNeed -> Triple(FieryCoralSoft, FieryCoral.copy(alpha = 0.5f), FieryCoralGlow)
+        isOffer -> Triple(EmeraldSoft, EmeraldMint.copy(alpha = 0.5f), EmeraldLight)
+        else -> Triple(AmberSoft, AmberGlow.copy(alpha = 0.5f), AmberLight)
     }
 
     val typeLabel = when {
@@ -775,301 +700,294 @@ fun NearbyFeedCard(
         else -> "NEED"
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("nearby_feed_card_${post.id}"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = PrimarySurface),
-        border = BorderStroke(1.dp, CardBorderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    DarkGlassCard(
+        modifier = modifier.testTag("nearby_feed_card_${post.id}"),
+        cornerRadius = 24.dp,
+        containerColor = DarkGlassCard,
+        borderColor = HairlineGlassBorder,
+        contentPadding = PaddingValues(vertical = 18.dp)
     ) {
-        Column(
+        // Header: Author Info + Distance Pill
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header: Author Info + Distance Badge
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(CobaltHeroGradient)
+                        .border(1.dp, CobaltGlow.copy(alpha = 0.45f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = post.authorInitials.ifBlank { "N" },
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = PureWhite
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column {
+                    Text(
+                        text = post.authorName.ifBlank { "Neighbor" },
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = ObsidianInk
+                    )
+                    Text(
+                        text = post.cellName.ifBlank { "Local Block" },
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 11.sp,
+                        color = MutedSlate
+                    )
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = ElevatedGlassSurface,
+                border = BorderStroke(1.dp, HairlineGlassBorder)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(if (isOffer) AccentLime.copy(alpha = 0.35f) else SoftSurface)
-                            .border(1.dp, CardBorderColor, CircleShape),
-                        contentAlignment = Alignment.Center
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Distance",
+                        tint = CobaltGlow,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = post.approxDistanceBand,
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ObsidianInk
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = post.title,
+            fontFamily = OutfitFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            lineHeight = 25.sp,
+            color = ObsidianInk,
+            modifier = Modifier.padding(horizontal = 18.dp)
+        )
+
+        if (post.description.isNotBlank()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = post.description,
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.5.sp,
+                lineHeight = 19.sp,
+                color = MutedSlate,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 18.dp)
+            )
+        }
+
+        if (post.mediaUris.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            NearbyImagePreviewSection(
+                mediaUris = post.mediaUris,
+                postTitle = post.title,
+                onImageClick = onImageClick
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = badgeBg,
+                    border = BorderStroke(1.dp, badgeBorder)
+                ) {
+                    Text(
+                        text = typeLabel,
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        color = badgeText,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                    )
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = ElevatedGlassSurface,
+                    border = BorderStroke(1.dp, HairlineGlassBorder)
+                ) {
+                    Text(
+                        text = post.category.uppercase(),
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 10.sp,
+                        color = MutedSlate,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                    )
+                }
+
+                if (post.urgency == "URGENT") {
+                    Surface(
+                        shape = CircleShape,
+                        color = FieryCoralSoft,
+                        border = BorderStroke(1.dp, FieryCoral.copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = post.authorInitials.ifBlank { "N" },
-                            fontFamily = ManropeFontFamily,
+                            text = "URGENT",
+                            fontFamily = PlusJakartaFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = PrimaryText
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Column {
-                        Text(
-                            text = post.authorName.ifBlank { "Neighbor" },
-                            fontFamily = ManropeFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            color = PrimaryText
-                        )
-                        Text(
-                            text = post.cellName.ifBlank { "Local Block" },
-                            fontFamily = ManropeFontFamily,
-                            fontSize = 11.sp,
-                            color = SecondaryText
+                            fontSize = 10.sp,
+                            color = FieryCoralGlow,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                         )
                     }
                 }
+            }
 
-                // Proximity Distance Badge
+            Text(
+                text = "${post.expiresInHours}H LEFT",
+                style = AuraKickerStyle,
+                color = MutedSlate
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = SoftSurface,
-                    border = BorderStroke(1.dp, CardBorderColor)
+                    shape = CircleShape,
+                    color = if (upvoted) CobaltSoft else ElevatedGlassSurface,
+                    border = BorderStroke(1.dp, if (upvoted) CobaltBorder else HairlineGlassBorder),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable {
+                            upvoted = !upvoted
+                            upvotesCount += if (upvoted) 1 else -1
+                        }
+                        .testTag("nearby_post_upvote_button")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Distance",
-                            tint = SlateBlue,
-                            modifier = Modifier.size(12.dp)
+                            imageVector = if (upvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = "Upvote",
+                            tint = if (upvoted) CobaltGlow else MutedSlate,
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = post.approxDistanceBand,
-                            fontFamily = ManropeFontFamily,
-                            fontSize = 11.sp,
+                            text = "$upvotesCount",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = PrimaryText
+                            color = ObsidianInk
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Post Title
-            Text(
-                text = post.title,
-                fontFamily = ManropeFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
-                lineHeight = 22.sp,
-                color = PrimaryText
-            )
-
-            if (post.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = post.description,
-                    fontFamily = ManropeFontFamily,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = SecondaryText,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Image Previews Section
-            if (post.mediaUris.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                NearbyImagePreviewSection(
-                    mediaUris = post.mediaUris,
-                    postTitle = post.title,
-                    onImageClick = onImageClick
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Tags & Meta Row (Type, Category, Urgency)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = CircleShape,
+                    color = ElevatedGlassSurface,
+                    border = BorderStroke(1.dp, HairlineGlassBorder),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable { onOpenComments() }
+                        .testTag("nearby_post_comments_button")
                 ) {
-                    // Type Pill
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = typeColor.copy(alpha = 0.2f),
-                        border = BorderStroke(1.dp, typeColor.copy(alpha = 0.4f))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = typeLabel,
-                            fontFamily = ManropeFontFamily,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryText,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        Icon(
+                            imageVector = Icons.Default.ChatBubbleOutline,
+                            contentDescription = "Comments",
+                            tint = MutedSlate,
+                            modifier = Modifier.size(14.dp)
                         )
-                    }
-
-                    // Category Pill
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = SoftSurface,
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = post.category,
-                            fontFamily = ManropeFontFamily,
-                            fontSize = 10.sp,
+                            text = "Chat",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = SecondaryText,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            color = ObsidianInk
                         )
                     }
-
-                    // Urgency Indicator if urgent
-                    if (post.urgency == "URGENT") {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFFEBEE),
-                            border = BorderStroke(1.dp, Color(0xFFEF9A9A))
-                        ) {
-                            Text(
-                                text = "URGENT",
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC62828),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
                 }
-
-                // Relative Date or Hours
-                Text(
-                    text = "${post.expiresInHours}h left",
-                    fontFamily = ManropeFontFamily,
-                    fontSize = 11.sp,
-                    color = SecondaryText
-                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Action Buttons Footer (Upvote, Comment, Connect)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Connect Hero Pill CTA
+            Surface(
+                shape = CircleShape,
+                color = PureWhite,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { onConnect() }
+                    .testTag("nearby_post_connect_button")
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Upvote Button
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (upvoted) SoftLimeSurface else SoftSurface,
-                        border = BorderStroke(1.dp, if (upvoted) LightLime else CardBorderColor),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                upvoted = !upvoted
-                                upvotesCount += if (upvoted) 1 else -1
-                            }
-                            .testTag("nearby_post_upvote_button")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (upvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                                contentDescription = "Upvote",
-                                tint = if (upvoted) PrimaryText else SecondaryText,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "$upvotesCount",
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = PrimaryText
-                            )
-                        }
-                    }
-
-                    // Comments Button
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = SoftSurface,
-                        border = BorderStroke(1.dp, CardBorderColor),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onOpenComments() }
-                            .testTag("nearby_post_comments_button")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ChatBubbleOutline,
-                                contentDescription = "Comments",
-                                tint = SecondaryText,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Chat",
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = PrimaryText
-                            )
-                        }
-                    }
-                }
-
-                // Connect Action Button
-                Button(
-                    onClick = onConnect,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryText,
-                        contentColor = PureWhite
-                    ),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    modifier = Modifier.testTag("nearby_post_connect_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Chat,
                         contentDescription = null,
-                        modifier = Modifier.size(13.dp)
+                        tint = ObsidianBlack,
+                        modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isOffer) "Claim Offer" else "Coordinate",
-                        fontFamily = ManropeFontFamily,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ObsidianBlack
                     )
                 }
             }
@@ -1077,9 +995,6 @@ fun NearbyFeedCard(
     }
 }
 
-/**
- * Image Preview Section supporting single hero images and multiple thumbnail carousels.
- */
 @Composable
 fun NearbyImagePreviewSection(
     mediaUris: List<String>,
@@ -1088,15 +1003,15 @@ fun NearbyImagePreviewSection(
     modifier: Modifier = Modifier
 ) {
     if (mediaUris.size == 1) {
-        // Single Hero Image Banner
         val uri = mediaUris.first()
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(DarkNavy)
-                .border(1.dp, CardBorderColor, RoundedCornerShape(16.dp))
+                .padding(horizontal = 14.dp)
+                .height(210.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(ObsidianCanvas)
+                .border(1.dp, HairlineGlassBorder, RoundedCornerShape(18.dp))
                 .clickable { onImageClick(uri, postTitle) }
                 .testTag("nearby_image_preview_single")
         ) {
@@ -1108,40 +1023,39 @@ fun NearbyImagePreviewSection(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Zoom pill indicator
             Surface(
                 shape = CircleShape,
-                color = PureWhite.copy(alpha = 0.85f),
+                color = ObsidianCanvas.copy(alpha = 0.78f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(8.dp)
+                    .padding(10.dp)
             ) {
                 Text(
-                    text = "Tap to expand ↗",
-                    fontFamily = ManropeFontFamily,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = PrimaryText,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    text = "Full view ↗",
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PureWhite,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
         }
     } else {
-        // Multi-image preview row / carousel
         Column(modifier = modifier.fillMaxWidth()) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 itemsIndexed(mediaUris) { index, uri ->
                     Box(
                         modifier = Modifier
-                            .height(140.dp)
-                            .width(200.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(DarkNavy)
-                            .border(1.dp, CardBorderColor, RoundedCornerShape(14.dp))
+                            .height(150.dp)
+                            .width(220.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(ObsidianCanvas)
+                            .border(1.dp, HairlineGlassBorder, RoundedCornerShape(18.dp))
                             .clickable { onImageClick(uri, "$postTitle (${index + 1}/${mediaUris.size})") }
                             .testTag("nearby_image_preview_thumb_$index")
                     ) {
@@ -1153,21 +1067,20 @@ fun NearbyImagePreviewSection(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Index badge
                         Surface(
                             shape = CircleShape,
-                            color = Color.Black.copy(alpha = 0.65f),
+                            color = ObsidianCanvas.copy(alpha = 0.75f),
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .padding(6.dp)
+                                .padding(8.dp)
                         ) {
                             Text(
                                 text = "${index + 1}/${mediaUris.size}",
-                                fontFamily = ManropeFontFamily,
-                                fontSize = 9.sp,
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = PureWhite,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -1177,9 +1090,6 @@ fun NearbyImagePreviewSection(
     }
 }
 
-/**
- * Fullscreen Lightbox Image Viewer Modal when a resident clicks on an image preview.
- */
 @Composable
 fun FullScreenImageViewerDialog(
     imageUri: String,
@@ -1193,7 +1103,7 @@ fun FullScreenImageViewerDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.95f))
+                .background(ObsidianCanvas.copy(alpha = 0.96f))
                 .clickable { onDismiss() }
                 .testTag("fullscreen_image_viewer_dialog")
         ) {
@@ -1203,43 +1113,34 @@ fun FullScreenImageViewerDialog(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top control bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp),
+                        .statusBarsPadding()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = title.ifBlank { "Photo Preview" },
-                        fontFamily = ManropeFontFamily,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = OutfitFontFamily,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
                         color = PureWhite,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
 
-                    IconButton(
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = "Close preview",
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .testTag("close_fullscreen_image_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close preview",
-                            tint = PureWhite,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                        size = 40.dp,
+                        modifier = Modifier.testTag("close_fullscreen_image_button")
+                    )
                 }
 
-                // Center Image
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1253,22 +1154,22 @@ fun FullScreenImageViewerDialog(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(20.dp))
                     )
                 }
 
-                // Bottom Hint
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .navigationBarsPadding()
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
                         text = "Tap anywhere to dismiss",
-                        fontFamily = ManropeFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MutedSlate
                     )
                 }
             }
@@ -1276,108 +1177,98 @@ fun FullScreenImageViewerDialog(
     }
 }
 
-/**
- * Loading Skeleton when fetching Firestore content.
- */
 @Composable
 fun NearbyFeedLoadingSkeleton() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         repeat(3) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = PrimarySurface),
-                border = BorderStroke(1.dp, CardBorderColor)
+            DarkGlassCard(
+                cornerRadius = 24.dp,
+                containerColor = DarkGlassCard,
+                borderColor = HairlineGlassBorder
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(ElevatedGlassSurface)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .width(110.dp)
+                                .height(14.dp)
                                 .clip(CircleShape)
-                                .background(SoftSurface)
+                                .background(ElevatedGlassSurface)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .height(14.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(SoftSurface)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .width(60.dp)
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(SoftSurface)
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(70.dp)
+                                .height(10.dp)
+                                .clip(CircleShape)
+                                .background(ElevatedGlassSurface)
+                        )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.85f)
-                            .height(16.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(SoftSurface)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SoftSurface)
-                    )
                 }
+                Spacer(modifier = Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(18.dp)
+                        .clip(CircleShape)
+                        .background(ElevatedGlassSurface)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(ElevatedGlassSurface)
+                )
             }
         }
     }
 }
 
-/**
- * Empty state when no posts match radius or coordinate criteria.
- */
 @Composable
 fun NearbyFeedEmptyState(
     radiusMeters: Int,
     onlyWithPhotos: Boolean,
     onResetFilters: () -> Unit
 ) {
-    Card(
+    DarkGlassCard(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .testTag("nearby_feed_empty_state"),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = PrimarySurface),
-        border = BorderStroke(1.dp, CardBorderColor)
+        cornerRadius = 24.dp,
+        containerColor = DarkGlassCard,
+        borderColor = HairlineGlassBorder,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 34.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(28.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(58.dp)
                     .clip(CircleShape)
-                    .background(SoftSurface),
+                    .background(CobaltSoft)
+                    .border(1.dp, CobaltBorder.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.NearMe,
                     contentDescription = null,
-                    tint = SlateBlue,
+                    tint = CobaltGlow,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -1386,10 +1277,11 @@ fun NearbyFeedEmptyState(
 
             Text(
                 text = "No Nearby Content in Range",
-                fontFamily = ManropeFontFamily,
+                fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = PrimaryText
+                fontSize = 20.sp,
+                color = ObsidianInk,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -1400,39 +1292,24 @@ fun NearbyFeedEmptyState(
                 } else {
                     "There are currently no active neighbor posts within ${LocationHelper.formatDistance(radiusMeters.toFloat())} of your coordinates."
                 },
-                fontFamily = ManropeFontFamily,
-                fontSize = 12.sp,
-                color = SecondaryText,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 17.sp
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.sp,
+                color = MutedSlate,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Button(
+            PillPrimaryButton(
+                text = "Expand Radius to 10 km",
                 onClick = onResetFilters,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryText,
-                    contentColor = PureWhite
-                ),
                 modifier = Modifier.testTag("nearby_feed_expand_radius_button")
-            ) {
-                Text(
-                    text = "Expand Radius to 10 km",
-                    fontFamily = ManropeFontFamily,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            )
         }
     }
 }
 
-/**
- * Generates sample seed posts around the provided coordinates to ensure
- * instantaneous visual feedback even on fresh environments without pre-seeded Firestore records.
- */
 fun generateSeedPostsForCoordinates(lat: Double, lng: Double): List<NeighborPost> {
     val baseLat = if (lat != 0.0) lat else 37.7749
     val baseLng = if (lng != 0.0) lng else -122.4194

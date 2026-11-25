@@ -1,6 +1,6 @@
 package com.example.ui.components
 
-import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,12 +10,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -26,14 +27,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,21 +40,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.example.R
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DarkNavy
-import com.example.ui.theme.DeepNavy
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.WarmBorder
 
 @Composable
 fun PostMediaCarousel(
@@ -69,86 +68,177 @@ fun PostMediaCarousel(
     var selectedViewerIndex by remember { mutableIntStateOf(-1) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(vertical = 6.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            itemsIndexed(mediaUris) { index, uriString ->
-                val isVideo = mediaTypes.getOrNull(index) == "VIDEO" ||
-                        uriString.contains("video", ignoreCase = true) ||
-                        uriString.endsWith(".mp4", ignoreCase = true)
+        if (mediaUris.size == 1) {
+            val uriString = mediaUris.first()
+            val isVideo = mediaTypes.getOrNull(0) == "VIDEO" ||
+                    uriString.contains("video", ignoreCase = true) ||
+                    uriString.endsWith(".mp4", ignoreCase = true)
 
-                Box(
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(216.dp)
+                    .background(ElevatedGlassSurface)
+                    .clickable { selectedViewerIndex = 0 }
+                    .testTag("post_media_item_0")
+            ) {
+                AsyncImage(
+                    model = uriString,
+                    error = painterResource(id = R.drawable.img_neighborhood_connection),
+                    contentDescription = "Media attachment 1",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                Surface(
+                    shape = CircleShape,
+                    color = ObsidianCanvas.copy(alpha = 0.82f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
                     modifier = Modifier
-                        .height(180.dp)
-                        .width(if (mediaUris.size == 1) 280.dp else 220.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(DarkNavy)
-                        .border(1.dp, WarmBorder, RoundedCornerShape(16.dp))
-                        .clickable { selectedViewerIndex = index }
-                        .testTag("post_media_item_$index")
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
                 ) {
-                    AsyncImage(
-                        model = uriString,
-                        error = painterResource(id = R.drawable.img_neighborhood_connection),
-                        contentDescription = "Media attachment ${index + 1}",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                    Text(
+                        text = "FULL VIEW",
+                        style = AuraKickerStyle,
+                        color = PureWhite,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
+                }
 
-                    if (isVideo) {
-                        // Play Icon Overlay Badge
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.35f)),
-                            contentAlignment = Alignment.Center
+                if (isVideo) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = PureWhite,
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = PureWhite.copy(alpha = 0.9f),
-                                modifier = Modifier.size(46.dp)
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Play Video",
-                                        tint = PrimaryText,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play Video",
+                                    tint = ObsidianBlack,
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
+                        }
 
-                            // Video Tag Badge
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color.Black.copy(alpha = 0.7f),
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(8.dp)
+                        Surface(
+                            shape = CircleShape,
+                            color = ObsidianCanvas.copy(alpha = 0.86f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Icon(
+                                    imageVector = Icons.Default.Videocam,
+                                    contentDescription = null,
+                                    tint = PureWhite,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "VIDEO",
+                                    style = AuraKickerStyle,
+                                    color = PureWhite
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                itemsIndexed(mediaUris) { index, uriString ->
+                    val isVideo = mediaTypes.getOrNull(index) == "VIDEO" ||
+                            uriString.contains("video", ignoreCase = true) ||
+                            uriString.endsWith(".mp4", ignoreCase = true)
+
+                    Box(
+                        modifier = Modifier
+                            .height(180.dp)
+                            .width(260.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(ElevatedGlassSurface)
+                            .border(1.dp, HairlineGlassBorder, RoundedCornerShape(18.dp))
+                            .clickable { selectedViewerIndex = index }
+                            .testTag("post_media_item_$index")
+                    ) {
+                        AsyncImage(
+                            model = uriString,
+                            error = painterResource(id = R.drawable.img_neighborhood_connection),
+                            contentDescription = "Media attachment ${index + 1}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        if (isVideo) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.35f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = PureWhite,
+                                    modifier = Modifier.size(48.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Videocam,
-                                        contentDescription = null,
-                                        tint = PureWhite,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Video",
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PureWhite
-                                    )
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Play Video",
+                                            tint = ObsidianBlack,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = ObsidianCanvas.copy(alpha = 0.86f),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Videocam,
+                                            contentDescription = null,
+                                            tint = PureWhite,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "VIDEO",
+                                            style = AuraKickerStyle,
+                                            color = PureWhite
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -158,7 +248,6 @@ fun PostMediaCarousel(
         }
     }
 
-    // Full-Screen Media Viewer Dialog
     if (selectedViewerIndex >= 0 && selectedViewerIndex < mediaUris.size) {
         val viewerUri = mediaUris[selectedViewerIndex]
         val isViewerVideo = mediaTypes.getOrNull(selectedViewerIndex) == "VIDEO" ||
@@ -172,42 +261,46 @@ fun PostMediaCarousel(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.95f))
+                    .background(ObsidianCanvas.copy(alpha = 0.97f))
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Header Bar with Close Button
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Media ${selectedViewerIndex + 1} of ${mediaUris.size}",
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PureWhite
-                        )
-
-                        IconButton(
-                            onClick = { selectedViewerIndex = -1 },
-                            modifier = Modifier.testTag("media_viewer_close_button")
+                        Surface(
+                            shape = CircleShape,
+                            color = ElevatedGlassSurface,
+                            border = BorderStroke(1.dp, HairlineGlassBorder)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = PureWhite,
-                                modifier = Modifier.size(24.dp)
+                            Text(
+                                text = "MEDIA ${selectedViewerIndex + 1} / ${mediaUris.size}",
+                                fontFamily = OutfitFontFamily,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp,
+                                color = PureWhite,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                             )
                         }
+
+                        CircularOutlineIconButton(
+                            icon = Icons.Default.Close,
+                            contentDescription = "Close",
+                            onClick = { selectedViewerIndex = -1 },
+                            modifier = Modifier.testTag("media_viewer_close_button")
+                        )
                     }
 
-                    // Main Image/Video Content
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -225,7 +318,7 @@ fun PostMediaCarousel(
                         if (isViewerVideo) {
                             Surface(
                                 shape = CircleShape,
-                                color = PureWhite.copy(alpha = 0.9f),
+                                color = PureWhite,
                                 modifier = Modifier.size(64.dp)
                             ) {
                                 Box(
@@ -235,7 +328,7 @@ fun PostMediaCarousel(
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
                                         contentDescription = "Playing Video",
-                                        tint = DeepNavy,
+                                        tint = ObsidianBlack,
                                         modifier = Modifier.size(40.dp)
                                     )
                                 }
@@ -243,7 +336,6 @@ fun PostMediaCarousel(
                         }
                     }
 
-                    // Bottom Navigation if multiple
                     if (mediaUris.size > 1) {
                         Row(
                             modifier = Modifier
@@ -255,9 +347,10 @@ fun PostMediaCarousel(
                                 Box(
                                     modifier = Modifier
                                         .padding(horizontal = 4.dp)
-                                        .size(if (idx == selectedViewerIndex) 10.dp else 6.dp)
+                                        .height(5.dp)
+                                        .width(if (idx == selectedViewerIndex) 24.dp else 8.dp)
                                         .clip(CircleShape)
-                                        .background(if (idx == selectedViewerIndex) PureWhite else Color.White.copy(alpha = 0.4f))
+                                        .background(if (idx == selectedViewerIndex) ElectricCobalt else Color.White.copy(alpha = 0.35f))
                                         .clickable { selectedViewerIndex = idx }
                                 )
                             }

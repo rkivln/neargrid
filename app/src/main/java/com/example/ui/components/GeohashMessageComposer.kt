@@ -25,19 +25,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,29 +46,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GeohashMessage
-import com.example.ui.theme.AccentLime
-import com.example.ui.theme.BackgroundCanvas
-import com.example.ui.theme.BlueGray
-import com.example.ui.theme.CardBorderColor
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DeepNavy
-import com.example.ui.theme.LightLime
-import com.example.ui.theme.PrimarySurface
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AmberGlow
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SlateBlue
-import com.example.ui.theme.SoftLimeSurface
-import com.example.ui.theme.SoftSurface
-import com.example.ui.theme.SubtleDivider
+import com.example.ui.theme.SubtleGlassDivider
+import com.example.ui.theme.SubtleSlate
 import com.example.util.LocationHelper
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,11 +98,11 @@ fun GeohashMessageComposer(
 
     val quickTopics = remember {
         listOf(
-            "📢 Announcement: ",
-            "☕ Coffee meetup: ",
-            "📦 Giving away: ",
-            "ℹ️ Neighborhood note: ",
-            "🐾 Sighting/Alert: "
+            "Announcement: ",
+            "Coffee meetup: ",
+            "Giving away: ",
+            "Neighborhood note: ",
+            "Sighting/Alert: "
         )
     }
 
@@ -124,20 +121,19 @@ fun GeohashMessageComposer(
         "Acquiring GPS fix..."
     }
 
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .testTag("geohash_message_composer"),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = PrimarySurface),
-        border = BorderStroke(1.dp, CardBorderColor)
+        color = DarkGlassCard,
+        border = BorderStroke(1.dp, HairlineGlassBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
-            // Header with Geohash Badge and Live GPS Coordinates
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -146,93 +142,143 @@ fun GeohashMessageComposer(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = SoftLimeSurface,
-                            border = BorderStroke(1.dp, AccentLime),
+                            shape = CircleShape,
+                            color = CobaltSoft,
+                            border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.55f)),
                             modifier = Modifier.testTag("geohash_badge")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Tag,
                                     contentDescription = "Geohash Area Tag",
-                                    tint = DeepNavy,
-                                    modifier = Modifier.size(13.dp)
+                                    tint = CobaltGlow,
+                                    modifier = Modifier.size(12.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "#$displayGeohash",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 12.sp,
+                                    text = "#${displayGeohash.uppercase()}",
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = DeepNavy
+                                    color = PureWhite
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Live GPS indicator
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = SoftSurface,
-                            border = BorderStroke(1.dp, CardBorderColor)
+                            shape = CircleShape,
+                            color = if (isLocating) AmberSoft else EmeraldSoft,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isLocating) AmberGlow.copy(alpha = 0.5f) else EmeraldMint.copy(alpha = 0.45f)
+                            )
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(if (isLocating) SlateBlue else AccentLime)
+                                        .background(if (isLocating) AmberGlow else EmeraldMint)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = if (isLocating) "Locating..." else "Live GPS",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = SlateBlue
+                                    text = if (isLocating) "LOCATING" else "LIVE GPS",
+                                    style = AuraKickerStyle,
+                                    color = if (isLocating) AmberLight else EmeraldLight
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = if (localityName.isNotBlank()) "$localityName • $coordinatesLabel" else coordinatesLabel,
-                        fontFamily = DMSansFontFamily,
+                        text = if (localityName.isNotBlank()) "$localityName · $coordinatesLabel" else coordinatesLabel,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 11.sp,
-                        color = SecondaryText,
+                        color = MutedSlate,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Refresh Location button
                 IconButton(
                     onClick = onRefreshLocation,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(ElevatedGlassSurface)
+                        .border(1.dp, HairlineGlassBorder, CircleShape)
                         .testTag("geohash_refresh_gps")
                 ) {
                     if (isLocating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = SlateBlue
+                            color = CobaltGlow
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Refresh GPS Location",
-                            tint = SlateBlue,
+                            tint = PureWhite,
                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Compose Geohash Broadcast",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 19.sp,
+                color = PureWhite
+            )
+
+            Text(
+                text = "Post an instant dispatch to neighbors in your active geohash cell with verified coordinates.",
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 12.sp,
+                color = MutedSlate,
+                modifier = Modifier.padding(top = 3.dp, bottom = 10.dp)
+            )
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(quickTopics) { topic ->
+                    Surface(
+                        shape = CircleShape,
+                        color = ElevatedGlassSurface,
+                        border = BorderStroke(1.dp, HairlineGlassBorder),
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .testTag("geohash_quick_tag")
+                            .clickable {
+                                textMessage = if (textMessage.isBlank()) topic else "$textMessage $topic"
+                            }
+                    ) {
+                        Text(
+                            text = topic.trimEnd(' ').trimEnd(':'),
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ObsidianInk,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -240,52 +286,6 @@ fun GeohashMessageComposer(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = "Compose Geohash Broadcast",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 18.sp,
-                color = PrimaryText
-            )
-
-            Text(
-                text = "Post an instant text message to neighbors in your active geohash cell with verified coordinates.",
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
-                color = SecondaryText,
-                modifier = Modifier.padding(top = 1.dp, bottom = 8.dp)
-            )
-
-            // Quick Topic Chips
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(quickTopics) { topic ->
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = SoftSurface,
-                        border = BorderStroke(1.dp, CardBorderColor),
-                        modifier = Modifier
-                            .testTag("geohash_quick_tag")
-                            .clickable {
-                                textMessage = if (textMessage.isBlank()) topic else "$textMessage $topic"
-                            }
-                    ) {
-                        Text(
-                            text = topic.trimEnd(':').trimEnd(' '),
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = SlateBlue,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Main Text Message Composer Input
             OutlinedTextField(
                 value = textMessage,
                 onValueChange = {
@@ -298,30 +298,29 @@ fun GeohashMessageComposer(
                     .testTag("geohash_message_input"),
                 placeholder = {
                     Text(
-                        text = "Share an update or notice with neighbors in geohash #$displayGeohash...",
-                        fontFamily = DMSansFontFamily,
+                        text = "Share an update or notice in geohash #$displayGeohash...",
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
-                        color = SecondaryText
+                        color = MutedSlate
                     )
                 },
                 minLines = 2,
                 maxLines = 4,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = DeepNavy,
-                    unfocusedBorderColor = CardBorderColor,
-                    focusedContainerColor = SoftSurface,
-                    unfocusedContainerColor = SoftSurface,
-                    focusedTextColor = PrimaryText,
-                    unfocusedTextColor = PrimaryText
+                    focusedBorderColor = ElectricCobalt,
+                    unfocusedBorderColor = HairlineGlassBorder,
+                    focusedContainerColor = ElevatedGlassSurface,
+                    unfocusedContainerColor = ElevatedGlassSurface,
+                    focusedTextColor = PureWhite,
+                    unfocusedTextColor = ObsidianInk
                 )
             )
 
-            // Character counter & metadata footer
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 12.dp),
+                    .padding(top = 8.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -329,28 +328,26 @@ fun GeohashMessageComposer(
                     Icon(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = "Pinned to coordinates",
-                        tint = SlateBlue,
-                        modifier = Modifier.size(12.dp)
+                        tint = EmeraldLight,
+                        modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Tagged with lat, lon & timestamp",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        color = SecondaryText
+                        text = "TAGGED LAT · LON · TIME",
+                        style = AuraKickerStyle,
+                        color = SubtleSlate
                     )
                 }
 
                 Text(
                     text = "${textMessage.length}/$maxChars",
-                    fontFamily = DMSansFontFamily,
+                    fontFamily = PlusJakartaFontFamily,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (textMessage.length >= maxChars) Color(0xFFD32F2F) else SecondaryText
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (textMessage.length >= maxChars) FieryCoralGlow else MutedSlate
                 )
             }
 
-            // Status message banner (if any)
             AnimatedVisibility(
                 visible = postStatus != null,
                 enter = fadeIn(),
@@ -358,9 +355,9 @@ fun GeohashMessageComposer(
             ) {
                 if (postStatus != null) {
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = SoftLimeSurface,
-                        border = BorderStroke(1.dp, AccentLime),
+                        shape = RoundedCornerShape(16.dp),
+                        color = EmeraldSoft,
+                        border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
@@ -368,7 +365,7 @@ fun GeohashMessageComposer(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -379,16 +376,16 @@ fun GeohashMessageComposer(
                                 Icon(
                                     imageVector = Icons.Filled.CheckCircle,
                                     contentDescription = "Success",
-                                    tint = DeepNavy,
+                                    tint = EmeraldLight,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = postStatus,
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = DeepNavy,
+                                    color = ObsidianInk,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -400,7 +397,7 @@ fun GeohashMessageComposer(
                                 Icon(
                                     imageVector = Icons.Filled.Close,
                                     contentDescription = "Dismiss",
-                                    tint = DeepNavy,
+                                    tint = ObsidianInk,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -409,7 +406,6 @@ fun GeohashMessageComposer(
                 }
             }
 
-            // Post Button
             Button(
                 onClick = {
                     if (hasGpsLock && textMessage.isNotBlank() && !isPosting) {
@@ -421,40 +417,40 @@ fun GeohashMessageComposer(
                 enabled = hasGpsLock && textMessage.isNotBlank() && !isPosting,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(50.dp)
                     .testTag("send_geohash_message_button"),
-                shape = RoundedCornerShape(14.dp),
+                shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = DeepNavy,
+                    containerColor = ElectricCobalt,
                     contentColor = PureWhite,
-                    disabledContainerColor = DeepNavy.copy(alpha = 0.35f),
-                    disabledContentColor = PureWhite.copy(alpha = 0.6f)
+                    disabledContainerColor = ElevatedGlassSurface,
+                    disabledContentColor = MutedSlate
                 )
             ) {
                 if (isPosting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
                         color = PureWhite
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Posting to Geohash Area...",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 } else if (!hasGpsLock) {
                     Icon(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = "GPS Required",
                         modifier = Modifier.size(16.dp),
-                        tint = PureWhite.copy(alpha = 0.7f)
+                        tint = MutedSlate
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Acquiring GPS fix to broadcast...",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -462,23 +458,22 @@ fun GeohashMessageComposer(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send Geohash Message",
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Post to Geohash #$displayGeohash",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            // Stream of messages posted to this geohash
             if (messages.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = CardBorderColor, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = SubtleGlassDivider, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -487,21 +482,23 @@ fun GeohashMessageComposer(
                 ) {
                     Text(
                         text = "Recent Geohash Messages (${messages.size})",
-                        fontFamily = DMSerifFontFamily,
-                        fontSize = 16.sp,
-                        color = PrimaryText
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 17.sp,
+                        color = PureWhite
                     )
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = SoftSurface,
-                        border = BorderStroke(1.dp, CardBorderColor)
+                        shape = CircleShape,
+                        color = CobaltSoft,
+                        border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.45f))
                     ) {
                         Text(
-                            text = "#$displayGeohash",
-                            fontFamily = DMSansFontFamily,
+                            text = "#${displayGeohash.uppercase()}",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
-                            color = SlateBlue,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            color = CobaltGlow,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
@@ -550,14 +547,17 @@ fun GeohashMessageItem(
         modifier = modifier
             .fillMaxWidth()
             .testTag("geohash_message_item"),
-        shape = RoundedCornerShape(14.dp),
-        color = if (message.isFromCurrentUser) SoftLimeSurface.copy(alpha = 0.5f) else SoftSurface,
-        border = BorderStroke(1.dp, if (message.isFromCurrentUser) AccentLime else CardBorderColor)
+        shape = RoundedCornerShape(18.dp),
+        color = if (message.isFromCurrentUser) CobaltSoft.copy(alpha = 0.55f) else ElevatedGlassSurface,
+        border = BorderStroke(
+            1.dp,
+            if (message.isFromCurrentUser) ElectricCobalt.copy(alpha = 0.45f) else HairlineGlassBorder
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -567,15 +567,15 @@ fun GeohashMessageItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
-                            .background(if (message.isFromCurrentUser) DeepNavy else SlateBlue),
+                            .background(if (message.isFromCurrentUser) ElectricCobalt else EmeraldMint),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = message.authorInitials.take(2),
                             color = PureWhite,
-                            fontFamily = DMSansFontFamily,
+                            fontFamily = OutfitFontFamily,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -583,36 +583,36 @@ fun GeohashMessageItem(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (message.isFromCurrentUser) "${message.authorName} (You)" else message.authorName,
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = PrimaryText
+                        color = PureWhite
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (distanceLabel != null) {
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = SoftSurface,
-                            border = BorderStroke(1.dp, CardBorderColor)
+                            shape = CircleShape,
+                            color = EmeraldSoft,
+                            border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.45f))
                         ) {
                             Text(
                                 text = distanceLabel,
-                                fontFamily = DMSansFontFamily,
+                                fontFamily = PlusJakartaFontFamily,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = SlateBlue,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.SemiBold,
+                                color = EmeraldLight,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
                         text = timeFormatted,
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 10.sp,
-                        color = SecondaryText
+                        color = SubtleSlate
                     )
                 }
             }
@@ -621,10 +621,10 @@ fun GeohashMessageItem(
 
             Text(
                 text = message.text,
-                fontFamily = DMSansFontFamily,
+                fontFamily = PlusJakartaFontFamily,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
-                color = PrimaryText
+                color = ObsidianInk
             )
 
             if (message.latitude != 0.0 && message.longitude != 0.0) {
@@ -633,15 +633,15 @@ fun GeohashMessageItem(
                     Icon(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = "GPS Coordinates",
-                        tint = SlateBlue,
-                        modifier = Modifier.size(10.dp)
+                        tint = EmeraldLight,
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = String.format(Locale.US, "GPS: %.4f, %.4f", message.latitude, message.longitude),
-                        fontFamily = DMSansFontFamily,
+                        text = String.format(Locale.US, "GPS %.4f, %.4f", message.latitude, message.longitude),
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 10.sp,
-                        color = SecondaryText
+                        color = SubtleSlate
                     )
                 }
             }

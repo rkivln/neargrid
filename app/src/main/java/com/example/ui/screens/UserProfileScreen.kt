@@ -1,11 +1,11 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -21,13 +21,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,34 +44,29 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
-import android.content.Intent
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import com.example.data.update.AppUpdateInfo
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -91,6 +89,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -103,21 +102,42 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.GridCell
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DarkNavy
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.data.update.AppUpdateInfo
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.LiquidGlassBackButton
+import com.example.ui.components.LiquidGlassSwitch
+import com.example.ui.components.PillPrimaryButton
+import com.example.ui.components.WhiteHeroPillButton
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltBorder
+import com.example.ui.theme.CobaltDeep
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmDivider
-import com.example.ui.theme.WarmIvory
+import com.example.ui.theme.SubtleGlassDivider
+import com.example.ui.theme.SubtleSlate
 import kotlinx.coroutines.launch
 
 data class AvatarPreset(
@@ -129,12 +149,12 @@ data class AvatarPreset(
 )
 
 val PRESET_AVATARS = listOf(
-    AvatarPreset(0, "Herb & Garden", Icons.Default.Spa, PastelMint, Color(0xFF2E7D32)),
-    AvatarPreset(1, "Workshop", Icons.Default.Build, PastelPeach, Color(0xFFD84315)),
-    AvatarPreset(2, "Artisan", Icons.Default.Palette, PastelCoral, Color(0xFFC2185B)),
-    AvatarPreset(3, "Bicycle Ranger", Icons.Default.DirectionsBike, PastelSoftCyan, Color(0xFF00838F)),
-    AvatarPreset(4, "Book Nook", Icons.Default.MenuBook, PastelButterYellow, Color(0xFFE65100)),
-    AvatarPreset(5, "Cafe Neighbor", Icons.Default.LocalCafe, SoftCream, Color(0xFF5D4037))
+    AvatarPreset(0, "Herb & Garden", Icons.Default.Spa, EmeraldSoft, EmeraldLight),
+    AvatarPreset(1, "Workshop", Icons.Default.Build, AmberSoft, AmberLight),
+    AvatarPreset(2, "Artisan", Icons.Default.Palette, FieryCoralSoft, FieryCoralGlow),
+    AvatarPreset(3, "Bicycle Ranger", Icons.Default.DirectionsBike, CobaltSoft, CobaltGlow),
+    AvatarPreset(4, "Book Nook", Icons.Default.MenuBook, ElevatedGlassSurface, ObsidianInk),
+    AvatarPreset(5, "Cafe Neighbor", Icons.Default.LocalCafe, CobaltSoft, PureWhite)
 )
 
 val PRIVACY_RADIUS_OPTIONS = listOf(
@@ -209,7 +229,6 @@ fun UserProfileScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Android Photo Picker Launcher (zero-permission compliant)
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -221,180 +240,138 @@ fun UserProfileScreen(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(WarmIvory)
+    fun performSave() {
+        val cleanNick = nickname.trim().ifBlank { "Neighbor" }
+        val cleanHandle = handle.trim().ifBlank { "resident" }
+        onSaveProfile(
+            cleanNick,
+            cleanHandle,
+            bio,
+            avatarUri,
+            presetIndex,
+            selectedRadius,
+            fuzzyCoords,
+            incognito,
+            allowDMs,
+            locationPrecision,
+            hideOnlineStatus,
+            hideExactDistance
+        )
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar("Profile & privacy settings saved!")
+        }
+    }
+
+    AuraMeshBackground(
+        variant = AuraVariant.MIXED,
+        modifier = modifier.fillMaxSize()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
         ) {
             // Top Bar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = PureWhite,
-                border = BorderStroke(1.dp, WarmBorder)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(SoftCream)
-                                .border(1.dp, WarmBorder, CircleShape)
-                                .testTag("profile_back_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate back",
-                                tint = PrimaryText,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                    LiquidGlassBackButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("profile_back_button")
+                    )
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                        Column {
-                            Text(
-                                text = "User Profile & Privacy",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 20.sp,
-                                color = PrimaryText
-                            )
-                            Text(
-                                text = "Nickname, picture, and spatial perimeter",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText
-                            )
-                        }
+                    Column {
+                        Text(
+                            text = "RESIDENT DOSSIER",
+                            style = AuraKickerStyle,
+                            color = CobaltGlow
+                        )
+                        Text(
+                            text = "Profile & Privacy",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = ObsidianInk
+                        )
                     }
+                }
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onOpenSettings,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(SoftCream)
-                                .border(1.dp, WarmBorder, CircleShape)
-                                .testTag("open_settings_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "App Settings",
-                                tint = PrimaryText,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Settings,
+                        contentDescription = "App Settings",
+                        onClick = onOpenSettings,
+                        size = 44.dp,
+                        modifier = Modifier.testTag("open_settings_button")
+                    )
 
-                        Button(
-                            onClick = {
-                                val cleanNick = nickname.trim().ifBlank { "Neighbor" }
-                                val cleanHandle = handle.trim().ifBlank { "resident" }
-                                onSaveProfile(
-                                    cleanNick,
-                                    cleanHandle,
-                                    bio,
-                                    avatarUri,
-                                    presetIndex,
-                                    selectedRadius,
-                                    fuzzyCoords,
-                                    incognito,
-                                    allowDMs,
-                                    locationPrecision,
-                                    hideOnlineStatus,
-                                    hideExactDistance
-                                )
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Profile & privacy settings saved!")
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryText,
-                                contentColor = PureWhite
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("profile_top_save_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = PureWhite,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Save",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = PureWhite
-                            )
-                        }
-                    }
+                    WhiteHeroPillButton(
+                        text = "Save",
+                        icon = Icons.Default.Check,
+                        onClick = { performSave() },
+                        modifier = Modifier
+                            .height(44.dp)
+                            .testTag("profile_top_save_button")
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // SECTION 1: DISPLAY PICTURE / AVATAR
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // SECTION 1: DISPLAY PICTURE / AVATAR
+                DarkGlassCard(
+                    cornerRadius = 24.dp,
+                    containerColor = DarkGlassCard,
+                    borderColor = HairlineGlassBorder
                 ) {
                     Text(
-                        text = "Display Picture",
-                        fontFamily = DMSerifFontFamily,
-                        fontSize = 18.sp,
-                        color = PrimaryText,
-                        modifier = Modifier.align(Alignment.Start)
+                        text = "01 // DISPLAY PORTRAIT",
+                        style = AuraKickerStyle,
+                        color = CobaltGlow
                     )
                     Text(
-                        text = "Choose an avatar or upload a picture for your neighbor card",
-                        fontFamily = DMSansFontFamily,
+                        text = "Display Picture",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = ObsidianInk
+                    )
+                    Text(
+                        text = "Choose an avatar or upload a picture for your neighbor dossier",
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
-                        color = SecondaryText,
-                        modifier = Modifier.align(Alignment.Start)
+                        color = MutedSlate
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Big Avatar Preview with camera action badge
                     Box(
-                        modifier = Modifier.size(100.dp),
+                        modifier = Modifier
+                            .size(100.dp)
+                            .align(Alignment.CenterHorizontally),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(96.dp)
                                 .clip(CircleShape)
-                                .border(2.dp, PastelPeach, CircleShape)
-                                .background(SoftCream),
+                                .border(2.dp, CobaltGlow, CircleShape)
+                                .background(ElevatedGlassSurface),
                             contentAlignment = Alignment.Center
                         ) {
                             if (avatarUri != null) {
@@ -418,20 +395,19 @@ fun UserProfileScreen(
                                         imageVector = currentPreset.icon,
                                         contentDescription = currentPreset.name,
                                         tint = currentPreset.accentColor,
-                                        modifier = Modifier.size(46.dp)
+                                        modifier = Modifier.size(44.dp)
                                     )
                                 }
                             }
                         }
 
-                        // Floating edit photo badge
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .size(32.dp)
+                                .size(34.dp)
                                 .clip(CircleShape)
-                                .background(PrimaryText)
-                                .border(2.dp, PureWhite, CircleShape)
+                                .background(ElectricCobalt)
+                                .border(2.dp, DarkGlassCard, CircleShape)
                                 .clickable {
                                     photoPickerLauncher.launch(
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -444,67 +420,53 @@ fun UserProfileScreen(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Pick picture",
                                 tint = PureWhite,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Photo action buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        OutlinedButton(
+                        GlassSecondaryPillButton(
+                            text = "Choose Photo",
+                            icon = Icons.Default.PhotoLibrary,
                             onClick = {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, WarmBorder),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("profile_pick_photo_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoLibrary,
-                                contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Choose Photo",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 12.sp,
-                                color = PrimaryText
-                            )
-                        }
+                        )
 
                         if (avatarUri != null) {
                             OutlinedButton(
                                 onClick = { avatarUri = null },
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, PastelCoral.copy(alpha = 0.5f)),
-                                colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
-                                modifier = Modifier.testTag("profile_remove_photo_button")
+                                shape = CircleShape,
+                                border = BorderStroke(1.dp, FieryCoral.copy(alpha = 0.55f)),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = FieryCoralSoft),
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .testTag("profile_remove_photo_button")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Remove Photo",
-                                    tint = PastelCoral,
+                                    tint = FieryCoralGlow,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Reset",
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontSize = 12.sp,
-                                    color = PastelCoral
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = FieryCoralGlow
                                 )
                             }
                         }
@@ -512,16 +474,14 @@ fun UserProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Preset Avatars Selector
                     Text(
                         text = "Or choose a neighborhood avatar style:",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = 12.sp,
-                        color = PrimaryText,
-                        modifier = Modifier.align(Alignment.Start)
+                        color = ObsidianInk
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -530,7 +490,7 @@ fun UserProfileScreen(
                         items(PRESET_AVATARS) { preset ->
                             val isSelected = avatarUri == null && presetIndex == preset.id
                             val animatedBorder by animateColorAsState(
-                                targetValue = if (isSelected) PrimaryText else WarmBorder,
+                                targetValue = if (isSelected) ElectricCobalt else HairlineGlassBorder,
                                 label = "presetBorder"
                             )
 
@@ -546,7 +506,7 @@ fun UserProfileScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(52.dp)
+                                        .size(54.dp)
                                         .clip(CircleShape)
                                         .background(preset.backgroundColor)
                                         .border(if (isSelected) 2.dp else 1.dp, animatedBorder, CircleShape),
@@ -556,7 +516,7 @@ fun UserProfileScreen(
                                         imageVector = preset.icon,
                                         contentDescription = preset.name,
                                         tint = preset.accentColor,
-                                        modifier = Modifier.size(26.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                     if (isSelected) {
                                         Box(
@@ -564,7 +524,7 @@ fun UserProfileScreen(
                                                 .align(Alignment.BottomEnd)
                                                 .size(18.dp)
                                                 .clip(CircleShape)
-                                                .background(PrimaryText),
+                                                .background(ElectricCobalt),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -579,57 +539,66 @@ fun UserProfileScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = preset.name.split(" ").first(),
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontSize = 10.sp,
-                                    color = if (isSelected) PrimaryText else SecondaryText,
+                                    color = if (isSelected) CobaltGlow else MutedSlate,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // SECTION 2: NICKNAME & IDENTITY
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                // SECTION 2: NICKNAME & IDENTITY
+                DarkGlassCard(
+                    cornerRadius = 24.dp,
+                    containerColor = DarkGlassCard,
+                    borderColor = HairlineGlassBorder
+                ) {
+                    Text(
+                        text = "02 // RESIDENT IDENTITY",
+                        style = AuraKickerStyle,
+                        color = CobaltGlow
+                    )
                     Text(
                         text = "Resident Identity",
-                        fontFamily = DMSerifFontFamily,
-                        fontSize = 18.sp,
-                        color = PrimaryText
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = ObsidianInk
                     )
                     Text(
                         text = "Set your nickname and how neighbors recognize you in Cell ${currentCell?.name ?: "Oakwood Grove"}",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
-                        color = SecondaryText
+                        color = MutedSlate
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Nickname Input
+                    val textFieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ElectricCobalt,
+                        unfocusedBorderColor = HairlineGlassBorder,
+                        focusedContainerColor = ElevatedGlassSurface,
+                        unfocusedContainerColor = ElevatedGlassSurface,
+                        focusedTextColor = PureWhite,
+                        unfocusedTextColor = ObsidianInk,
+                        errorBorderColor = FieryCoral,
+                        errorContainerColor = ElevatedGlassSurface
+                    )
+
                     OutlinedTextField(
                         value = nickname,
                         onValueChange = {
                             if (it.length <= 32) nickname = it
                         },
-                        label = { Text("Resident Nickname / Preferred Name", fontFamily = DMSansFontFamily) },
-                        placeholder = { Text("e.g. Alex Rivera", fontFamily = DMSansFontFamily) },
+                        label = { Text("Resident Nickname / Preferred Name", fontFamily = PlusJakartaFontFamily, color = MutedSlate) },
+                        placeholder = { Text("e.g. Alex Rivera", fontFamily = PlusJakartaFontFamily, color = SubtleSlate) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = PastelCoral
+                                tint = CobaltGlow
                             )
                         },
                         trailingIcon = {
@@ -638,7 +607,7 @@ fun UserProfileScreen(
                                     Icon(
                                         imageVector = Icons.Default.Clear,
                                         contentDescription = "Clear nickname",
-                                        tint = SecondaryText,
+                                        tint = MutedSlate,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -651,40 +620,33 @@ fun UserProfileScreen(
                             ) {
                                 Text(
                                     text = if (nickname.isBlank()) "Nickname cannot be blank" else "Visible on all posts & asks",
-                                    color = if (nickname.isBlank()) PastelCoral else SecondaryText,
-                                    fontFamily = DMSansFontFamily,
+                                    color = if (nickname.isBlank()) FieryCoralGlow else MutedSlate,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontSize = 11.sp
                                 )
                                 Text(
                                     text = "${nickname.length}/32",
-                                    color = SecondaryText,
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp
+                                    color = MutedSlate,
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontSize = 10.sp
                                 )
                             }
                         },
                         isError = nickname.isBlank(),
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryText,
-                            unfocusedBorderColor = WarmBorder,
-                            focusedContainerColor = PureWhite,
-                            unfocusedContainerColor = SoftCream
-                        ),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = textFieldColors,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("profile_nickname_input")
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Quick Nickname Suggestions
                     Text(
-                        text = "Suggested aliases:",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        color = SecondaryText
+                        text = "SUGGESTED ALIASES",
+                        style = AuraKickerStyle,
+                        color = SubtleSlate
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -699,38 +661,35 @@ fun UserProfileScreen(
                                 label = {
                                     Text(
                                         text = suggestion,
-                                        fontFamily = DMSansFontFamily,
+                                        fontFamily = PlusJakartaFontFamily,
                                         fontSize = 11.sp
                                     )
                                 },
-                                shape = RoundedCornerShape(8.dp),
+                                shape = CircleShape,
                                 colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = SoftCream,
-                                    labelColor = PrimaryText,
-                                    selectedContainerColor = PastelPeach,
-                                    selectedLabelColor = PrimaryText
+                                    containerColor = ElevatedGlassSurface,
+                                    labelColor = ObsidianInk,
+                                    selectedContainerColor = CobaltSoft,
+                                    selectedLabelColor = CobaltGlow
                                 ),
-                                border = BorderStroke(1.dp, WarmBorder)
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (nickname == suggestion) ElectricCobalt else HairlineGlassBorder
+                                )
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Community Handle
                     OutlinedTextField(
                         value = handle,
                         onValueChange = { handle = it.filter { c -> c.isLetterOrDigit() || c == '_' } },
-                        label = { Text("Grid Tag / Handle", fontFamily = DMSansFontFamily) },
-                        prefix = { Text("@", fontFamily = DMSansFontFamily, fontWeight = FontWeight.Bold) },
+                        label = { Text("Grid Tag / Handle", fontFamily = PlusJakartaFontFamily, color = MutedSlate) },
+                        prefix = { Text("@", fontFamily = PlusJakartaFontFamily, fontWeight = FontWeight.Bold, color = CobaltGlow) },
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryText,
-                            unfocusedBorderColor = WarmBorder,
-                            focusedContainerColor = PureWhite,
-                            unfocusedContainerColor = SoftCream
-                        ),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = textFieldColors,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("profile_handle_input")
@@ -738,107 +697,92 @@ fun UserProfileScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Community Bio
                     OutlinedTextField(
                         value = bio,
                         onValueChange = { if (it.length <= 140) bio = it },
-                        label = { Text("Neighbor Bio & Skills", fontFamily = DMSansFontFamily) },
-                        placeholder = { Text("e.g. Garden enthusiast, have power tools to share...", fontFamily = DMSansFontFamily) },
+                        label = { Text("Neighbor Bio & Skills", fontFamily = PlusJakartaFontFamily, color = MutedSlate) },
+                        placeholder = { Text("e.g. Garden enthusiast, have power tools to share...", fontFamily = PlusJakartaFontFamily, color = SubtleSlate) },
                         supportingText = {
                             Text(
-                                text = "${bio.length}/140 • Helps neighbors find common interests",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText
+                                text = "${bio.length}/140 · Helps neighbors find common interests",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 10.sp,
+                                color = MutedSlate
                             )
                         },
                         minLines = 2,
                         maxLines = 4,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryText,
-                            unfocusedBorderColor = WarmBorder,
-                            focusedContainerColor = PureWhite,
-                            unfocusedContainerColor = SoftCream
-                        ),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = textFieldColors,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("profile_bio_input")
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // SECTION 3: NEIGHBORHOOD PRIVACY RADIUS SETTINGS
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                // SECTION 3: NEIGHBORHOOD PRIVACY RADIUS SETTINGS
+                DarkGlassCard(
+                    cornerRadius = 24.dp,
+                    containerColor = DarkGlassCard,
+                    borderColor = HairlineGlassBorder
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
-                                .background(PastelMint.copy(alpha = 0.5f))
-                                .border(1.dp, PastelMint, CircleShape),
+                                .background(EmeraldSoft)
+                                .border(1.dp, EmeraldMint.copy(alpha = 0.5f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Radar,
                                 contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(20.dp)
+                                tint = EmeraldLight,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Neighborhood Privacy Radius",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 18.sp,
-                                color = PrimaryText
+                                text = "03 // SPATIAL PERIMETER",
+                                style = AuraKickerStyle,
+                                color = EmeraldLight
                             )
                             Text(
-                                text = "Manage your broadcast zone & discoverability perimeter",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 12.sp,
-                                color = SecondaryText
+                                text = "Neighborhood Privacy Radius",
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = ObsidianInk
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Radar Visualization Graphic
                     RadiusRadarGraphic(
                         radiusMeters = selectedRadius,
                         cellName = currentCell?.name ?: "Oakwood Grove",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(SoftCream)
-                            .border(1.dp, WarmBorder, RoundedCornerShape(16.dp))
+                            .height(170.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(ObsidianCanvas)
+                            .border(1.dp, HairlineGlassBorder, RoundedCornerShape(20.dp))
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "Select active neighborhood boundary:",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        color = PrimaryText
+                        color = ObsidianInk
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Radius Option Cards
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         PRIVACY_RADIUS_OPTIONS.forEach { (meters, labels) ->
                             val (title, description) = labels
@@ -847,15 +791,15 @@ fun UserProfileScreen(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(RoundedCornerShape(18.dp))
                                     .clickable { selectedRadius = meters }
                                     .testTag("privacy_radius_option_$meters"),
-                                color = if (isSelected) PastelPeach.copy(alpha = 0.35f) else SoftCream,
+                                color = if (isSelected) CobaltSoft else ElevatedGlassSurface,
                                 border = BorderStroke(
                                     if (isSelected) 1.5.dp else 1.dp,
-                                    if (isSelected) PastelCoral else WarmBorder
+                                    if (isSelected) ElectricCobalt else HairlineGlassBorder
                                 ),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(18.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(14.dp),
@@ -863,20 +807,20 @@ fun UserProfileScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(20.dp)
+                                            .size(18.dp)
                                             .clip(CircleShape)
                                             .border(
                                                 2.dp,
-                                                if (isSelected) PastelCoral else SecondaryText,
+                                                if (isSelected) CobaltGlow else MutedSlate,
                                                 CircleShape
                                             )
-                                            .background(if (isSelected) PastelCoral else Color.Transparent),
+                                            .background(if (isSelected) ElectricCobalt else Color.Transparent),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (isSelected) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(8.dp)
+                                                    .size(7.dp)
                                                     .clip(CircleShape)
                                                     .background(PureWhite)
                                             )
@@ -893,23 +837,24 @@ fun UserProfileScreen(
                                         ) {
                                             Text(
                                                 text = title,
-                                                fontFamily = DMSansFontFamily,
+                                                fontFamily = OutfitFontFamily,
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                color = PrimaryText
+                                                fontSize = 15.sp,
+                                                color = ObsidianInk
                                             )
                                             if (meters == 500) {
                                                 Surface(
-                                                    color = PastelMint,
-                                                    shape = RoundedCornerShape(6.dp)
+                                                    color = EmeraldSoft,
+                                                    shape = CircleShape,
+                                                    border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.45f))
                                                 ) {
                                                     Text(
                                                         text = "RECOMMENDED",
-                                                        fontFamily = DMSansFontFamily,
+                                                        fontFamily = PlusJakartaFontFamily,
                                                         fontWeight = FontWeight.Bold,
                                                         fontSize = 9.sp,
-                                                        color = PrimaryText,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        color = EmeraldLight,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                                     )
                                                 }
                                             }
@@ -917,9 +862,9 @@ fun UserProfileScreen(
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = description,
-                                            fontFamily = DMSansFontFamily,
-                                            fontSize = 11.sp,
-                                            color = SecondaryText
+                                            fontFamily = PlusJakartaFontFamily,
+                                            fontSize = 11.5.sp,
+                                            color = MutedSlate
                                         )
                                     }
                                 }
@@ -928,29 +873,22 @@ fun UserProfileScreen(
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(WarmDivider)
-                    )
-                    Spacer(modifier = Modifier.height(18.dp))
+                    HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Privacy Controls & Spatial Precision
                     Text(
                         text = "Map location precision:",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        color = PrimaryText
+                        color = ObsidianInk
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // 3-way Precision Cards (Exact, Approximate, Neighborhood)
                     val precisionOptions = listOf(
-                        Triple("EXACT", "🎯 Exact Pin", "Live coordinate pinpoint on map"),
-                        Triple("APPROXIMATE", "🌐 Approximate (~200m)", "Fuzzes coordinates to protect home doorstep"),
-                        Triple("NEIGHBORHOOD", "🏘️ Neighborhood Only", "Displays at area center without exact location")
+                        Triple("EXACT", "Exact Pin", "Live coordinate pinpoint on map"),
+                        Triple("APPROXIMATE", "Approximate (~200m)", "Fuzzes coordinates to protect home doorstep"),
+                        Triple("NEIGHBORHOOD", "Neighborhood Only", "Displays at area center without exact location")
                     )
 
                     Column(
@@ -960,49 +898,50 @@ fun UserProfileScreen(
                         precisionOptions.forEach { (key, title, desc) ->
                             val isSelected = locationPrecision == key
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (isSelected) PastelPeach.copy(alpha = 0.35f) else SoftCream,
+                                shape = RoundedCornerShape(18.dp),
+                                color = if (isSelected) CobaltSoft else ElevatedGlassSurface,
                                 border = BorderStroke(
                                     if (isSelected) 1.5.dp else 1.dp,
-                                    if (isSelected) DarkNavy else WarmBorder
+                                    if (isSelected) ElectricCobalt else HairlineGlassBorder
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clip(RoundedCornerShape(18.dp))
                                     .clickable { locationPrecision = key }
                                     .testTag("precision_option_${key.lowercase()}")
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier.padding(13.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = title,
-                                            fontFamily = DMSansFontFamily,
+                                            fontFamily = PlusJakartaFontFamily,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,
-                                            color = if (isSelected) DarkNavy else PrimaryText
+                                            color = ObsidianInk
                                         )
                                         Text(
                                             text = desc,
-                                            fontFamily = DMSansFontFamily,
+                                            fontFamily = PlusJakartaFontFamily,
                                             fontSize = 11.sp,
-                                            color = SecondaryText,
+                                            color = MutedSlate,
                                             lineHeight = 15.sp
                                         )
                                     }
                                     if (isSelected) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = DarkNavy,
-                                            modifier = Modifier.size(20.dp)
+                                            color = ElectricCobalt,
+                                            modifier = Modifier.size(22.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.Check,
                                                     contentDescription = "Selected",
                                                     tint = PureWhite,
-                                                    modifier = Modifier.size(12.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                             }
                                         }
@@ -1015,87 +954,32 @@ fun UserProfileScreen(
                     Spacer(modifier = Modifier.height(18.dp))
 
                     Text(
-                        text = "Activity & presence indicators:",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
-                        color = PrimaryText
+                        text = "ACTIVITY & PRESENCE INDICATORS",
+                        style = AuraKickerStyle,
+                        color = SubtleSlate
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Toggle 1: Hide Online Status
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Hide Online Status Badge",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = PrimaryText
-                            )
-                            Text(
-                                text = "Conceals the green online indicator. Neighbors see you as 'Active in neighborhood' without revealing real-time usage.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText,
-                                lineHeight = 15.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Switch(
-                            checked = hideOnlineStatus,
-                            onCheckedChange = { hideOnlineStatus = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureWhite,
-                                checkedTrackColor = PastelCoral
-                            ),
-                            modifier = Modifier.testTag("toggle_hide_online_status")
-                        )
-                    }
+                    ProfilePrivacySwitchRow(
+                        title = "Hide Online Status Badge",
+                        subtitle = "Conceals the live indicator. Neighbors see you as 'Active in neighborhood' without revealing real-time usage.",
+                        checked = hideOnlineStatus,
+                        onCheckedChange = { hideOnlineStatus = it },
+                        testTag = "toggle_hide_online_status"
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Toggle 2: Hide Exact Distance
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Hide Exact Distance Meters",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = PrimaryText
-                            )
-                            Text(
-                                text = "Displays a broad proximity band (e.g. '< 500 m' or 'In your neighborhood') instead of exact meters like '85 m away'.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText,
-                                lineHeight = 15.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Switch(
-                            checked = hideExactDistance,
-                            onCheckedChange = { hideExactDistance = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureWhite,
-                                checkedTrackColor = PastelCoral
-                            ),
-                            modifier = Modifier.testTag("toggle_hide_exact_distance")
-                        )
-                    }
+                    ProfilePrivacySwitchRow(
+                        title = "Hide Exact Distance Meters",
+                        subtitle = "Displays a broad proximity band (e.g. '< 500 m') instead of exact meters like '85 m away'.",
+                        checked = hideExactDistance,
+                        onCheckedChange = { hideExactDistance = it },
+                        testTag = "toggle_hide_exact_distance"
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Toggle 3: Incognito Grid Presence
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1105,125 +989,93 @@ fun UserProfileScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "Ghost / Incognito Presence",
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
-                                    color = PrimaryText
+                                    color = ObsidianInk
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     imageVector = if (incognito) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
-                                    tint = if (incognito) PastelCoral else SecondaryText,
+                                    tint = if (incognito) FieryCoralGlow else MutedSlate,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
                             Text(
                                 text = if (incognito) "Completely hidden from map radar and neighbor lists." else "Your avatar appears as an active neighbor node inside your cell.",
-                                fontFamily = DMSansFontFamily,
+                                fontFamily = PlusJakartaFontFamily,
                                 fontSize = 11.sp,
-                                color = SecondaryText,
+                                color = MutedSlate,
                                 lineHeight = 15.sp
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Switch(
+                        LiquidGlassSwitch(
                             checked = incognito,
                             onCheckedChange = { incognito = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureWhite,
-                                checkedTrackColor = PastelCoral
-                            ),
+                            activeColor = FieryCoral,
                             modifier = Modifier.testTag("toggle_incognito")
                         )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Toggle 4: Direct Proximity Messaging
+                    ProfilePrivacySwitchRow(
+                        title = "Direct Intent Messaging",
+                        subtitle = "Allow verified neighbors located inside your $selectedRadius m boundary to chat about offers & needs.",
+                        checked = allowDMs,
+                        onCheckedChange = { allowDMs = it },
+                        testTag = "toggle_allow_dms"
+                    )
+                }
+
+                // SECTION 4: BLOCKED NEIGHBORS & SAFETY
+                DarkGlassCard(
+                    modifier = Modifier.testTag("blocked_neighbors_card"),
+                    cornerRadius = 24.dp,
+                    containerColor = DarkGlassCard,
+                    borderColor = HairlineGlassBorder
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Direct Intent Messaging",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = PrimaryText
-                            )
-                            Text(
-                                text = "Allow verified neighbors located inside your $selectedRadius m boundary to chat about offers & needs.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText,
-                                lineHeight = 15.sp
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(FieryCoralSoft)
+                                .border(1.dp, FieryCoral.copy(alpha = 0.45f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Block,
+                                contentDescription = null,
+                                tint = FieryCoralGlow,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Switch(
-                            checked = allowDMs,
-                            onCheckedChange = { allowDMs = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = PureWhite,
-                                checkedTrackColor = PastelCoral
-                            ),
-                            modifier = Modifier.testTag("toggle_allow_dms")
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // SECTION: BLOCKED NEIGHBORS & SAFETY
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .testTag("blocked_neighbors_card"),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = CircleShape,
-                                color = PastelCoral.copy(alpha = 0.2f),
-                                modifier = Modifier.size(38.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Block,
-                                        contentDescription = null,
-                                        tint = DarkNavy,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Blocked Neighbors",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 18.sp,
-                                    color = PrimaryText
-                                )
-                                Text(
-                                    text = "${blockedUserIds.size} accounts blocked",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp,
-                                    color = SecondaryText
-                                )
-                            }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "04 // SAFETY ROSTER",
+                                style = AuraKickerStyle,
+                                color = FieryCoralGlow
+                            )
+                            Text(
+                                text = "Blocked Neighbors",
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = ObsidianInk
+                            )
+                            Text(
+                                text = "${blockedUserIds.size} accounts blocked",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 11.sp,
+                                color = MutedSlate
+                            )
                         }
                     }
 
@@ -1231,25 +1083,26 @@ fun UserProfileScreen(
 
                     Text(
                         text = "Blocked neighbors cannot view your location on the map, see your posts, or send you private messages.",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        color = SecondaryText,
-                        lineHeight = 15.sp
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 12.sp,
+                        color = MutedSlate,
+                        lineHeight = 16.sp
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     if (blockedUserIds.isEmpty()) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = SoftCream,
+                            shape = RoundedCornerShape(16.dp),
+                            color = ElevatedGlassSurface,
+                            border = BorderStroke(1.dp, HairlineGlassBorder),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = "No neighbors currently blocked. You can block or report any neighbor directly from their profile on the map.",
-                                fontFamily = DMSansFontFamily,
+                                fontFamily = PlusJakartaFontFamily,
                                 fontSize = 12.sp,
-                                color = SecondaryText,
+                                color = MutedSlate,
                                 modifier = Modifier.padding(14.dp)
                             )
                         }
@@ -1257,9 +1110,9 @@ fun UserProfileScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             blockedUserIds.forEach { blockedId ->
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = SoftCream,
-                                    border = BorderStroke(1.dp, WarmBorder),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = ElevatedGlassSurface,
+                                    border = BorderStroke(1.dp, HairlineGlassBorder),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -1273,30 +1126,30 @@ fun UserProfileScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Person,
                                                 contentDescription = null,
-                                                tint = SecondaryText,
+                                                tint = MutedSlate,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
                                                 text = "Neighbor #${blockedId.take(8)}",
-                                                fontFamily = DMSansFontFamily,
+                                                fontFamily = PlusJakartaFontFamily,
                                                 fontWeight = FontWeight.Medium,
                                                 fontSize = 12.sp,
-                                                color = PrimaryText
+                                                color = ObsidianInk
                                             )
                                         }
 
                                         OutlinedButton(
                                             onClick = { onUnblockUser(blockedId) },
-                                            shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(1.dp, WarmBorder),
+                                            shape = CircleShape,
+                                            border = BorderStroke(1.dp, HairlineGlassBorder),
                                             modifier = Modifier.testTag("unblock_button_$blockedId")
                                         ) {
                                             Text(
                                                 text = "Unblock",
-                                                fontFamily = DMSansFontFamily,
+                                                fontFamily = PlusJakartaFontFamily,
                                                 fontSize = 11.sp,
-                                                color = PrimaryText
+                                                color = ObsidianInk
                                             )
                                         }
                                     }
@@ -1305,21 +1158,14 @@ fun UserProfileScreen(
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // SECTION 6: APP RELEASES & UPDATES
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .testTag("app_version_card"),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                // SECTION 5: APP RELEASES & UPDATES
+                DarkGlassCard(
+                    modifier = Modifier.testTag("app_version_card"),
+                    cornerRadius = 24.dp,
+                    containerColor = DarkGlassCard,
+                    borderColor = HairlineGlassBorder
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1333,61 +1179,63 @@ fun UserProfileScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(PastelPeach.copy(alpha = 0.5f)),
+                                    .background(CobaltSoft)
+                                    .border(1.dp, CobaltBorder.copy(alpha = 0.5f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SystemUpdate,
                                     contentDescription = null,
-                                    tint = PrimaryText,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = CobaltGlow,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
                                     text = "Version & Updates",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 17.sp,
-                                    color = PrimaryText
+                                    fontFamily = OutfitFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = ObsidianInk
                                 )
                                 Text(
-                                    text = "Installed build v${updateInfo?.currentVersion ?: com.example.BuildConfig.VERSION_NAME}",
-                                    fontFamily = DMSansFontFamily,
+                                    text = "BUILD V${updateInfo?.currentVersion ?: com.example.BuildConfig.VERSION_NAME}",
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontSize = 11.sp,
-                                    color = SecondaryText
+                                    color = MutedSlate
                                 )
                             }
                         }
 
                         if (updateInfo?.isUpdateAvailable == true) {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = PastelCoral.copy(alpha = 0.2f),
-                                border = BorderStroke(1.dp, PastelCoral.copy(alpha = 0.5f))
+                                shape = CircleShape,
+                                color = FieryCoralSoft,
+                                border = BorderStroke(1.dp, FieryCoral.copy(alpha = 0.5f))
                             ) {
                                 Text(
-                                    text = "v${updateInfo.latestVersion} Available",
-                                    fontFamily = DMSansFontFamily,
+                                    text = "V${updateInfo.latestVersion} AVAILABLE",
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 10.sp,
-                                    color = PastelCoral,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    color = FieryCoralGlow,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         } else {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = PastelMint.copy(alpha = 0.3f),
-                                border = BorderStroke(1.dp, PastelMint)
+                                shape = CircleShape,
+                                color = EmeraldSoft,
+                                border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.45f))
                             ) {
                                 Text(
-                                    text = "Up to Date",
-                                    fontFamily = DMSansFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
+                                    text = "UP TO DATE",
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = FontWeight.Bold,
                                     fontSize = 10.sp,
-                                    color = PrimaryText,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    color = EmeraldLight,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }
@@ -1395,26 +1243,26 @@ fun UserProfileScreen(
 
                     if (updateInfo?.isUpdateAvailable == true) {
                         Spacer(modifier = Modifier.height(14.dp))
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = SoftCream),
-                            border = BorderStroke(1.dp, WarmBorder)
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = ElevatedGlassSurface,
+                            border = BorderStroke(1.dp, HairlineGlassBorder)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Text(
                                     text = updateInfo.releaseName.ifBlank { "Release v${updateInfo.latestVersion}" },
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = PrimaryText
+                                    color = ObsidianInk
                                 )
                                 if (updateInfo.releaseNotes.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = updateInfo.releaseNotes,
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 11.sp,
-                                        color = SecondaryText,
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontSize = 11.5.sp,
+                                        color = MutedSlate,
                                         lineHeight = 15.sp,
                                         maxLines = 3
                                     )
@@ -1424,63 +1272,28 @@ fun UserProfileScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Button(
+                                    PillPrimaryButton(
+                                        text = "Download APK",
+                                        icon = Icons.Default.Download,
                                         onClick = {
                                             val url = updateInfo.apkDownloadUrl.ifBlank { updateInfo.releaseHtmlUrl }
                                             if (url.isNotBlank()) {
                                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                             }
                                         },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrimaryText,
-                                            contentColor = PureWhite
-                                        ),
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(38.dp)
                                             .testTag("profile_download_update_button")
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = null,
-                                            tint = PureWhite,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Download APK",
-                                            fontFamily = DMSansFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 11.sp,
-                                            color = PureWhite
-                                        )
-                                    }
+                                    )
 
                                     if (updateInfo.releaseHtmlUrl.isNotBlank()) {
-                                        OutlinedButton(
+                                        GlassSecondaryPillButton(
+                                            text = "GitHub",
+                                            icon = Icons.Default.OpenInNew,
                                             onClick = {
                                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseHtmlUrl)))
-                                            },
-                                            shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(1.dp, WarmBorder),
-                                            colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
-                                            modifier = Modifier.height(38.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.OpenInNew,
-                                                contentDescription = null,
-                                                tint = PrimaryText,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "GitHub",
-                                                fontFamily = DMSansFontFamily,
-                                                fontSize = 11.sp,
-                                                color = PrimaryText
-                                            )
-                                        }
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -1491,9 +1304,9 @@ fun UserProfileScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = updateInfo.errorMessage,
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 10.sp,
-                            color = SecondaryText
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 11.sp,
+                            color = MutedSlate
                         )
                     }
 
@@ -1502,132 +1315,120 @@ fun UserProfileScreen(
                     OutlinedButton(
                         onClick = onCheckForUpdates,
                         enabled = updateInfo?.isChecking != true,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, WarmBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
+                        shape = CircleShape,
+                        border = BorderStroke(1.dp, HairlineGlassBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = ElevatedGlassSurface),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(42.dp)
+                            .height(48.dp)
                             .testTag("profile_check_updates_button")
                     ) {
                         if (updateInfo?.isChecking == true) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = PrimaryText
+                                color = CobaltGlow
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Checking for Releases...",
-                                fontFamily = DMSansFontFamily,
+                                fontFamily = PlusJakartaFontFamily,
                                 fontSize = 12.sp,
-                                color = PrimaryText
+                                color = ObsidianInk
                             )
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(15.dp)
+                                tint = CobaltGlow,
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Check for Updates Now",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 12.sp,
-                                color = PrimaryText
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = ObsidianInk
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Action Buttons
+            // Primary Save & Cancel Capsule Actions
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Button(
-                    onClick = {
-                        val cleanNick = nickname.trim().ifBlank { "Neighbor" }
-                        val cleanHandle = handle.trim().ifBlank { "resident" }
-                        onSaveProfile(
-                            cleanNick,
-                            cleanHandle,
-                            bio,
-                            avatarUri,
-                            presetIndex,
-                            selectedRadius,
-                            fuzzyCoords,
-                            incognito,
-                            allowDMs,
-                            locationPrecision,
-                            hideOnlineStatus,
-                            hideExactDistance
-                        )
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Profile & privacy radius successfully updated!")
-                        }
-                    },
+                WhiteHeroPillButton(
+                    text = "Save Profile & Privacy Settings",
+                    icon = Icons.Default.Check,
+                    onClick = { performSave() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("profile_save_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryText,
-                        contentColor = PureWhite
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = PureWhite,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Save Profile & Privacy Settings",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = PureWhite
-                    )
-                }
+                        .testTag("profile_save_button")
+                )
 
-                OutlinedButton(
+                GlassSecondaryPillButton(
+                    text = "Cancel & Return",
                     onClick = onBack,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("profile_cancel_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, WarmBorder),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite)
-                ) {
-                    Text(
-                        text = "Cancel & Return",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
-                        color = PrimaryText
-                    )
-                }
+                        .testTag("profile_cancel_button")
+                )
             }
 
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(64.dp))
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
                 .padding(bottom = 24.dp)
+        )
+    }
+}
+
+@Composable
+private fun ProfilePrivacySwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    testTag: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontFamily = PlusJakartaFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = ObsidianInk
+            )
+            Text(
+                text = subtitle,
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 11.sp,
+                color = MutedSlate,
+                lineHeight = 15.sp
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        LiquidGlassSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            activeColor = ElectricCobalt,
+            modifier = Modifier.testTag(testTag)
         )
     }
 }
@@ -1663,9 +1464,8 @@ fun RadiusRadarGraphic(
 
             val targetPixelRadius = maxDrawRadius * normalizedRadius
 
-            // Draw outer grid lines
             drawCircle(
-                color = Color(0xFFD8D9DB),
+                color = HairlineGlassBorder,
                 radius = maxDrawRadius,
                 center = center,
                 style = Stroke(
@@ -1674,37 +1474,40 @@ fun RadiusRadarGraphic(
                 )
             )
 
-            // Draw intermediate concentric rings
             drawCircle(
-                color = Color(0xFFE2E3E5),
+                color = HairlineGlassBorder.copy(alpha = 0.5f),
                 radius = maxDrawRadius * 0.6f,
                 center = center,
                 style = Stroke(width = 1.dp.toPx())
             )
 
-            // Draw pulsing wave within target radius
             drawCircle(
-                color = PastelCoral.copy(alpha = (1f - pulseProgress) * 0.3f),
+                color = ElectricCobalt.copy(alpha = (1f - pulseProgress) * 0.35f),
                 radius = targetPixelRadius * pulseProgress,
                 center = center
             )
 
-            // Draw active perimeter fill
             drawCircle(
-                color = PastelPeach.copy(alpha = 0.35f),
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        ElectricCobalt.copy(alpha = 0.28f),
+                        CobaltDeep.copy(alpha = 0.08f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = targetPixelRadius
+                ),
                 radius = targetPixelRadius,
                 center = center
             )
 
-            // Draw active perimeter boundary stroke
             drawCircle(
-                color = PastelCoral,
+                color = CobaltGlow,
                 radius = targetPixelRadius,
                 center = center,
                 style = Stroke(width = 2.dp.toPx())
             )
 
-            // Ambient neighborhood beacons (dots in or out of perimeter)
             val ambientBeaconOffsets = listOf(
                 Offset(center.x - 35f, center.y - 25f),
                 Offset(center.x + 40f, center.y + 30f),
@@ -1718,15 +1521,14 @@ fun RadiusRadarGraphic(
                 val distance = (node - center).getDistance()
                 val isInside = distance <= targetPixelRadius
                 drawCircle(
-                    color = if (isInside) PastelMint else Color(0xFFBDC3C7),
+                    color = if (isInside) EmeraldMint else HairlineGlassBorder,
                     radius = if (isInside) 4.5.dp.toPx() else 3.dp.toPx(),
                     center = node
                 )
             }
 
-            // Center User Node
             drawCircle(
-                color = PrimaryText,
+                color = ElectricCobalt,
                 radius = 7.dp.toPx(),
                 center = center
             )
@@ -1737,32 +1539,31 @@ fun RadiusRadarGraphic(
             )
         }
 
-        // Overlay status label
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(10.dp),
-            color = PureWhite.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, WarmBorder)
+            color = DarkGlassCard.copy(alpha = 0.92f),
+            shape = CircleShape,
+            border = BorderStroke(1.dp, HairlineGlassBorder)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(PastelCoral)
+                        .background(CobaltGlow)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "$radiusMeters m perimeter active in $cellName",
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PrimaryText
+                    text = "$radiusMeters M PERIMETER · ${cellName.uppercase()}",
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ObsidianInk
                 )
             }
         }

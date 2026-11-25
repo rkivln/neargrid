@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.Image
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,35 +15,41 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,50 +58,55 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.LocationOff
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.platform.LocalContext
-import com.example.R
+import com.example.data.model.CommunityIssue
+import com.example.data.model.CommunityNotice
 import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
 import com.example.data.model.IntentMatchResult
 import com.example.data.model.NeighborPost
 import com.example.data.update.AppUpdateInfo
-import com.example.ui.components.DiscoveryRadiusSelector
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.CobaltHeroCard
+import com.example.ui.components.DarkGlassCard
 import com.example.ui.components.GeohashMessageComposer
+import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.GlowingOrbVisualizer
 import com.example.ui.components.IntentMatchCard
+import com.example.ui.components.PillPrimaryButton
 import com.example.ui.components.PostCard
 import com.example.ui.components.TopNeighborhoodBar
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PaleWarmGray
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.UpdateBanner
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltPillGradient
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.example.ui.theme.SubtleGlassDivider
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +128,8 @@ fun HomeScreen(
     onPostGeohashMessage: (String) -> Unit = {},
     onDismissGeohashStatus: () -> Unit = {},
     posts: List<NeighborPost>,
+    notices: List<CommunityNotice> = emptyList(),
+    issues: List<CommunityIssue> = emptyList(),
     topIntentMatches: List<IntentMatchResult>,
     selectedFilterType: String,
     selectedCategory: String,
@@ -129,6 +144,8 @@ fun HomeScreen(
     onConnectPost: (NeighborPost) -> Unit,
     onToggleUpvote: (NeighborPost) -> Unit = {},
     onOpenComments: (NeighborPost) -> Unit = {},
+    onToggleIssueUpvote: (CommunityIssue) -> Unit = {},
+    onUpdateIssueStatus: (issueId: String, newStatus: String, volunteer: String?) -> Unit = { _, _, _ -> },
     currentUserId: String? = null,
     onEditPost: ((NeighborPost, String, String, String, String) -> Unit)? = null,
     onDeletePost: ((NeighborPost) -> Unit)? = null,
@@ -138,20 +155,24 @@ fun HomeScreen(
     onDismissUpdateBanner: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var isNearbyFeedMode by remember { mutableStateOf(false) }
+    var showRadarDrawer by remember { mutableStateOf(false) }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize().testTag("home_pull_to_refresh")
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("home_pull_to_refresh")
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(WarmIvory)
-        ) {
-            var isNearbyFeedMode by remember { mutableStateOf(false) }
-
+        AuraMeshBackground(variant = AuraVariant.MIXED) {
+            val feedBackdrop = rememberLayerBackdrop()
             if (isNearbyFeedMode) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(feedBackdrop)
+                ) {
                     TopNeighborhoodBar(
                         currentCell = currentCell,
                         discoveryRadiusMeters = discoveryRadiusMeters,
@@ -164,10 +185,37 @@ fun HomeScreen(
                         onScanQrClick = onScanQrClick
                     )
 
-                    FeedModeToggleBar(
-                        isNearbyFeedMode = true,
-                        onToggle = { isNearbyFeedMode = it }
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Nearby Distance Feed",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = PureWhite
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GlassSecondaryPillButton(
+                                text = "Radar",
+                                onClick = { showRadarDrawer = true },
+                                contentColor = CobaltGlow,
+                                height = 36.dp,
+                                modifier = Modifier.testTag("home_radar_drawer_button")
+                            )
+                            PillPrimaryButton(
+                                text = "Back to Feed",
+                                onClick = { isNearbyFeedMode = false },
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .testTag("feed_mode_grid")
+                            )
+                        }
+                    }
 
                     NearbyFeedComponent(
                         userLatitude = latitude,
@@ -179,8 +227,12 @@ fun HomeScreen(
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    // Top Navigation & Coordinate Bar
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(feedBackdrop),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     item {
                         TopNeighborhoodBar(
                             currentCell = currentCell,
@@ -195,595 +247,585 @@ fun HomeScreen(
                         )
                     }
 
-                    // Feed Mode Switcher (Grid vs Nearby Feed)
-                    item {
-                        FeedModeToggleBar(
-                            isNearbyFeedMode = false,
-                            onToggle = { isNearbyFeedMode = it }
+                    item(key = "app_update_banner") {
+                        UpdateBanner(
+                            updateInfoOverride = updateInfo,
+                            isDismissedOverride = isUpdateBannerDismissed,
+                            onDismissOverride = onDismissUpdateBanner
                         )
                     }
 
-            // In-App Release Update Alert Banner
-            item(key = "app_update_banner") {
-                com.example.ui.components.UpdateBanner(
-                    updateInfoOverride = updateInfo,
-                    isDismissedOverride = isUpdateBannerDismissed,
-                    onDismissOverride = onDismissUpdateBanner
-                )
-            }
+                    // Streamlined Cobalt Hero Card: 1-tap New Post + Inline Radius Chips + 1-tap Radar Drawer
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            val sectorName = currentCell?.name ?: localityName.ifBlank { "Local Sector" }
+                            CobaltHeroCard(
+                                eyebrowText = "$sectorName · ${posts.size} Live",
+                                titleText = "Block Feed",
+                                trailingIcon = Icons.Default.Radar,
+                                trailingIconDescription = "Open Sector Radar Drawer",
+                                onTrailingIconClick = { showRadarDrawer = true },
+                                trailingIconTestTag = "home_radar_drawer_button",
+                                primaryCtaText = "New Post",
+                                primaryCtaIcon = Icons.Default.Add,
+                                onPrimaryCtaClick = { onOpenCreateDialog("NEED") },
+                                primaryCtaTestTag = "hero_new_dispatch_button",
+                                extraContent = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val radii = listOf(300 to "300m", 800 to "800m", 2000 to "2 km")
+                                        radii.forEach { (radius, label) ->
+                                            val isSelected = discoveryRadiusMeters == radius
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isSelected) PureWhite else Color.White.copy(alpha = 0.14f)
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        if (isSelected) PureWhite else Color.White.copy(alpha = 0.25f),
+                                                        CircleShape
+                                                    )
+                                                    .clickable { onRadiusChange(radius) }
+                                                    .padding(horizontal = 11.dp, vertical = 6.dp)
+                                                    .testTag("radius_chip_$radius"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    fontFamily = PlusJakartaFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = if (isSelected) ElectricCobalt else PureWhite
+                                                )
+                                            }
+                                        }
 
-            // Hero Community Editorial Showcase with hand-drawn line art illustration
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = PureWhite),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Hand-drawn artwork with soft watercolor brush marks
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(130.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.img_neighborhood_editorial),
-                                contentDescription = "Neighborhood editorial scene",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                                        Spacer(modifier = Modifier.weight(1f))
 
-                            // Soft gradient bottom blend into cream
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                Color.Transparent,
-                                                PureWhite.copy(alpha = 0.15f),
-                                                PureWhite.copy(alpha = 0.95f)
+                                        Row(
+                                            modifier = Modifier
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = 0.14f))
+                                                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                                                .clickable { isNearbyFeedMode = true }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                .testTag("feed_mode_nearby"),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.NearMe,
+                                                contentDescription = "Nearby distance sort",
+                                                tint = PureWhite,
+                                                modifier = Modifier.size(13.dp)
                                             )
-                                        )
-                                    )
+                                            Text(
+                                                text = "Nearby",
+                                                fontFamily = PlusJakartaFontFamily,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 11.sp,
+                                                color = PureWhite
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // Capsule Filter Bar (All | Needs | Offers | Meetups | Civic)
+                    item {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            val filterTypes = listOf(
+                                "ALL" to "All",
+                                "NEED" to "Needs",
+                                "OFFER" to "Offers",
+                                "MEETUP" to "Meetups",
+                                "CIVIC" to "Civic"
                             )
 
-                            // Cell resident counter pill
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = PureWhite.copy(alpha = 0.92f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(10.dp)
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                items(filterTypes) { (type, label) ->
+                                    val isSelected = selectedFilterType == type
+                                    val activeBg = when (type) {
+                                        "NEED" -> FieryCoral
+                                        "OFFER" -> EmeraldMint
+                                        "CIVIC" -> FieryCoral
+                                        else -> ElectricCobalt
+                                    }
                                     Box(
                                         modifier = Modifier
-                                            .size(6.dp)
                                             .clip(CircleShape)
-                                            .background(PastelMint)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "${currentCell?.name ?: "Oakwood Grove"} • 42 neighbors nearby",
-                                        color = PrimaryText,
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-
-                        // Editorial headline and storytelling copy
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = "Your neighborhood, coordinated.",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 22.sp,
-                                lineHeight = 26.sp,
-                                color = PrimaryText
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = "A quiet, coordinate-aware network for sharing tools, lending hands, and organizing local life without revealing your home address.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp,
-                                color = SecondaryText
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Discovery Radius Selector
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                DiscoveryRadiusSelector(
-                    selectedRadiusMeters = discoveryRadiusMeters,
-                    onSelectRadius = onRadiusChange
-                )
-            }
-
-            // Top Intent Match Spotlight
-            if (topIntentMatches.isNotEmpty()) {
-                item {
-                    val topMatch = topIntentMatches.first()
-                    IntentMatchCard(
-                        match = topMatch,
-                        onConnect = onConnectPost
-                    )
-                }
-            }
-
-            // Feed filter tabs
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                ) {
-                    val filterTypes = listOf(
-                        "ALL" to "All updates",
-                        "NEED" to "Needs",
-                        "OFFER" to "Offers",
-                        "MEETUP" to "Meetups"
-                    )
-
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        color = PureWhite,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            filterTypes.forEach { (type, label) ->
-                                val isSelected = selectedFilterType == type
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) SoftCream else Color.Transparent)
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) PastelPeach else Color.Transparent,
-                                            RoundedCornerShape(12.dp)
+                                            .background(if (isSelected) activeBg else DarkGlassCard)
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) PureWhite.copy(alpha = 0.35f) else HairlineGlassBorder,
+                                                CircleShape
+                                            )
+                                            .clickable { onFilterChange(type) }
+                                            .padding(horizontal = 16.dp, vertical = 9.dp)
+                                            .testTag("filter_pill_${type.lowercase()}"),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontFamily = PlusJakartaFontFamily,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 12.sp,
+                                            color = if (isSelected) PureWhite else MutedSlate
                                         )
-                                        .clickable { onFilterChange(type) }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
+                                    }
+                                }
+                            }
+
+                            if (selectedFilterType != "CIVIC") {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = label,
-                                        fontFamily = DMSansFontFamily,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        fontSize = 12.sp,
-                                        color = if (isSelected) PrimaryText else SecondaryText
-                                    )
+                                    val categories = listOf("ALL", "TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
+                                    items(categories) { cat ->
+                                        val isSelected = selectedCategory == cat
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { onCategoryChange(cat) },
+                                            label = {
+                                                Text(
+                                                    if (cat == "ALL") "All topics" else cat.lowercase().replaceFirstChar { it.uppercase() },
+                                                    fontFamily = PlusJakartaFontFamily,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                )
+                                            },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = CobaltSoft,
+                                                selectedLabelColor = PureWhite,
+                                                containerColor = DarkGlassCard,
+                                                labelColor = MutedSlate
+                                            ),
+                                            border = FilterChipDefaults.filterChipBorder(
+                                                borderColor = if (isSelected) ElectricCobalt else HairlineGlassBorder,
+                                                enabled = true,
+                                                selected = isSelected
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Category horizontal chips
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val categories = listOf("ALL", "TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
-                        items(categories) { cat ->
-                            val isSelected = selectedCategory == cat
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onCategoryChange(cat) },
-                                label = {
-                                    Text(
-                                        if (cat == "ALL") "All categories" else cat.lowercase().replaceFirstChar { it.uppercase() },
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 12.sp
-                                    )
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = PastelPeach,
-                                    selectedLabelColor = PrimaryText,
-                                    containerColor = PureWhite,
-                                    labelColor = SecondaryText
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder,
-                                    enabled = true,
-                                    selected = isSelected
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Feed Items list
-            if (posts.isEmpty()) {
-                item {
-                    if (!gpsEnabled || (latitude == 0.0 && longitude == 0.0)) {
-                        // Location Disabled / Pending Location Prompt
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 20.dp)
-                                .testTag("location_required_card"),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = PureWhite),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-                        ) {
-                            Column(
+                    if (selectedFilterType == "CIVIC") {
+                        // Inline Civic Bulletin & Issue Tracker
+                        item {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(CircleShape)
-                                        .background(PastelPeach.copy(alpha = 0.5f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOff,
-                                        contentDescription = null,
-                                        tint = PastelCoral,
-                                        modifier = Modifier.size(28.dp)
+                                Column {
+                                    Text(
+                                        text = "Civic Noticeboard & Issues",
+                                        fontFamily = OutfitFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 19.sp,
+                                        color = PureWhite
+                                    )
+                                    Text(
+                                        text = "${notices.size} advisories · ${issues.size} local reports",
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontSize = 12.sp,
+                                        color = MutedSlate
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Location Required for Local Grid",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 22.sp,
-                                    color = PrimaryText,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "To protect privacy and ensure you only see posts from your active location, NearGrid scopes all data strictly to your local geohash. Enable location access to view local posts on your block.",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 13.sp,
-                                    color = SecondaryText,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    lineHeight = 19.sp
-                                )
-                                Spacer(modifier = Modifier.height(20.dp))
-                                Button(
-                                    onClick = onGpsToggle,
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = PrimaryText,
-                                        contentColor = PureWhite
-                                    ),
+
+                                PillPrimaryButton(
+                                    text = "Report Issue",
+                                    icon = Icons.Default.Add,
+                                    onClick = { onOpenCreateDialog("ISSUE") },
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(44.dp)
-                                        .testTag("enable_gps_button")
-                                ) {
-                                    Text(
-                                        text = "Enable Location & Detect Grid",
-                                        fontFamily = DMSansFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp
+                                        .height(40.dp)
+                                        .testTag("report_issue_button")
+                                )
+                            }
+                        }
+
+                        if (notices.isEmpty() && issues.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    DarkGlassCard(
+                                        modifier = Modifier.testTag("empty_issues_card"),
+                                        cornerRadius = 24.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(CircleShape)
+                                                    .background(EmeraldSoft)
+                                                    .border(1.dp, EmeraldMint.copy(alpha = 0.5f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Shield,
+                                                    contentDescription = null,
+                                                    tint = EmeraldLight,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(14.dp))
+                                            Text(
+                                                text = "All Clear in Your Sector",
+                                                fontFamily = OutfitFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 20.sp,
+                                                color = PureWhite
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "No civic notices or maintenance hazards right now. Spot an issue nearby?",
+                                                fontFamily = PlusJakartaFontFamily,
+                                                fontSize = 13.sp,
+                                                color = MutedSlate,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 19.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            PillPrimaryButton(
+                                                text = "Report an Issue",
+                                                onClick = { onOpenCreateDialog("ISSUE") },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("fresh_report_issue_button")
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            items(notices, key = { "notice_${it.id}" }) { notice ->
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    NoticeCard(notice = notice)
+                                }
+                            }
+                            items(issues, key = { "issue_${it.id}" }) { issue ->
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    IssueCard(
+                                        issue = issue,
+                                        onUpvote = { onToggleIssueUpvote(issue) },
+                                        onAdvanceStatus = {
+                                            val nextStatus = when (issue.status) {
+                                                "REPORTED" -> "ACKNOWLEDGED"
+                                                "ACKNOWLEDGED" -> "IN_PROGRESS"
+                                                "IN_PROGRESS" -> "RESOLVED"
+                                                else -> "RESOLVED"
+                                            }
+                                            onUpdateIssueStatus(issue.id, nextStatus, "Assigned Local Volunteers")
+                                        }
                                     )
                                 }
                             }
                         }
                     } else {
-                        // Location active but no posts in current cell yet
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 20.dp)
-                                .testTag("fresh_grid_empty_card"),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = PureWhite),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(CircleShape)
-                                        .background(PastelPeach.copy(alpha = 0.4f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.VolunteerActivism,
-                                        contentDescription = null,
-                                        tint = PastelCoral,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Your Neighborhood Grid is Fresh",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 22.sp,
-                                    color = PrimaryText,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        if (topIntentMatches.isNotEmpty() && selectedFilterType == "ALL") {
+                            item {
+                                IntentMatchCard(
+                                    match = topIntentMatches.first(),
+                                    onConnect = onConnectPost
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Be the pioneer neighbor on this block! Share a spare tool, lend a hand, or request assistance from your neighbors in ${localityName.ifBlank { "your cell" }}.",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 13.sp,
-                                    color = SecondaryText,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    lineHeight = 19.sp
-                                )
-                                Spacer(modifier = Modifier.height(20.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Button(
-                                        onClick = { onOpenCreateDialog("NEED") },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrimaryText,
-                                            contentColor = PureWhite
-                                        ),
-                                        modifier = Modifier.weight(1f).testTag("fresh_ask_help_button")
-                                    ) {
-                                        Text(
-                                            text = "Ask for Help",
-                                            fontFamily = DMSansFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp
-                                        )
+                            }
+                        }
+
+                        if (posts.isEmpty()) {
+                            item {
+                                if (!gpsEnabled || (latitude == 0.0 && longitude == 0.0)) {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        DarkGlassCard(
+                                            modifier = Modifier.testTag("location_required_card"),
+                                            cornerRadius = 24.dp
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(56.dp)
+                                                        .clip(CircleShape)
+                                                        .background(FieryCoralSoft)
+                                                        .border(1.dp, FieryCoral.copy(alpha = 0.5f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.LocationOff,
+                                                        contentDescription = null,
+                                                        tint = FieryCoralGlow,
+                                                        modifier = Modifier.size(26.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(14.dp))
+                                                Text(
+                                                    text = "Location Required for Local Grid",
+                                                    fontFamily = OutfitFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 21.sp,
+                                                    color = PureWhite,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Text(
+                                                    text = "Enable location access to discover posts inside your local block.",
+                                                    fontFamily = PlusJakartaFontFamily,
+                                                    fontSize = 13.sp,
+                                                    color = MutedSlate,
+                                                    textAlign = TextAlign.Center,
+                                                    lineHeight = 19.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(18.dp))
+                                                PillPrimaryButton(
+                                                    text = "Enable Location",
+                                                    onClick = onGpsToggle,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .testTag("enable_gps_button")
+                                                )
+                                            }
+                                        }
                                     }
-                                    OutlinedButton(
-                                        onClick = { onOpenCreateDialog("OFFER") },
-                                        shape = RoundedCornerShape(14.dp),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                                        colors = ButtonDefaults.outlinedButtonColors(containerColor = SoftCream),
-                                        modifier = Modifier.weight(1f).testTag("fresh_offer_button")
-                                    ) {
-                                        Text(
-                                            text = "Lend an Item",
-                                            fontFamily = DMSansFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = PrimaryText
-                                        )
+                                } else {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        DarkGlassCard(
+                                            modifier = Modifier.testTag("fresh_grid_empty_card"),
+                                            cornerRadius = 24.dp
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(56.dp)
+                                                        .clip(CircleShape)
+                                                        .background(CobaltSoft)
+                                                        .border(1.dp, ElectricCobalt.copy(alpha = 0.5f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.VolunteerActivism,
+                                                        contentDescription = null,
+                                                        tint = CobaltGlow,
+                                                        modifier = Modifier.size(26.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(14.dp))
+                                                Text(
+                                                    text = "No Posts Yet in ${localityName.ifBlank { "Your Block" }}",
+                                                    fontFamily = OutfitFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 20.sp,
+                                                    color = PureWhite,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Text(
+                                                    text = "Be the first neighbor nearby to ask for a hand or lend a spare tool.",
+                                                    fontFamily = PlusJakartaFontFamily,
+                                                    fontSize = 13.sp,
+                                                    color = MutedSlate,
+                                                    textAlign = TextAlign.Center,
+                                                    lineHeight = 19.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(18.dp))
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    PillPrimaryButton(
+                                                        text = "Ask Help",
+                                                        onClick = { onOpenCreateDialog("NEED") },
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .testTag("fresh_ask_help_button")
+                                                    )
+                                                    GlassSecondaryPillButton(
+                                                        text = "Lend Tool",
+                                                        onClick = { onOpenCreateDialog("OFFER") },
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .testTag("fresh_offer_button")
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
+                        } else {
+                            items(posts, key = { it.id }) { post ->
+                                PostCard(
+                                    post = post,
+                                    onConnect = onConnectPost,
+                                    onToggleUpvote = onToggleUpvote,
+                                    onOpenComments = onOpenComments,
+                                    currentUserId = currentUserId,
+                                    onEditPost = onEditPost,
+                                    onDeletePost = onDeletePost
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Spacer(
+                            modifier = Modifier
+                                .height(118.dp)
+                                .navigationBarsPadding()
+                        )
+                    }
+                }
+            }
+
+            // 1-Tap Liquid Glass Post Pill Floating Action Button above 5-tab Glass Dock
+            PillPrimaryButton(
+                text = "Post",
+                icon = Icons.Default.Add,
+                onClick = { onOpenCreateDialog("NEED") },
+                backdrop = feedBackdrop,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 18.dp, bottom = 92.dp)
+                    .height(50.dp)
+                    .testTag("fab_create_post")
+            )
+        }
+    }
+
+    // Quick Radar & Geohash Broadcast Drawer
+    if (showRadarDrawer) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showRadarDrawer = false },
+            sheetState = sheetState,
+            containerColor = ObsidianCanvas,
+            contentColor = PureWhite,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "LIVE SECTOR DRAWER",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = CobaltGlow
+                        )
+                        Text(
+                            text = "Radar & Quick Broadcast",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = PureWhite
+                        )
+                    }
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = "Close Radar Drawer",
+                        onClick = { showRadarDrawer = false },
+                        size = 40.dp
+                    )
+                }
+
+                DarkGlassCard(
+                    cornerRadius = 24.dp,
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        GlowingOrbVisualizer(
+                            modifier = Modifier.size(96.dp),
+                            activeNodesCount = geohashMessages.size.coerceAtLeast(3),
+                            radiusMeters = discoveryRadiusMeters,
+                            isScanning = isLocating || latitude != 0.0
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentCell?.name ?: localityName.ifBlank { "Local Sector" },
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                color = PureWhite
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = if (currentGeohash.isNotBlank()) {
+                                    "Geohash #${currentGeohash.removePrefix("#").uppercase()} · ${discoveryRadiusMeters}m"
+                                } else {
+                                    "Perimeter · ${discoveryRadiusMeters}m"
+                                },
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 12.sp,
+                                color = MutedSlate
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${geohashMessages.size} recent radio broadcasts",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = EmeraldLight
+                            )
                         }
                     }
                 }
-            } else {
-                items(posts, key = { it.id }) { post ->
-                    PostCard(
-                        post = post,
-                        onConnect = onConnectPost,
-                        onToggleUpvote = onToggleUpvote,
-                        onOpenComments = onOpenComments,
-                        currentUserId = currentUserId,
-                        onEditPost = onEditPost,
-                        onDeletePost = onDeletePost
-                    )
-                }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(100.dp))
-            }
-        }
-    }
+                HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
 
-    // Floating Action Button
-    FloatingActionButton(
-        onClick = { onOpenCreateDialog("NEED") },
-        containerColor = PrimaryText,
-        contentColor = PureWhite,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(20.dp)
-            .testTag("fab_create_post")
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Create Action",
-                tint = PureWhite,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "New coordination",
-                fontFamily = DMSansFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                color = PureWhite
-            )
-        }
-    }
-}
-}
-}
-
-@Composable
-fun FeedModeToggleBar(
-    isNearbyFeedMode: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = PureWhite,
-        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onToggle(false) }
-                    .testTag("feed_mode_grid"),
-                shape = RoundedCornerShape(12.dp),
-                color = if (!isNearbyFeedMode) PrimaryText else PureWhite
-            ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GridView,
-                        contentDescription = "Grid Feed",
-                        tint = if (!isNearbyFeedMode) PureWhite else SecondaryText,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Grid Overview",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = if (!isNearbyFeedMode) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = if (!isNearbyFeedMode) PureWhite else SecondaryText
-                    )
-                }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onToggle(true) }
-                    .testTag("feed_mode_nearby"),
-                shape = RoundedCornerShape(12.dp),
-                color = if (isNearbyFeedMode) PrimaryText else PureWhite
-            ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.NearMe,
-                        contentDescription = "Nearby Feed",
-                        tint = if (isNearbyFeedMode) PureWhite else SecondaryText,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Nearby Feed",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = if (isNearbyFeedMode) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = if (isNearbyFeedMode) PureWhite else SecondaryText
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ActionTile(
-    number: String,
-    title: String,
-    subtitle: String,
-    accentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = number,
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = accentColor
-                )
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(accentColor)
+                GeohashMessageComposer(
+                    currentGeohash = currentGeohash,
+                    latitude = latitude,
+                    longitude = longitude,
+                    localityName = localityName,
+                    isLocating = isLocating,
+                    isPosting = isPostingGeohashMessage,
+                    postStatus = geohashPostStatus,
+                    messages = geohashMessages,
+                    onRefreshLocation = onRefreshLocation,
+                    onPostMessage = onPostGeohashMessage,
+                    onDismissStatus = onDismissGeohashStatus
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = title,
-                fontFamily = DMSerifFontFamily,
-                fontSize = 17.sp,
-                color = PrimaryText
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = subtitle,
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
-                color = SecondaryText,
-                lineHeight = 15.sp
-            )
         }
     }
 }
@@ -795,19 +837,19 @@ fun AppUpdateBanner(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp)
             .testTag("app_update_banner"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SoftCream),
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, PastelCoral.copy(alpha = 0.7f))
+        shape = RoundedCornerShape(24.dp),
+        color = DarkGlassCard,
+        border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.45f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -820,59 +862,55 @@ fun AppUpdateBanner(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(PastelCoral.copy(alpha = 0.2f)),
+                            .background(CobaltSoft),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.SystemUpdate,
                             contentDescription = "New App Version",
-                            tint = PastelCoral,
+                            tint = CobaltGlow,
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "New Version Available: v${updateInfo.latestVersion}",
-                            fontFamily = DMSansFontFamily,
+                            fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = PrimaryText
+                            fontSize = 15.sp,
+                            color = PureWhite
                         )
                         Text(
                             text = "Tap to update to the latest release",
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 11.sp,
-                            color = SecondaryText
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
+                            color = MutedSlate
                         )
                     }
                 }
 
-                IconButton(
+                CircularOutlineIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = "Dismiss Banner",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .testTag("dismiss_update_banner_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Dismiss Banner",
-                        tint = SecondaryText,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                    size = 36.dp,
+                    modifier = Modifier.testTag("dismiss_update_banner_button")
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
+                PillPrimaryButton(
+                    text = "Update (v${updateInfo.latestVersion})",
+                    icon = Icons.Default.Download,
                     onClick = {
                         val targetUrl = updateInfo.apkDownloadUrl.ifBlank { updateInfo.releaseHtmlUrl }
                         if (targetUrl.isNotBlank()) {
@@ -880,52 +918,22 @@ fun AppUpdateBanner(
                             context.startActivity(intent)
                         }
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryText,
-                        contentColor = PureWhite
-                    ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(38.dp)
+                        .height(44.dp)
                         .testTag("download_update_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = null,
-                        tint = PureWhite,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Update APK (v${updateInfo.latestVersion})",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = PureWhite
-                    )
-                }
+                )
 
                 if (updateInfo.releaseHtmlUrl.isNotBlank()) {
-                    OutlinedButton(
+                    GlassSecondaryPillButton(
+                        text = "Release Notes",
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseHtmlUrl))
                             context.startActivity(intent)
                         },
-                        shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
-                        modifier = Modifier
-                            .height(38.dp)
-                            .testTag("view_release_notes_button")
-                    ) {
-                        Text(
-                            text = "Release Notes",
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 11.sp,
-                            color = PrimaryText
-                        )
-                    }
+                        height = 44.dp,
+                        modifier = Modifier.testTag("view_release_notes_button")
+                    )
                 }
             }
         }

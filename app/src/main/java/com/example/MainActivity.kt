@@ -4,50 +4,27 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Radar
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Radar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +35,7 @@ import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
+import com.example.ui.components.LiquidGlassBottomBar
 import com.example.ui.components.PostCommentsSheet
 import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.AppSettingsScreen
@@ -65,26 +43,25 @@ import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.GridQrInviteScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InboxScreen
-import com.example.ui.screens.LivingGridScreen
 import com.example.ui.screens.MeshRadarScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.RealtimeMapScreen
 import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.UserProfileScreen
-import com.example.ui.theme.DMSansFontFamily
+import com.example.ui.theme.BackgroundCanvas
 import com.example.ui.theme.NearGridTheme
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PrimaryText
-import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.WarmBorder
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            enableEdgeToEdge()
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+                navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            )
         } catch (ignored: Exception) {
             // Edge-to-edge fallback for custom OEM ROMs
         }
@@ -141,7 +118,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
 
     val activity = context as? android.app.Activity
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         val hasLocationPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -169,7 +146,7 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     }
 
     // Handle deep link notification click to open corresponding conversation directly
-    androidx.compose.runtime.LaunchedEffect(activity?.intent, conversations) {
+    LaunchedEffect(activity?.intent, conversations) {
         val convId = activity?.intent?.getStringExtra(com.example.util.ChatNotificationManager.EXTRA_CONVERSATION_ID)
         if (!convId.isNullOrBlank()) {
             val matchingConv = conversations.find { it.id == convId }
@@ -220,8 +197,10 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     }
 
     // Predictive Back Handling
-    BackHandler(enabled = uiState.showGridQrScreen || uiState.showUserProfileEditor || uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
-        if (uiState.showGridQrScreen) {
+    BackHandler(enabled = uiState.showAppSettingsScreen || uiState.showGridQrScreen || uiState.showUserProfileEditor || uiState.activeConversation != null || uiState.currentDestination != NavigationDestination.HOME) {
+        if (uiState.showAppSettingsScreen) {
+            viewModel.closeAppSettings()
+        } else if (uiState.showGridQrScreen) {
             viewModel.closeGridQrScreen()
         } else if (uiState.showUserProfileEditor) {
             viewModel.closeUserProfileEditor()
@@ -321,68 +300,18 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         return
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.safeDrawing,
-        bottomBar = {
-            NavigationBar(
-                containerColor = PureWhite,
-                tonalElevation = 0.dp,
-                modifier = Modifier
-                    .testTag("bottom_nav_bar")
-                    .border(1.dp, WarmBorder)
-            ) {
-                NavigationDestination.values().forEach { destination ->
-                    val isSelected = uiState.currentDestination == destination
-                    val (iconFilled, iconOutlined) = when (destination) {
-                        NavigationDestination.HOME -> Icons.Filled.Home to Icons.Outlined.Home
-                        NavigationDestination.MAP -> Icons.Filled.Map to Icons.Outlined.Map
-                        NavigationDestination.RADAR -> Icons.Filled.Radar to Icons.Outlined.Radar
-                        NavigationDestination.COMMUNITY -> Icons.Filled.Campaign to Icons.Outlined.Campaign
-                        NavigationDestination.INBOX -> Icons.Filled.ChatBubble to Icons.Outlined.ChatBubbleOutline
-                        NavigationDestination.PROFILE -> Icons.Filled.Person to Icons.Outlined.Person
-                    }
+    val backdrop = rememberLayerBackdrop()
 
-                    NavigationBarItem(
-                        selected = isSelected,
-                        alwaysShowLabel = false,
-                        onClick = { viewModel.setDestination(destination) },
-                        icon = {
-                            Icon(
-                                imageVector = if (isSelected) iconFilled else iconOutlined,
-                                contentDescription = destination.label,
-                                tint = if (isSelected) PrimaryText else SecondaryText
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = destination.label,
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (isSelected) PrimaryText else SecondaryText
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PrimaryText,
-                            selectedTextColor = PrimaryText,
-                            unselectedTextColor = SecondaryText,
-                            unselectedIconColor = SecondaryText,
-                            indicatorColor = PastelPeach.copy(alpha = 0.5f)
-                        ),
-                        modifier = Modifier.testTag("nav_item_${destination.name.lowercase()}")
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
+    // Edge-to-edge tab host layered behind the floating Apple Liquid Glass pill dock
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundCanvas)
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .layerBackdrop(backdrop)
         ) {
             when (uiState.currentDestination) {
                 NavigationDestination.HOME -> {
@@ -404,6 +333,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onPostGeohashMessage = { viewModel.postGeohashMessage(it) },
                         onDismissGeohashStatus = { viewModel.clearGeohashPostStatus() },
                         posts = posts,
+                        notices = notices,
+                        issues = issues,
                         topIntentMatches = topIntentMatches,
                         selectedFilterType = uiState.postFilterType,
                         selectedCategory = uiState.selectedCategory,
@@ -418,6 +349,10 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onConnectPost = { viewModel.connectFromPost(it) },
                         onToggleUpvote = { viewModel.togglePostUpvote(it) },
                         onOpenComments = { viewModel.openPostComments(it) },
+                        onToggleIssueUpvote = { viewModel.toggleIssueUpvote(it) },
+                        onUpdateIssueStatus = { id, status, volunteer ->
+                            viewModel.updateIssueStatus(id, status, volunteer)
+                        },
                         currentUserId = viewModel.currentUserId,
                         onEditPost = { post, title, desc, category, urgency ->
                             viewModel.editPost(post.id, title, desc, category, urgency)
@@ -449,7 +384,10 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                             viewModel.reportUser(targetUid, name, reason, notes)
                         },
                         onPostClick = { viewModel.connectFromPost(it) },
-                        onIssueClick = { viewModel.setDestination(NavigationDestination.COMMUNITY) }
+                        onIssueClick = {
+                            viewModel.setPostFilter("CIVIC")
+                            viewModel.setDestination(NavigationDestination.HOME)
+                        }
                     )
                 }
 
@@ -508,8 +446,35 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         userBio = uiState.userBio,
                         avatarUri = uiState.avatarUri,
                         avatarPresetIndex = uiState.avatarPresetIndex,
+                        incognitoGridPresence = uiState.incognitoGridPresence,
+                        allowProximityMessaging = uiState.allowProximityMessaging,
+                        hideExactDistance = uiState.hideExactDistance,
+                        locationPrecision = uiState.locationPrecision,
+                        blockedUserIds = uiState.blockedUserIds,
+                        onToggleIncognito = { viewModel.toggleIncognitoPresence() },
+                        onToggleAllowDMs = { viewModel.toggleAllowProximityMessaging() },
+                        onToggleHideExactDistance = { viewModel.toggleHideExactDistance() },
+                        onSetLocationPrecision = { viewModel.setLocationPrecision(it) },
+                        onSaveProfile = { nick, handle, bio, uri, preset, radius ->
+                            viewModel.updateUserProfile(
+                                nickname = nick,
+                                handle = handle,
+                                bio = bio,
+                                avatarUri = uri,
+                                avatarPresetIndex = preset,
+                                privacyRadiusMeters = radius,
+                                fuzzyCoords = uiState.fuzzyCoordinateOffset,
+                                incognito = uiState.incognitoGridPresence,
+                                allowDMs = uiState.allowProximityMessaging,
+                                locationPrecision = uiState.locationPrecision,
+                                hideOnlineStatus = uiState.hideOnlineStatus,
+                                hideExactDistance = uiState.hideExactDistance
+                            )
+                        },
+                        onUnblockUser = { viewModel.unblockUser(it) },
                         onEditProfile = { viewModel.openUserProfileEditor() },
                         onOpenGridQrScreen = { viewModel.openGridQrScreen() },
+                        onOpenSettings = { viewModel.openAppSettings() },
                         onResetToFreshGrid = { viewModel.resetToFreshGrid() },
                         userEmail = currentUser?.email,
                         onSignOut = { viewModel.signOut(context) }
@@ -517,6 +482,23 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                 }
             }
         }
+
+        LiquidGlassBottomBar(
+            backdrop = backdrop,
+            destinations = listOf(
+                NavigationDestination.HOME,
+                NavigationDestination.MAP,
+                NavigationDestination.RADAR,
+                NavigationDestination.INBOX,
+                NavigationDestination.PROFILE
+            ),
+            currentDestination = uiState.currentDestination,
+            onSelectDestination = { viewModel.setDestination(it) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        )
     }
 
     // Modal Sheet for choosing neighborhood coordinate cells

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,20 +19,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,25 +49,43 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PaleWarmGray
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelPowderBlue
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.GlowingOrbVisualizer
+import com.example.ui.components.NearGridBrandMark
+import com.example.ui.components.rememberResolvedBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import androidx.compose.ui.unit.DpOffset
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
 
 @Composable
 fun OnboardingScreen(
@@ -76,171 +95,250 @@ fun OnboardingScreen(
     var currentSlide by remember { mutableIntStateOf(0) }
     val totalSlides = 4
 
-    Box(
+    val auraVariant = when (currentSlide) {
+        0 -> AuraVariant.COBALT
+        1 -> AuraVariant.CORAL
+        2 -> AuraVariant.COBALT
+        else -> AuraVariant.MIXED
+    }
+
+    AuraMeshBackground(
+        variant = auraVariant,
         modifier = modifier
-            .fillMaxSize()
-            .background(WarmIvory)
     ) {
-        AnimatedContent(
-            targetState = currentSlide,
-            transitionSpec = {
-                if (targetState > initialState) {
-                    slideInHorizontally { width -> width } + fadeIn() togetherWith
-                            slideOutHorizontally { width -> -width } + fadeOut()
-                } else {
-                    slideInHorizontally { width -> -width } + fadeIn() togetherWith
-                            slideOutHorizontally { width -> width } + fadeOut()
-                }
-            },
-            label = "WarmEditorialOnboarding"
-        ) { slide ->
-            when (slide) {
-                0 -> OnboardingSlideIntroduction(
-                    onNext = { currentSlide = 1 },
-                    onSkip = onFinish
-                )
-                1 -> OnboardingSlideDiscovery(
-                    onNext = { currentSlide = 2 },
-                    onSkip = onFinish
-                )
-                2 -> OnboardingSlideConnection(
-                    onNext = { currentSlide = 3 },
-                    onSkip = onFinish
-                )
-                else -> OnboardingSlideGetStarted(
-                    onGetStarted = onFinish
-                )
-            }
-        }
-
-        // Top Navigation Bar (Progress Dots & Skip)
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 24.dp)
-                .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Elegant slim progress pill indicators
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (i in 0 until totalSlides) {
-                    val isCurrent = i == currentSlide
-                    Box(
-                        modifier = Modifier
-                            .height(3.dp)
-                            .width(if (isCurrent) 24.dp else 8.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(if (isCurrent) PrimaryText else PaleWarmGray)
+            // Top Minimal Brand Bar + Skip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    NearGridBrandMark(size = 34.dp)
+                    Text(
+                        text = "NEARGRID",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        letterSpacing = 1.sp,
+                        color = PureWhite
+                    )
+                }
+
+                if (currentSlide < totalSlides - 1) {
+                    TextButton(
+                        onClick = onFinish,
+                        modifier = Modifier.testTag("onboarding_skip_button")
+                    ) {
+                        Text(
+                            text = "Skip",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = PureWhite.copy(alpha = 0.85f)
+                        )
+                    }
+                } else {
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = "Close",
+                        onClick = onFinish,
+                        size = 40.dp
                     )
                 }
             }
 
-            if (currentSlide < totalSlides - 1) {
-                TextButton(
-                    onClick = onFinish,
-                    modifier = Modifier.testTag("onboarding_skip_button")
-                ) {
-                    Text(
-                        text = "Skip",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 13.sp,
-                        color = SecondaryText
-                    )
+            // Animated Slide Body
+            AnimatedContent(
+                targetState = currentSlide,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        slideInHorizontally { width -> width } + fadeIn() togetherWith
+                                slideOutHorizontally { width -> -width } + fadeOut()
+                    } else {
+                        slideInHorizontally { width -> -width } + fadeIn() togetherWith
+                                slideOutHorizontally { width -> width } + fadeOut()
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                label = "AuraOnboardingSlides"
+            ) { slide ->
+                when (slide) {
+                    0 -> OnboardingSlideIntroduction()
+                    1 -> OnboardingSlideDiscovery()
+                    2 -> OnboardingSlideConnection()
+                    else -> OnboardingSlideGetStarted()
                 }
-            } else {
-                IconButton(onClick = onFinish) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = PrimaryText,
-                        modifier = Modifier.size(20.dp)
-                    )
+            }
+
+            // MRR-style Segmented Bar + Bottom Stepper Dock
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 0 until totalSlides) {
+                        val isCurrent = i == currentSlide
+                        Box(
+                            modifier = Modifier
+                                .height(4.dp)
+                                .width(if (isCurrent) 28.dp else 10.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isCurrent) PureWhite else PureWhite.copy(alpha = 0.28f)
+                                )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // MRR Capsule Dock: [ <- ]  [ ( -> ) ]  [ Start >>> ]
+                val actionTag = when (currentSlide) {
+                    0 -> "onboarding_next_1"
+                    1 -> "onboarding_next_2"
+                    2 -> "onboarding_next_3"
+                    else -> "onboarding_finish_button"
+                }
+
+                val dockBackdrop = rememberResolvedBackdrop()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .drawBackdrop(
+                            backdrop = dockBackdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                vibrancy()
+                                blur(18.dp.toPx())
+                                lens(
+                                    refractionHeight = 14.dp.toPx(),
+                                    refractionAmount = 26.dp.toPx(),
+                                    depthEffect = true,
+                                    chromaticAberration = true
+                                )
+                            },
+                            highlight = { Highlight.Default },
+                            shadow = {
+                                Shadow(
+                                    radius = 20.dp,
+                                    offset = DpOffset(0.dp, 8.dp),
+                                    color = Color.Black.copy(alpha = 0.45f)
+                                )
+                            },
+                            innerShadow = { InnerShadow.Default },
+                            onDrawSurface = {
+                                drawRect(Color(0xFF0E121C).copy(alpha = 0.72f))
+                            }
+                        )
+                        .border(1.dp, PureWhite.copy(alpha = 0.24f), CircleShape)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Circular Back Button
+                        CircularOutlineIconButton(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Previous slide",
+                            onClick = { if (currentSlide > 0) currentSlide -= 1 else onFinish() },
+                            size = 48.dp,
+                            containerColor = Color(0xFF161B28).copy(alpha = 0.72f),
+                            borderColor = PureWhite.copy(alpha = 0.22f),
+                            iconTint = if (currentSlide > 0) PureWhite else MutedSlate
+                        )
+
+                        // Luminous Pearl White Liquid Glass Next / Enter Button
+                        CircularOutlineIconButton(
+                            icon = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = if (currentSlide < totalSlides - 1) "Continue" else "Enter NearGrid",
+                            onClick = {
+                                if (currentSlide < totalSlides - 1) currentSlide += 1 else onFinish()
+                            },
+                            size = 50.dp,
+                            containerColor = PureWhite.copy(alpha = 0.90f),
+                            borderColor = PureWhite,
+                            iconTint = ObsidianBlack,
+                            modifier = Modifier.testTag(actionTag)
+                        )
+
+                        // Right "Continue >>>" Smoked Liquid Glass Track
+                        GlassSecondaryPillButton(
+                            text = when (currentSlide) {
+                                0 -> "Continue"
+                                1 -> "Explore"
+                                2 -> "Match"
+                                else -> "Enter Grid"
+                            },
+                            icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            onClick = {
+                                if (currentSlide < totalSlides - 1) currentSlide += 1 else onFinish()
+                            },
+                            height = 48.dp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 8.dp)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// Slide 1 — Introduction
 @Composable
-fun OnboardingSlideIntroduction(
-    onNext: () -> Unit,
-    onSkip: () -> Unit
+private fun FrostedOnboardingTag(
+    text: String,
+    accentColor: Color = CobaltGlow
 ) {
+    Surface(
+        shape = CircleShape,
+        color = PureWhite.copy(alpha = 0.14f),
+        border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.25f))
+    ) {
+        Text(
+            text = text,
+            fontFamily = PlusJakartaFontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            color = accentColor.takeIf { it == PureWhite } ?: PureWhite,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
+        )
+    }
+}
+
+@Composable
+fun OnboardingSlideIntroduction() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Upper-middle: Concise, elegant DM Serif headline with highlighted phrase
-        Column {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = SoftCream,
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-            ) {
-                Text(
-                    text = "Welcome to NearGrid",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = SecondaryText,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Neighborhood\ncoordination,\nwithout the noise.",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 38.sp,
-                lineHeight = 44.sp,
-                color = PrimaryText
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Highlighted phrase with a soft pastel brush stroke underline
-            Box {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 14.dp)
-                        .height(10.dp)
-                        .width(220.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(PastelPeach.copy(alpha = 0.65f))
-                )
-                Text(
-                    text = "Real people, nearby places.",
-                    fontFamily = DMSerifFontFamily,
-                    fontSize = 18.sp,
-                    color = PrimaryText
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Discover who lives around you to lend tools, solve civic issues, and build real community trust.",
-                fontFamily = DMSansFontFamily,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = SecondaryText
-            )
-        }
-
-        // Bottom artwork: Fine black ink line art with pastel watercolor washes
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .border(1.dp, WarmBorder, RoundedCornerShape(24.dp))
+                .height(235.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .border(1.dp, PureWhite.copy(alpha = 0.20f), RoundedCornerShape(28.dp))
         ) {
             Image(
                 painter = painterResource(id = R.drawable.img_neighborhood_editorial),
@@ -248,330 +346,246 @@ fun OnboardingSlideIntroduction(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-        }
-
-        Button(
-            onClick = onNext,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .testTag("onboarding_next_1"),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryText,
-                contentColor = PureWhite
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Continue",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = PureWhite
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-// Slide 2 — Discovery
-@Composable
-fun OnboardingSlideDiscovery(
-    onNext: () -> Unit,
-    onSkip: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Centered illustration with generous negative space
-        Box(
-            modifier = Modifier
-                .size(240.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .border(1.dp, WarmBorder, RoundedCornerShape(26.dp))
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.img_community_gathering),
-                contentDescription = "Discovery scene",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent,
+                                Color(0xFF090B10).copy(alpha = 0.55f)
+                            )
+                        )
+                    )
             )
         }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = PastelMint.copy(alpha = 0.45f)
-            ) {
-                Text(
-                    text = "H3 Spatial Mesh",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = PrimaryText,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            FrostedOnboardingTag(text = "Today on Your Block")
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Privacy without isolation",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 28.sp,
-                color = PrimaryText,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                text = buildAnnotatedString {
+                    append("Neighborhood Aid,\n")
+                    withStyle(SpanStyle(color = CobaltGlow)) {
+                        append("Zero Noise.")
+                    }
+                },
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 33.sp,
+                lineHeight = 38.sp,
+                color = PureWhite,
+                textAlign = TextAlign.Center
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "Distance determines which requests and community events you discover, using geographic cell rings without ever exposing your exact home pin.",
-                fontFamily = DMSansFontFamily,
+                text = "Discover real neighbors nearby to lend tools, coordinate local favors, and solve civic issues together.",
+                fontFamily = PlusJakartaFontFamily,
                 fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = SecondaryText,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                lineHeight = 21.sp,
+                color = MutedSlate,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
-        }
-
-        Button(
-            onClick = onNext,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .testTag("onboarding_next_2"),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryText,
-                contentColor = PureWhite
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Explore the mesh",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = PureWhite
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
     }
 }
 
-// Slide 3 — Connection
 @Composable
-fun OnboardingSlideConnection(
-    onNext: () -> Unit,
-    onSkip: () -> Unit
-) {
+fun OnboardingSlideDiscovery() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Character illustration with warm pastel watercolor brush strokes
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .border(1.dp, WarmBorder, RoundedCornerShape(26.dp))
+                .height(235.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            GlowingOrbVisualizer(
+                modifier = Modifier.size(230.dp),
+                activeNodesCount = 6,
+                radiusMeters = 800,
+                isScanning = true
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            FrostedOnboardingTag(text = "H3 Spatial Mesh")
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("Privacy Without\n")
+                    withStyle(SpanStyle(color = FieryCoralGlow)) {
+                        append("Isolation.")
+                    }
+                },
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 33.sp,
+                lineHeight = 38.sp,
+                color = PureWhite,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Geographic rings determine nearby discovery without ever revealing your exact residential pin.",
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 14.sp,
+                lineHeight = 21.sp,
+                color = MutedSlate,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun OnboardingSlideConnection() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(235.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .border(1.dp, PureWhite.copy(alpha = 0.20f), RoundedCornerShape(28.dp))
         ) {
             Image(
                 painter = painterResource(id = R.drawable.img_neighborhood_connection),
-                contentDescription = "Warm lantern doorway",
+                contentDescription = "Neighbor connection",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent,
+                                Color(0xFF090B10).copy(alpha = 0.55f)
+                            )
+                        )
+                    )
+            )
         }
 
-        Column {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = PastelSoftCyan.copy(alpha = 0.35f)
-            ) {
-                Text(
-                    text = "Autonomous Intent Matching",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = PrimaryText,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            FrostedOnboardingTag(text = "Autonomous Intent")
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Needs meet neighborly offers",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 28.sp,
-                lineHeight = 34.sp,
-                color = PrimaryText
+                text = buildAnnotatedString {
+                    append("Needs Meet\n")
+                    withStyle(SpanStyle(color = CobaltGlow)) {
+                        append("Neighbor Offers.")
+                    }
+                },
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 33.sp,
+                lineHeight = 38.sp,
+                color = PureWhite,
+                textAlign = TextAlign.Center
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "Instead of endlessly scrolling social media feeds, NearGrid matches you with someone who has the ladder you need or wants to join your local cricket game.",
-                fontFamily = DMSansFontFamily,
+                text = "Skip endless feeds. NearGrid pairs someone who needs a ladder with a neighbor ready to lend one.",
+                fontFamily = PlusJakartaFontFamily,
                 fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = SecondaryText
+                lineHeight = 21.sp,
+                color = MutedSlate,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
-        }
-
-        Button(
-            onClick = onNext,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .testTag("onboarding_next_3"),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryText,
-                contentColor = PureWhite
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "See how it works",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = PureWhite
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
     }
 }
 
-// Slide 4 — Get started
 @Composable
-fun OnboardingSlideGetStarted(
-    onGetStarted: () -> Unit
-) {
+fun OnboardingSlideGetStarted() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Column {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = PastelPeach.copy(alpha = 0.5f)
-            ) {
-                Text(
-                    text = "Oakwood Grove Cluster Ready",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = PrimaryText,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-            }
-
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            FrostedOnboardingTag(text = "Grid Cluster Ready")
             Spacer(modifier = Modifier.height(16.dp))
-
             Text(
-                text = "Connect with your\nneighborhood today.",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 36.sp,
-                lineHeight = 42.sp,
-                color = PrimaryText
+                text = buildAnnotatedString {
+                    append("Connect With\n")
+                    withStyle(SpanStyle(color = CobaltGlow)) {
+                        append("Your Sector.")
+                    }
+                },
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 34.sp,
+                lineHeight = 39.sp,
+                color = PureWhite,
+                textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(10.dp))
-
             Text(
-                text = "Your digital neighborhood pass is ready. You can browse local requests, offer skills, and arrange safe handoffs at the Oakwood Pavilion.",
-                fontFamily = DMSansFontFamily,
+                text = "Your resident pass is ready. Browse needs, lend skills, and coordinate safe local handoffs.",
+                fontFamily = PlusJakartaFontFamily,
                 fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = SecondaryText
+                lineHeight = 21.sp,
+                color = MutedSlate,
+                textAlign = TextAlign.Center
             )
         }
 
-        // Summary editorial card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = PureWhite),
-            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-        ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Text(
-                    text = "Community Principles",
-                    fontFamily = DMSerifFontFamily,
-                    fontSize = 16.sp,
-                    color = PrimaryText
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "• Zero public home GPS coordinates\n• Transparent civic issue tracking\n• Verified public meeting spots\n• Pure local utility, no algorithmic feed rage",
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 13.sp,
-                    lineHeight = 22.sp,
-                    color = SecondaryText
-                )
-            }
-        }
-
-        Button(
-            onClick = onGetStarted,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .testTag("onboarding_finish_button"),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryText,
-                contentColor = PureWhite
-            )
+        DarkGlassCard(
+            cornerRadius = 24.dp,
+            containerColor = DarkGlassCard.copy(alpha = 0.88f)
         ) {
             Text(
-                text = "Enter NearGrid",
-                fontFamily = DMSansFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
+                text = "Community Charter",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
                 color = PureWhite
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            val principles = listOf(
+                "Zero public home GPS coordinates",
+                "Verified public pavilion meeting spots",
+                "Transparent local civic issue tracking",
+                "Pure local utility without feed clutter"
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                principles.forEach { line ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = EmeraldLight,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = line,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 13.sp,
+                            color = ObsidianInk
+                        )
+                    }
+                }
+            }
         }
     }
 }

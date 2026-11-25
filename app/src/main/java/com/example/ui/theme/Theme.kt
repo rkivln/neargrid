@@ -1,68 +1,56 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
-private val MinimalistColorScheme = lightColorScheme(
-    primary = PrimaryText,
+private val ObsidianAuraColorScheme = darkColorScheme(
+    primary = ElectricCobalt,
     onPrimary = PureWhite,
-    primaryContainer = SoftSurface,
-    onPrimaryContainer = PrimaryText,
-    secondary = SlateBlue,
+    primaryContainer = CobaltSoft,
+    onPrimaryContainer = ObsidianInk,
+    secondary = EmeraldMint,
     onSecondary = PureWhite,
-    secondaryContainer = BlueGray.copy(alpha = 0.2f),
-    onSecondaryContainer = PrimaryText,
-    tertiary = AccentLime,
-    onTertiary = PrimaryText,
-    tertiaryContainer = LightLime.copy(alpha = 0.4f),
-    onTertiaryContainer = PrimaryText,
-    background = BackgroundCanvas,
-    surface = PrimarySurface,
-    surfaceVariant = SoftSurface,
-    onBackground = PrimaryText,
-    onSurface = PrimaryText,
-    onSurfaceVariant = SecondaryText,
-    outline = CardBorderColor,
-    outlineVariant = SubtleDivider
+    secondaryContainer = EmeraldSoft,
+    onSecondaryContainer = ObsidianInk,
+    tertiary = FieryCoral,
+    onTertiary = PureWhite,
+    tertiaryContainer = FieryCoralSoft,
+    onTertiaryContainer = ObsidianInk,
+    background = ObsidianCanvas,
+    surface = DarkGlassCard,
+    surfaceVariant = ElevatedGlassSurface,
+    onBackground = ObsidianInk,
+    onSurface = ObsidianInk,
+    onSurfaceVariant = MutedSlate,
+    outline = HairlineGlassBorder,
+    outlineVariant = SubtleGlassDivider
 )
 
-private val MinimalistDarkColorScheme = darkColorScheme(
-    primary = PureWhite,
-    onPrimary = DeepNavy,
-    primaryContainer = SlateBlue,
-    onPrimaryContainer = PureWhite,
-    secondary = AccentLime,
-    onSecondary = PrimaryText,
-    secondaryContainer = DarkNavy,
-    onSecondaryContainer = PureWhite,
-    tertiary = LightLime,
-    onTertiary = PrimaryText,
-    tertiaryContainer = SlateBlue.copy(alpha = 0.5f),
-    onTertiaryContainer = PureWhite,
-    background = DeepNavy,
-    surface = DarkNavy,
-    surfaceVariant = SlateBlue,
-    onBackground = PureWhite,
-    onSurface = PureWhite,
-    onSurfaceVariant = BlueGray,
-    outline = SlateBlue.copy(alpha = 0.4f),
-    outlineVariant = BlueGray.copy(alpha = 0.2f)
+val AuraShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
+
+// Compatibility alias
+val EditorialShapes = AuraShapes
 
 @Composable
 fun NearGridTheme(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = true,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) MinimalistDarkColorScheme else MinimalistColorScheme
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = ObsidianAuraColorScheme,
         typography = Typography,
+        shapes = AuraShapes,
         content = content
     )
 }

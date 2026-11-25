@@ -1106,6 +1106,60 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun toggleIncognitoPresence() {
+        val updated = _uiState.value.copy(incognitoGridPresence = !_uiState.value.incognitoGridPresence)
+        _uiState.value = updated
+        persistQuickProfileState(updated)
+    }
+
+    fun toggleAllowProximityMessaging() {
+        val updated = _uiState.value.copy(allowProximityMessaging = !_uiState.value.allowProximityMessaging)
+        _uiState.value = updated
+        persistQuickProfileState(updated)
+    }
+
+    fun toggleHideExactDistance() {
+        val updated = _uiState.value.copy(hideExactDistance = !_uiState.value.hideExactDistance)
+        _uiState.value = updated
+        persistQuickProfileState(updated)
+    }
+
+    fun setLocationPrecision(precision: String) {
+        val updated = _uiState.value.copy(
+            locationPrecision = precision,
+            fuzzyCoordinateOffset = precision != "EXACT"
+        )
+        _uiState.value = updated
+        persistQuickProfileState(updated)
+    }
+
+    private fun persistQuickProfileState(state: NearGridUiState) {
+        val user = auth.currentUser ?: return
+        viewModelScope.launch {
+            val loc = _currentLocation.value
+            val profile = UserProfile(
+                userId = user.uid,
+                email = user.email ?: "",
+                displayName = state.userNickname.ifBlank { "Neighbor" },
+                handle = state.userHandle,
+                bio = state.userBio,
+                cellId = state.selectedCell?.id ?: "cell_local",
+                cellName = loc?.displayAreaName ?: state.selectedCell?.name ?: "Local Area",
+                avatarPresetIndex = state.avatarPresetIndex,
+                avatarUri = state.avatarUri,
+                privacyRadiusMeters = state.neighborhoodPrivacyRadiusMeters,
+                fuzzyCoords = state.fuzzyCoordinateOffset,
+                incognito = state.incognitoGridPresence,
+                allowDMs = state.allowProximityMessaging,
+                locationPrecision = state.locationPrecision,
+                hideOnlineStatus = state.hideOnlineStatus,
+                hideExactDistance = state.hideExactDistance,
+                blockedUserIds = state.blockedUserIds
+            )
+            firestoreRepository.saveUserProfile(profile)
+        }
+    }
+
     fun blockUser(targetUserId: String) {
         if (targetUserId.isBlank()) return
         val currentBlocked = _uiState.value.blockedUserIds.toMutableList()
@@ -1275,7 +1329,10 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             )
             firestoreRepository.createIssue(issue)
             closeCreateDialog()
-            _uiState.value = _uiState.value.copy(currentDestination = NavigationDestination.COMMUNITY)
+            _uiState.value = _uiState.value.copy(
+                currentDestination = NavigationDestination.HOME,
+                postFilterType = "CIVIC"
+            )
         }
     }
 

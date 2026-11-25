@@ -3,37 +3,31 @@ package com.example.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Radar
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VolunteerActivism
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -41,27 +35,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GeohashMessage
 import com.example.data.model.GridCell
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CapsuleChevronRow
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.DarkGlassCard
 import com.example.ui.components.GeohashMessageComposer
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.GlowingOrbVisualizer
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,241 +87,253 @@ fun MeshRadarScreen(
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize().testTag("mesh_radar_pull_to_refresh")
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("mesh_radar_pull_to_refresh")
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(WarmIvory)
-        ) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                // Top Header Bar
+        AuraMeshBackground(variant = AuraVariant.MIXED) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header Row
                 item {
-                    Surface(
-                        color = PureWhite,
-                        border = BorderStroke(1.dp, WarmBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = PastelSoftCyan.copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, WarmBorder),
-                                    modifier = Modifier.size(38.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Radar,
-                                            contentDescription = null,
-                                            tint = PrimaryText,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Mesh Radar & Intent",
-                                        fontFamily = DMSerifFontFamily,
-                                        fontSize = 26.sp,
-                                        color = PrimaryText
-                                    )
-                                    Text(
-                                        text = if (localityName.isNotBlank()) "Geohash Area: $localityName" else "Hyperlocal area broadcast & actions",
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 11.sp,
-                                        color = SecondaryText
-                                    )
-                                }
-                            }
-
-                            IconButton(
-                                onClick = onRefreshLocation,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(SoftCream)
-                                    .border(1.dp, WarmBorder, CircleShape)
-                                    .testTag("radar_refresh_location_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.GpsFixed,
-                                    contentDescription = "Refresh GPS Location",
-                                    tint = PrimaryText,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-
-                // Hyperlocal Geohash Broadcast Area Composer
-                item {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 4.dp)
+                            .statusBarsPadding()
+                            .padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        GeohashMessageComposer(
-                            currentGeohash = currentGeohash,
-                            latitude = latitude,
-                            longitude = longitude,
-                            localityName = localityName,
-                            isLocating = isLocating,
-                            isPosting = isPostingGeohashMessage,
-                            postStatus = geohashPostStatus,
-                            messages = geohashMessages,
-                            onRefreshLocation = onRefreshLocation,
-                            onPostMessage = onPostGeohashMessage,
-                            onDismissStatus = onDismissGeohashStatus
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (localityName.isNotBlank()) "Geohash Mesh · $localityName" else "Hyperlocal Spatial Mesh",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = CobaltGlow
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Mesh Radar & Intent",
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp,
+                                lineHeight = 30.sp,
+                                color = PureWhite
+                            )
+                        }
+
+                        CircularOutlineIconButton(
+                            icon = Icons.Default.GpsFixed,
+                            contentDescription = "Refresh GPS Location",
+                            onClick = onRefreshLocation,
+                            modifier = Modifier.testTag("radar_refresh_location_button")
                         )
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+                // Glowing Cosmic Cobalt Orb Card (Orb style)
+                item {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        DarkGlassCard(
+                            cornerRadius = 28.dp,
+                            contentPadding = PaddingValues(18.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = CobaltSoft,
+                                        border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            text = if (currentGeohash.isNotBlank()) "Cell #${currentGeohash.uppercase()}" else "Cell Active",
+                                            fontFamily = PlusJakartaFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            color = PureWhite,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                        )
+                                    }
 
-                // Quick Intent Action Grid (Editorial Numbered Tiles)
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = EmeraldSoft,
+                                        border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            text = if (isLocating) "Scanning..." else "${geohashMessages.size} Dispatches",
+                                            fontFamily = PlusJakartaFontFamily,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = EmeraldLight,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                        )
+                                    }
+                                }
+
+                                GlowingOrbVisualizer(
+                                    modifier = Modifier.size(195.dp),
+                                    activeNodesCount = (geohashMessages.size + 4).coerceIn(4, 8),
+                                    radiusMeters = 1000,
+                                    isScanning = isLocating
+                                )
+
+                                Text(
+                                    text = currentCell?.name ?: localityName.ifBlank { "Oakwood Sector" },
+                                    fontFamily = OutfitFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = PureWhite
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text(
+                                    text = "1 km privacy-preserving radio broadcast zone",
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontSize = 12.sp,
+                                    color = MutedSlate
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Geohash Message Composer
+                item {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        DarkGlassCard(
+                            cornerRadius = 24.dp,
+                            contentPadding = PaddingValues(14.dp)
+                        ) {
+                            GeohashMessageComposer(
+                                currentGeohash = currentGeohash,
+                                latitude = latitude,
+                                longitude = longitude,
+                                localityName = localityName,
+                                isLocating = isLocating,
+                                isPosting = isPostingGeohashMessage,
+                                postStatus = geohashPostStatus,
+                                messages = geohashMessages,
+                                onRefreshLocation = onRefreshLocation,
+                                onPostMessage = onPostGeohashMessage,
+                                onDismissStatus = onDismissGeohashStatus
+                            )
+                        }
+                    }
+                }
+
+                // Tonesmith-style Capsule Chevron Quick Dispatch Rows
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "QUICK INTENT ACTIONS",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SecondaryText,
-                                letterSpacing = 1.sp
-                            )
-                        }
+                        Text(
+                            text = "Quick Intent Dispatches",
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = PureWhite,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        CapsuleChevronRow(
+                            title = "Request a Need",
+                            subtitle = "Ask nearby neighbors for tools or urgent favors",
+                            icon = Icons.Default.HelpOutline,
+                            iconBackgroundColor = FieryCoralSoft,
+                            iconTint = FieryCoralGlow,
+                            badgeText = "Need",
+                            badgeColor = FieryCoralGlow,
+                            onClick = { onOpenCreateDialog("NEED") },
+                            modifier = Modifier.testTag("create_need_tile")
+                        )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // 01 Ask Need
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = PastelCoral.copy(alpha = 0.35f),
-                                border = BorderStroke(1.dp, WarmBorder),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onOpenCreateDialog("NEED") }
-                                    .testTag("create_need_tile")
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Text(text = "01", fontFamily = DMSerifFontFamily, fontSize = 18.sp, color = PrimaryText)
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Icon(imageVector = Icons.Default.HelpOutline, contentDescription = null, tint = PrimaryText, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = "Request Need", fontFamily = DMSansFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
-                                    Text(text = "Tools, labor, supplies", fontFamily = DMSansFontFamily, fontSize = 10.sp, color = SecondaryText)
-                                }
-                            }
+                        CapsuleChevronRow(
+                            title = "Lend or Offer Help",
+                            subtitle = "Share equipment, supplies, or local expertise",
+                            icon = Icons.Default.VolunteerActivism,
+                            iconBackgroundColor = EmeraldSoft,
+                            iconTint = EmeraldLight,
+                            badgeText = "Offer",
+                            badgeColor = EmeraldMint,
+                            onClick = { onOpenCreateDialog("OFFER") },
+                            modifier = Modifier.testTag("create_offer_tile")
+                        )
 
-                            // 02 Offer Skill
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = PastelMint.copy(alpha = 0.35f),
-                                border = BorderStroke(1.dp, WarmBorder),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onOpenCreateDialog("OFFER") }
-                                    .testTag("create_offer_tile")
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Text(text = "02", fontFamily = DMSerifFontFamily, fontSize = 18.sp, color = PrimaryText)
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Icon(imageVector = Icons.Default.VolunteerActivism, contentDescription = null, tint = PrimaryText, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = "Lend / Offer", fontFamily = DMSansFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
-                                    Text(text = "Spare items, skills", fontFamily = DMSansFontFamily, fontSize = 10.sp, color = SecondaryText)
-                                }
-                            }
-
-                            // 03 Meetup
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = PastelButterYellow.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, WarmBorder),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onOpenCreateDialog("MEETUP") }
-                                    .testTag("create_meetup_tile")
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Text(text = "03", fontFamily = DMSerifFontFamily, fontSize = 18.sp, color = PrimaryText)
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = PrimaryText, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = "Host Meetup", fontFamily = DMSansFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
-                                    Text(text = "Walks, cleanups", fontFamily = DMSansFontFamily, fontSize = 10.sp, color = SecondaryText)
-                                }
-                            }
-                        }
+                        CapsuleChevronRow(
+                            title = "Host a Meetup",
+                            subtitle = "Organize neighborhood walks, cleanup, or study",
+                            icon = Icons.Default.AutoAwesome,
+                            iconBackgroundColor = CobaltSoft,
+                            iconTint = CobaltGlow,
+                            badgeText = "Meetup",
+                            badgeColor = ElectricCobalt,
+                            onClick = { onOpenCreateDialog("MEETUP") },
+                            modifier = Modifier.testTag("create_meetup_tile")
+                        )
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(20.dp)) }
-
-                // How Mesh Radar Works Card
+                // Protocol Note Dark Glass Card
                 item {
-                    Card(
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = PureWhite),
-                        border = BorderStroke(1.dp, WarmBorder),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        DarkGlassCard(cornerRadius = 24.dp) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Radar,
-                                    contentDescription = null,
-                                    tint = PrimaryText,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(ElevatedGlassSurface)
+                                        .border(1.dp, HairlineGlassBorder, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Radar,
+                                        contentDescription = null,
+                                        tint = CobaltGlow,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = "About Mesh Broadcasts",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 16.sp,
+                                    fontFamily = OutfitFontFamily,
                                     fontWeight = FontWeight.Bold,
-                                    color = PrimaryText
+                                    fontSize = 17.sp,
+                                    color = PureWhite
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Mesh broadcasts use base32 geohashes to connect neighbors within a 1km spatial zone without sharing your house address or personal identity.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp,
-                                color = SecondaryText
+                                text = "Mesh broadcasts use base32 geohashes to connect neighbors within a 1 km spatial zone without sharing your street address or personal identity.",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 13.sp,
+                                lineHeight = 19.sp,
+                                color = MutedSlate
                             )
                         }
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(32.dp)) }
+                item {
+                    Spacer(
+                        modifier = Modifier
+                            .height(118.dp)
+                            .navigationBarsPadding()
+                    )
+                }
             }
         }
     }

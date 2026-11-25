@@ -1,34 +1,34 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -44,30 +44,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.GlowingOrbVisualizer
+import com.example.ui.components.NearGridBrandMark
+import com.example.ui.components.WhiteHeroPillButton
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
+import com.example.ui.theme.SubtleSlate
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -116,7 +129,6 @@ fun SignInScreen(
                 isLoading = false
                 onSignInSuccess()
             } catch (e: GetCredentialCancellationException) {
-                // User dismissed or cancelled the dialog
                 isLoading = false
             } catch (e: Exception) {
                 isLoading = false
@@ -125,191 +137,193 @@ fun SignInScreen(
         }
     }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = WarmIvory
+    AuraMeshBackground(
+        variant = AuraVariant.COBALT,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Editorial Hero Card
-            Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
+            // Top Zentra-style Brand Badge + Status Pill
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_neighborhood_editorial),
-                        contentDescription = "NearGrid Community Illustration",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(PastelPeach),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CellTower,
-                                contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "NearGrid",
-                            fontFamily = DMSerifFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp,
-                            color = PrimaryText
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    NearGridBrandMark(size = 36.dp)
                     Text(
-                        text = "Spatial mesh mutual aid & hyper-local resilience",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
-                        color = SecondaryText,
-                        textAlign = TextAlign.Center
+                        text = "NearGrid",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = PureWhite
+                    )
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = PureWhite.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.25f))
+                ) {
+                    Text(
+                        text = "Zero-Trust Mesh",
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = PureWhite,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
 
-            // Value pillars
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = SoftCream),
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+            // Atmospheric Orb + Zentra Headline
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 28.dp)
+                    .padding(vertical = 12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(175.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GlowingOrbVisualizer(
+                        modifier = Modifier.size(175.dp),
+                        activeNodesCount = 5,
+                        radiusMeters = 500,
+                        isScanning = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = buildAnnotatedString {
+                        append("Own Your Block,\nProtect ")
+                        withStyle(SpanStyle(color = CobaltGlow)) {
+                            append("Your Privacy.")
+                        }
+                    },
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    lineHeight = 37.sp,
+                    color = PureWhite
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Spatial mesh mutual aid and hyper-local civic resilience for verified neighbors.",
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = MutedSlate
+                )
+            }
+
+            // 24dp Translucent Dark Glass Pillars
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                DarkGlassCard(
+                    cornerRadius = 22.dp,
+                    containerColor = DarkGlassCard.copy(alpha = 0.86f),
+                    contentPadding = PaddingValues(14.dp)
                 ) {
                     FeaturePillar(
                         icon = Icons.Default.Security,
                         title = "Zero GPS Tracking",
-                        description = "Coarse hexagonal cells keep your exact home coordinates private.",
-                        accentColor = PastelMint
+                        description = "Coarse hexagonal sectors keep exact home coordinates private.",
+                        accentColor = EmeraldSoft,
+                        iconTint = EmeraldLight
                     )
+                }
+                DarkGlassCard(
+                    cornerRadius = 22.dp,
+                    containerColor = DarkGlassCard.copy(alpha = 0.86f),
+                    contentPadding = PaddingValues(14.dp)
+                ) {
                     FeaturePillar(
                         icon = Icons.Default.Handshake,
                         title = "Real-Time Mutual Aid",
-                        description = "Direct resident needs, tool sharing, and local community council issues.",
-                        accentColor = PastelPeach
+                        description = "Direct neighbor needs, tool sharing, and civic dispatches.",
+                        accentColor = AmberSoft,
+                        iconTint = AmberLight
                     )
+                }
+                DarkGlassCard(
+                    cornerRadius = 22.dp,
+                    containerColor = DarkGlassCard.copy(alpha = 0.86f),
+                    contentPadding = PaddingValues(14.dp)
+                ) {
                     FeaturePillar(
                         icon = Icons.Default.Lock,
-                        title = "Verified Resident Identity",
-                        description = "Sign in with Google to protect your neighborhood board from spam.",
-                        accentColor = PastelSoftCyan
-                    )
-                }
-            }
-
-            // Error Banner if any
-            AnimatedVisibility(visible = errorMessage != null) {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = PastelCoral.copy(alpha = 0.15f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PastelCoral.copy(alpha = 0.4f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Text(
-                        text = errorMessage ?: "",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 12.sp,
-                        color = PrimaryText,
-                        modifier = Modifier.padding(14.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            // Primary Google Sign-In Action
-            Button(
-                onClick = { handleGoogleSignIn() },
-                enabled = !isLoading,
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryText),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .testTag("google_sign_in_button")
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = PureWhite,
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.5.dp
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Authenticating...",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = PureWhite
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = PastelPeach,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Continue with Google",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = PureWhite
+                        title = "Verified Resident Pass",
+                        description = "Sign in with Google to protect your block board from spam.",
+                        accentColor = FieryCoralSoft,
+                        iconTint = FieryCoralGlow
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "Protected by NearGrid zero-trust privacy rules and Firestore cloud sync.",
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
-                color = SecondaryText,
-                textAlign = TextAlign.Center
-            )
+            // Bottom Full-Pill Pure White CTA
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AnimatedVisibility(visible = errorMessage != null) {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = FieryCoralSoft,
+                        border = BorderStroke(1.dp, FieryCoral.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    ) {
+                        Text(
+                            text = errorMessage ?: "",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
+                            color = ObsidianInk,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                WhiteHeroPillButton(
+                    text = if (isLoading) "Authenticating..." else "Continue with Google",
+                    icon = if (isLoading) null else Icons.Default.LocationOn,
+                    enabled = !isLoading,
+                    onClick = { handleGoogleSignIn() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .testTag("google_sign_in_button")
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Protected by NearGrid Zero-Trust Privacy Rules",
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 11.sp,
+                    color = SubtleSlate,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -319,7 +333,8 @@ private fun FeaturePillar(
     icon: ImageVector,
     title: String,
     description: String,
-    accentColor: Color
+    accentColor: Color,
+    iconTint: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -327,16 +342,16 @@ private fun FeaturePillar(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(40.dp)
                 .clip(CircleShape)
                 .background(accentColor)
-                .border(1.dp, WarmBorder, CircleShape),
+                .border(1.dp, HairlineGlassBorder, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PrimaryText,
+                tint = iconTint,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -344,16 +359,17 @@ private fun FeaturePillar(
         Column {
             Text(
                 text = title,
-                fontFamily = DMSansFontFamily,
+                fontFamily = PlusJakartaFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                color = PrimaryText
+                fontSize = 14.sp,
+                color = PureWhite
             )
             Text(
                 text = description,
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
-                color = SecondaryText
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                color = MutedSlate
             )
         }
     }

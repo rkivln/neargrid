@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,18 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,17 +43,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.update.AppUpdateInfo
 import com.example.data.update.AppUpdateManager
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
 
 /**
- * A dismissible Jetpack Compose banner that observes [AppUpdateManager] state
- * and renders an alert at the top of the Home screen when an update is available,
- * including a direct "Update Now" action link.
+ * Dismissible Obsidian Cobalt Aura update card when a newer app release is available.
  */
 @Composable
 fun UpdateBanner(
@@ -83,19 +80,19 @@ fun UpdateBanner(
         exit = fadeOut() + shrinkVertically()
     ) {
         if (updateInfo != null) {
-            Card(
+            Surface(
                 modifier = modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
                     .testTag("update_banner"),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = SoftCream),
-                border = BorderStroke(1.5.dp, PastelCoral.copy(alpha = 0.75f))
+                shape = RoundedCornerShape(22.dp),
+                color = DarkGlassCard,
+                border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.5f))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp)
+                        .padding(16.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -108,60 +105,63 @@ fun UpdateBanner(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(PastelCoral.copy(alpha = 0.2f)),
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(CobaltSoft)
+                                    .border(1.dp, ElectricCobalt.copy(alpha = 0.45f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SystemUpdate,
                                     contentDescription = "New App Version",
-                                    tint = PastelCoral,
+                                    tint = CobaltGlow,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
+                                    text = "RELEASE UPDATE · V${updateInfo.latestVersion}",
+                                    style = AuraKickerStyle,
+                                    color = CobaltGlow
+                                )
+                                Text(
                                     text = "New Version Available: v${updateInfo.latestVersion}",
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = OutfitFontFamily,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = PrimaryText
+                                    fontSize = 16.sp,
+                                    color = PureWhite
                                 )
                                 Text(
                                     text = "Update now to get the latest features & improvements.",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 11.sp,
-                                    color = SecondaryText
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontSize = 12.sp,
+                                    color = MutedSlate
                                 )
                             }
                         }
 
-                        IconButton(
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        CircularOutlineIconButton(
+                            icon = Icons.Default.Close,
+                            contentDescription = "Dismiss Banner",
                             onClick = onDismiss,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .testTag("dismiss_update_banner_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Dismiss Banner",
-                                tint = SecondaryText,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            size = 36.dp,
+                            modifier = Modifier.testTag("dismiss_update_banner_button")
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // "Update Now" Action Button
-                        Button(
+                        PillPrimaryButton(
+                            text = "Update Now (v${updateInfo.latestVersion})",
+                            icon = Icons.Default.Download,
                             onClick = {
                                 val targetUrl = updateInfo.apkDownloadUrl.ifBlank { updateInfo.releaseHtmlUrl }
                                 if (targetUrl.isNotBlank()) {
@@ -169,46 +169,25 @@ fun UpdateBanner(
                                     context.startActivity(intent)
                                 }
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryText,
-                                contentColor = PureWhite
-                            ),
                             modifier = Modifier
-                                .height(38.dp)
+                                .height(42.dp)
                                 .testTag("update_now_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = null,
-                                tint = PureWhite,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Update Now (v${updateInfo.latestVersion})",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp,
-                                color = PureWhite
-                            )
-                        }
+                        )
 
-                        // Release Notes Link
                         if (updateInfo.releaseHtmlUrl.isNotBlank()) {
                             Text(
-                                text = "Release Notes ↗",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = PrimaryText,
+                                text = "Release Notes",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = CobaltGlow,
                                 textDecoration = TextDecoration.Underline,
                                 modifier = Modifier
                                     .clickable {
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseHtmlUrl))
                                         context.startActivity(intent)
                                     }
-                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .padding(horizontal = 8.dp, vertical = 8.dp)
                                     .testTag("update_release_notes_link")
                             )
                         }

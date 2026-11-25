@@ -10,13 +10,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,11 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
@@ -39,18 +40,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SupportAgent
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -74,19 +68,38 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.AppSettings
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DarkNavy
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.CircularOutlineIconButton
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.LiquidGlassBackButton
+import com.example.ui.components.LiquidGlassSwitch
+import com.example.ui.components.PillPrimaryButton
+import com.example.ui.theme.AmberGlow
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltBorder
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
+import com.example.ui.theme.SubtleGlassDivider
+import com.example.ui.theme.SubtleSlate
 import com.example.util.StorageUsage
 
 data class ColorThemeOption(
@@ -97,11 +110,11 @@ data class ColorThemeOption(
 )
 
 val ACCENT_THEME_OPTIONS = listOf(
-    ColorThemeOption("WARM_AMBER", "Warm Amber", Color(0xFFD84315), PastelPeach),
-    ColorThemeOption("ELECTRIC_TEAL", "Electric Teal", Color(0xFF00838F), PastelSoftCyan),
-    ColorThemeOption("BOTANICAL_SAGE", "Botanical Sage", Color(0xFF2E7D32), PastelMint),
-    ColorThemeOption("SOLAR_CORAL", "Solar Coral", Color(0xFFC2185B), PastelCoral),
-    ColorThemeOption("MIDNIGHT_INDIGO", "Midnight Indigo", DarkNavy, PastelButterYellow)
+    ColorThemeOption("WARM_AMBER", "Aura Amber", AmberGlow, AmberSoft),
+    ColorThemeOption("ELECTRIC_TEAL", "Electric Cobalt", ElectricCobalt, CobaltSoft),
+    ColorThemeOption("BOTANICAL_SAGE", "Emerald Mesh", EmeraldMint, EmeraldSoft),
+    ColorThemeOption("SOLAR_CORAL", "Fiery Coral", FieryCoral, FieryCoralSoft),
+    ColorThemeOption("MIDNIGHT_INDIGO", "Obsidian Glow", CobaltGlow, CobaltSoft)
 )
 
 @Composable
@@ -123,70 +136,57 @@ fun AppSettingsScreen(
     var showDiagnosticsModal by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    Box(
+    AuraMeshBackground(
+        variant = AuraVariant.MIXED,
         modifier = modifier
             .fillMaxSize()
-            .background(SoftCream)
             .testTag("app_settings_screen")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
         ) {
-            // Header Bar
-            Surface(
-                color = PureWhite,
-                border = BorderStroke(1.dp, WarmBorder),
-                modifier = Modifier.fillMaxWidth()
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(SoftCream)
-                            .testTag("settings_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = PrimaryText,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Settings & Customization",
-                            fontFamily = DMSerifFontFamily,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryText
-                        )
-                        Text(
-                            text = "App preferences, storage meter, support & version info",
-                            fontFamily = DMSansFontFamily,
-                            fontSize = 11.sp,
-                            color = SecondaryText
-                        )
-                    }
+                LiquidGlassBackButton(
+                    onClick = onBack,
+                    modifier = Modifier.testTag("settings_back_button")
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "SYSTEM PREFERENCES",
+                        style = AuraKickerStyle,
+                        color = CobaltGlow
+                    )
+                    Text(
+                        text = "Settings & Customization",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 23.sp,
+                        color = ObsidianInk
+                    )
+                    Text(
+                        text = "Appearance, storage meter, support & diagnostics",
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 12.sp,
+                        color = MutedSlate
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Section 1: Appearance & Accent Colors
                 SettingsCardSection(
@@ -195,28 +195,29 @@ fun AppSettingsScreen(
                 ) {
                     Text(
                         text = "Primary Accent Theme",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = PrimaryText
+                        color = ObsidianInk
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         ACCENT_THEME_OPTIONS.forEach { theme ->
                             val isSelected = appSettings.themeAccent == theme.id
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) theme.accentColor else PureWhite,
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) theme.accentColor else ElevatedGlassSurface,
                                 border = BorderStroke(
-                                    if (isSelected) 2.dp else 1.dp,
-                                    if (isSelected) theme.primaryColor else WarmBorder
+                                    if (isSelected) 1.5.dp else 1.dp,
+                                    if (isSelected) theme.primaryColor else HairlineGlassBorder
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(54.dp)
+                                    .height(58.dp)
+                                    .clip(RoundedCornerShape(16.dp))
                                     .clickable {
                                         onUpdateSettings(appSettings.copy(themeAccent = theme.id))
                                     }
@@ -232,66 +233,68 @@ fun AppSettingsScreen(
                                             .clip(CircleShape)
                                             .background(theme.primaryColor)
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(5.dp))
                                     Text(
-                                        text = theme.name.split(" ").first(),
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 10.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = PrimaryText
+                                        text = theme.name.split(" ").last(),
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontSize = 9.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = ObsidianInk
                                     )
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "Layout Density",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = PrimaryText
+                        color = ObsidianInk
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("COMFORT" to "Comfortable Spacing", "COMPACT" to "Compact Grid Density").forEach { (key, label) ->
+                        listOf("COMFORT" to "Comfortable", "COMPACT" to "Compact Grid").forEach { (key, label) ->
                             val isSelected = appSettings.layoutDensity == key
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) PastelPeach.copy(alpha = 0.5f) else PureWhite,
+                                shape = CircleShape,
+                                color = if (isSelected) CobaltSoft else ElevatedGlassSurface,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isSelected) PrimaryText else WarmBorder
+                                    if (isSelected) ElectricCobalt else HairlineGlassBorder
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .clip(CircleShape)
                                     .clickable {
                                         onUpdateSettings(appSettings.copy(layoutDensity = key))
                                     }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(14.dp)
+                                            .size(12.dp)
                                             .clip(CircleShape)
-                                            .border(1.5.dp, if (isSelected) PrimaryText else SecondaryText, CircleShape)
-                                            .background(if (isSelected) PrimaryText else Color.Transparent)
+                                            .border(1.5.dp, if (isSelected) CobaltGlow else MutedSlate, CircleShape)
+                                            .background(if (isSelected) ElectricCobalt else Color.Transparent)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = label,
-                                        fontFamily = DMSansFontFamily,
+                                        fontFamily = PlusJakartaFontFamily,
                                         fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = PrimaryText
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = ObsidianInk
                                     )
                                 }
                             }
@@ -312,40 +315,41 @@ fun AppSettingsScreen(
                         onCheckedChange = { onUpdateSettings(appSettings.copy(hapticEnabled = it)) }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
                         text = "Background Mesh Refresh Frequency",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = PrimaryText
+                        color = ObsidianInk
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        listOf(15 to "15m", 30 to "30m", 60 to "1h", 0 to "Manual").forEach { (min, label) ->
+                        listOf(15 to "15M", 30 to "30M", 60 to "1H", 0 to "MANUAL").forEach { (min, label) ->
                             val isSelected = appSettings.backgroundSyncMinutes == min
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) PrimaryText else PureWhite,
-                                border = BorderStroke(1.dp, if (isSelected) PrimaryText else WarmBorder),
+                                shape = CircleShape,
+                                color = if (isSelected) ElectricCobalt else ElevatedGlassSurface,
+                                border = BorderStroke(1.dp, if (isSelected) CobaltGlow else HairlineGlassBorder),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .clip(CircleShape)
                                     .clickable { onUpdateSettings(appSettings.copy(backgroundSyncMinutes = min)) }
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                                    modifier = Modifier.padding(vertical = 9.dp)
                                 ) {
                                     Text(
                                         text = label,
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) PureWhite else PrimaryText
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) PureWhite else ObsidianInk
                                     )
                                 }
                             }
@@ -365,50 +369,48 @@ fun AppSettingsScreen(
                     ) {
                         Text(
                             text = "App Footprint: ${storageUsage.formattedTotal}",
-                            fontFamily = DMSansFontFamily,
+                            fontFamily = PlusJakartaFontFamily,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = PrimaryText
+                            color = ObsidianInk
                         )
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = PastelMint,
-                            border = BorderStroke(1.dp, WarmBorder)
+                            shape = CircleShape,
+                            color = EmeraldSoft,
+                            border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "Healthy",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 10.sp,
+                                text = "HEALTHY",
+                                fontFamily = PlusJakartaFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = DarkNavy,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                fontSize = 10.sp,
+                                color = EmeraldLight,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Progress Storage Bar Meter
-                    LinearProgressIndicator(
-                        progress = { storageUsage.imagePercentage.coerceAtLeast(0.05f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp)),
-                        color = PrimaryText,
-                        trackColor = WarmBorder
-                    )
-
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Breakdown items
+                    LinearProgressIndicator(
+                        progress = { storageUsage.imagePercentage.coerceAtLeast(0.08f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
+                        color = ElectricCobalt,
+                        trackColor = ElevatedGlassSurface
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        StorageMeterBadge("Images & Tiles", storageUsage.formattedImageCache, PastelPeach)
-                        StorageMeterBadge("Local Database", storageUsage.formattedDb, PastelSoftCyan)
-                        StorageMeterBadge("Temp Files", storageUsage.formattedTemp, PastelButterYellow)
+                        StorageMeterBadge("Images & Tiles", storageUsage.formattedImageCache, CobaltSoft, CobaltGlow, Modifier.weight(1f))
+                        StorageMeterBadge("Local DB", storageUsage.formattedDb, EmeraldSoft, EmeraldLight, Modifier.weight(1f))
+                        StorageMeterBadge("Temp Files", storageUsage.formattedTemp, FieryCoralSoft, FieryCoralGlow, Modifier.weight(1f))
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -421,33 +423,16 @@ fun AppSettingsScreen(
                         onCheckedChange = { onUpdateSettings(appSettings.copy(autoTrimCacheEnabled = it)) }
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedButton(
+                    GlassSecondaryPillButton(
+                        text = "Optimize Storage & Trim Cache Now",
+                        icon = Icons.Default.Refresh,
                         onClick = onTrimCacheNow,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, WarmBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(42.dp)
                             .testTag("trim_cache_now_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = PrimaryText,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Optimize Storage & Trim Cache Now",
-                            fontFamily = DMSansFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            color = PrimaryText
-                        )
-                    }
+                    )
                 }
 
                 // Section 4: Support & Privacy Center
@@ -459,45 +444,22 @@ fun AppSettingsScreen(
                         question = "How does local spatial privacy work?",
                         answer = "NearGrid uses localized geohashing. Your exact coordinates are never shared with third-party tracking servers. When you select 'Approximate' or 'Neighborhood Only', coordinates are fuzzed or anchored to the neighborhood cell centroid."
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     FaqExpandableItem(
                         question = "What data is stored on my device vs cloud?",
                         answer = "Community posts and messages are synchronized via encrypted Firestore collections. Local preferences, blocked accounts, and cached map tiles stay private in your device's protected app sandbox."
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { showSupportDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryText,
-                                contentColor = PureWhite
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp)
-                                .testTag("open_support_ticket_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SupportAgent,
-                                contentDescription = null,
-                                tint = PureWhite,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Submit Support Ticket",
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
+                    PillPrimaryButton(
+                        text = "Submit Support Ticket",
+                        icon = Icons.Default.SupportAgent,
+                        onClick = { showSupportDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("open_support_ticket_button")
+                    )
                 }
 
                 // Section 5: About App & Diagnostics
@@ -513,97 +475,64 @@ fun AppSettingsScreen(
                         Column {
                             Text(
                                 text = "NearGrid Mobile App",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 16.sp,
+                                fontFamily = OutfitFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = PrimaryText
+                                fontSize = 19.sp,
+                                color = ObsidianInk
                             )
                             Text(
-                                text = "Version ${appSettings.appVersion} • Build ${appSettings.buildId}",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 12.sp,
-                                color = SecondaryText
+                                text = "VERSION ${appSettings.appVersion} · BUILD ${appSettings.buildId}",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 11.sp,
+                                color = MutedSlate
                             )
                         }
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = PastelCoral.copy(alpha = 0.3f),
-                            border = BorderStroke(1.dp, WarmBorder)
+                            shape = CircleShape,
+                            color = AmberSoft,
+                            border = BorderStroke(1.dp, AmberGlow.copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "Official Release",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 10.sp,
+                                text = "OFFICIAL",
+                                fontFamily = PlusJakartaFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = DarkNavy,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                fontSize = 10.sp,
+                                color = AmberLight,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        GlassSecondaryPillButton(
+                            text = "Diagnostics",
+                            icon = Icons.Default.BugReport,
                             onClick = { showDiagnosticsModal = true },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, WarmBorder),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
                                 .testTag("view_diagnostics_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.BugReport,
-                                contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "System Diagnostics",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = PrimaryText
-                            )
-                        }
+                        )
 
-                        OutlinedButton(
+                        GlassSecondaryPillButton(
+                            text = "Open Licenses",
+                            icon = Icons.Default.PrivacyTip,
                             onClick = { showLicenseModal = true },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, WarmBorder),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(38.dp)
                                 .testTag("open_licenses_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PrivacyTip,
-                                contentDescription = null,
-                                tint = PrimaryText,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Open Licenses",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = PrimaryText
-                            )
-                        }
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
 
-        // Support Ticket Modal Dialog
         if (showSupportDialog) {
             SupportTicketDialog(
                 statusMessage = supportTicketStatus,
@@ -617,7 +546,6 @@ fun AppSettingsScreen(
             )
         }
 
-        // Diagnostics Modal
         if (showDiagnosticsModal) {
             DiagnosticsDialog(
                 appVersion = appSettings.appVersion,
@@ -627,7 +555,6 @@ fun AppSettingsScreen(
             )
         }
 
-        // License Modal
         if (showLicenseModal) {
             OpenSourceLicenseDialog(
                 onDismiss = { showLicenseModal = false }
@@ -642,42 +569,37 @@ fun SettingsCardSection(
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
-        border = BorderStroke(1.dp, WarmBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth()
+    DarkGlassCard(
+        cornerRadius = 24.dp,
+        containerColor = DarkGlassCard,
+        borderColor = HairlineGlassBorder,
+        contentPadding = PaddingValues(18.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = SoftCream,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = PrimaryText,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SecondaryText,
-                    letterSpacing = 1.sp
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(ElevatedGlassSurface)
+                    .border(1.dp, HairlineGlassBorder, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = CobaltGlow,
+                    modifier = Modifier.size(15.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(14.dp))
-            content()
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = title,
+                style = AuraKickerStyle,
+                color = MutedSlate
+            )
         }
+        Spacer(modifier = Modifier.height(14.dp))
+        content()
     }
 }
 
@@ -692,65 +614,73 @@ fun SettingsSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = PrimaryText,
+            tint = CobaltGlow,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontFamily = DMSansFontFamily,
-                fontSize = 13.sp,
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.5.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = PrimaryText
+                color = ObsidianInk
             )
             Text(
                 text = subtitle,
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
-                color = SecondaryText
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 11.5.sp,
+                color = MutedSlate
             )
         }
-        Switch(
+        Spacer(modifier = Modifier.width(8.dp))
+        LiquidGlassSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = PureWhite,
-                checkedTrackColor = PrimaryText
-            )
+            activeColor = ElectricCobalt
         )
     }
 }
 
 @Composable
-fun StorageMeterBadge(label: String, formattedSize: String, color: Color) {
+fun StorageMeterBadge(
+    label: String,
+    formattedSize: String,
+    color: Color,
+    valueColor: Color = PureWhite,
+    modifier: Modifier = Modifier
+) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = color.copy(alpha = 0.3f),
-        border = BorderStroke(1.dp, WarmBorder)
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = color,
+        border = BorderStroke(1.dp, HairlineGlassBorder)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = label,
-                fontFamily = DMSansFontFamily,
-                fontSize = 10.sp,
-                color = SecondaryText
+                text = label.uppercase(),
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 9.sp,
+                color = MutedSlate
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = formattedSize,
-                fontFamily = DMSansFontFamily,
-                fontSize = 11.sp,
+                fontFamily = OutfitFontFamily,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryText
+                color = valueColor
             )
         }
     }
@@ -760,14 +690,15 @@ fun StorageMeterBadge(label: String, formattedSize: String, color: Color) {
 fun FaqExpandableItem(question: String, answer: String) {
     var expanded by remember { mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = SoftCream,
-        border = BorderStroke(1.dp, WarmBorder),
+        shape = RoundedCornerShape(18.dp),
+        color = ElevatedGlassSurface,
+        border = BorderStroke(1.dp, HairlineGlassBorder),
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
             .clickable { expanded = !expanded }
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -775,28 +706,30 @@ fun FaqExpandableItem(question: String, answer: String) {
             ) {
                 Text(
                     text = question,
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 12.sp,
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = PrimaryText,
+                    color = ObsidianInk,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = SecondaryText,
+                    tint = CobaltGlow,
                     modifier = Modifier.size(18.dp)
                 )
             }
             AnimatedVisibility(visible = expanded) {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = answer,
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        lineHeight = 16.sp,
-                        color = SecondaryText
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        color = MutedSlate
                     )
                 }
             }
@@ -818,119 +751,112 @@ fun SupportTicketDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = PureWhite,
-            border = BorderStroke(1.dp, WarmBorder),
-            shadowElevation = 16.dp,
+        DarkGlassCard(
+            cornerRadius = 28.dp,
+            containerColor = DarkGlassCard,
+            borderColor = HairlineGlassBorder,
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 24.dp)
                 .testTag("support_ticket_dialog")
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Submit Support Ticket",
-                        fontFamily = DMSerifFontFamily,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryText
-                    )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close", tint = SecondaryText)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "CATEGORY",
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 10.sp,
+                    text = "Submit Support Ticket",
+                    fontFamily = OutfitFontFamily,
                     fontWeight = FontWeight.Bold,
-                    color = SecondaryText
+                    fontSize = 21.sp,
+                    color = ObsidianInk
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                CircularOutlineIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = "Close",
+                    onClick = onDismiss,
+                    size = 38.dp
+                )
+            }
 
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    categories.forEach { cat ->
-                        val isSelected = category == cat
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) SoftCream else PureWhite,
-                            border = BorderStroke(1.dp, if (isSelected) PrimaryText else WarmBorder),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { category = cat }
-                        ) {
-                            Text(
-                                text = cat,
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = PrimaryText,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "CATEGORY",
+                style = AuraKickerStyle,
+                color = MutedSlate
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                categories.forEach { cat ->
+                    val isSelected = category == cat
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isSelected) CobaltSoft else ElevatedGlassSurface,
+                        border = BorderStroke(1.dp, if (isSelected) ElectricCobalt else HairlineGlassBorder),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { category = cat }
+                    ) {
+                        Text(
+                            text = cat,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = ObsidianInk,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)
+                        )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = message,
-                    onValueChange = { if (it.length <= 400) message = it },
-                    label = { Text("Describe issue or request") },
-                    placeholder = { Text("What happened or what feature would you like?") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("support_message_input"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryText,
-                        unfocusedBorderColor = WarmBorder,
-                        focusedContainerColor = SoftCream,
-                        unfocusedContainerColor = SoftCream
-                    ),
-                    maxLines = 4
-                )
-
-                if (statusMessage != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = statusMessage,
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = PrimaryText
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { onSubmit(category, message) },
-                    enabled = message.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryText,
-                        contentColor = PureWhite
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("send_support_ticket_button")
-                ) {
-                    Icon(imageVector = Icons.Default.Send, contentDescription = null, tint = PureWhite, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Submit Ticket", fontFamily = DMSansFontFamily, fontWeight = FontWeight.Bold)
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = message,
+                onValueChange = { if (it.length <= 400) message = it },
+                label = { Text("Describe issue or request", fontFamily = PlusJakartaFontFamily, color = MutedSlate) },
+                placeholder = { Text("What happened or what feature would you like?", fontFamily = PlusJakartaFontFamily, color = SubtleSlate) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("support_message_input"),
+                shape = RoundedCornerShape(18.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ElectricCobalt,
+                    unfocusedBorderColor = HairlineGlassBorder,
+                    focusedContainerColor = ElevatedGlassSurface,
+                    unfocusedContainerColor = ElevatedGlassSurface,
+                    focusedTextColor = PureWhite,
+                    unfocusedTextColor = ObsidianInk
+                ),
+                maxLines = 4
+            )
+
+            if (statusMessage != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = statusMessage,
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = EmeraldLight
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PillPrimaryButton(
+                text = "Submit Ticket",
+                icon = Icons.Default.Send,
+                enabled = message.isNotBlank(),
+                onClick = { onSubmit(category, message) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("send_support_ticket_button")
+            )
         }
     }
 }
@@ -943,62 +869,97 @@ fun DiagnosticsDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = PureWhite,
-            border = BorderStroke(1.dp, WarmBorder),
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        DarkGlassCard(
+            cornerRadius = 28.dp,
+            containerColor = DarkGlassCard,
+            borderColor = HairlineGlassBorder,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(text = "System Diagnostics Report", fontFamily = DMSerifFontFamily, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
-                Spacer(modifier = Modifier.height(12.dp))
-                DiagnosticRow("App Version", appVersion)
-                DiagnosticRow("Build ID", buildId)
-                DiagnosticRow("OS Environment", "Android 14 (API 34)")
-                DiagnosticRow("Memory Footprint", storageUsage.formattedTotal)
-                DiagnosticRow("Telemetry Status", "Active & Silent")
-                DiagnosticRow("Mesh State", "Connected")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                    Text("Close Report")
-                }
-            }
+            Text(
+                text = "DIAGNOSTICS REPORT",
+                style = AuraKickerStyle,
+                color = CobaltGlow
+            )
+            Text(
+                text = "System Diagnostics",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 21.sp,
+                color = ObsidianInk
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+            Spacer(modifier = Modifier.height(10.dp))
+            DiagnosticRow("App Version", appVersion)
+            DiagnosticRow("Build ID", buildId)
+            DiagnosticRow("OS Environment", "Android 14 (API 34)")
+            DiagnosticRow("Memory Footprint", storageUsage.formattedTotal)
+            DiagnosticRow("Telemetry Status", "Active & Silent")
+            DiagnosticRow("Mesh State", "Connected")
+            Spacer(modifier = Modifier.height(16.dp))
+            PillPrimaryButton(
+                text = "Close Report",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
 
 @Composable
 fun DiagnosticRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, fontFamily = DMSansFontFamily, fontSize = 12.sp, color = SecondaryText)
-        Text(text = value, fontFamily = DMSansFontFamily, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = PrimaryText)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontFamily = PlusJakartaFontFamily, fontSize = 12.sp, color = MutedSlate)
+        Text(text = value, fontFamily = PlusJakartaFontFamily, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = ObsidianInk)
     }
 }
 
 @Composable
 fun OpenSourceLicenseDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = PureWhite,
-            border = BorderStroke(1.dp, WarmBorder),
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        DarkGlassCard(
+            cornerRadius = 28.dp,
+            containerColor = DarkGlassCard,
+            borderColor = HairlineGlassBorder,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(text = "Open Source Software Credits", fontFamily = DMSerifFontFamily, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryText)
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = "NearGrid is built with standard open source Android Jetpack libraries:\n\n• Jetpack Compose & Material 3 (Apache 2.0)\n• Firebase Android SDK & Firestore (Apache 2.0)\n• osmdroid OpenStreetMap Engine (Apache 2.0)\n• Coil Image Loading Library (Apache 2.0)\n• Kotlin Coroutines & Flow (Apache 2.0)",
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp,
-                    color = PrimaryText
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                    Text("Close")
-                }
-            }
+            Text(
+                text = "OPEN SOURCE CREDITS",
+                style = AuraKickerStyle,
+                color = EmeraldLight
+            )
+            Text(
+                text = "Open Source Software",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 21.sp,
+                color = ObsidianInk
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "NearGrid is built with open source Android libraries:\n\n• Jetpack Compose & Material 3 (Apache 2.0)\n• Kyant Backdrop Liquid Glass (Apache 2.0)\n• Firebase Android SDK & Firestore (Apache 2.0)\n• osmdroid OpenStreetMap Engine (Apache 2.0)\n• Coil Image Loading Library (Apache 2.0)\n• Kotlin Coroutines & Flow (Apache 2.0)",
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                color = ObsidianInk
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            PillPrimaryButton(
+                text = "Close",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

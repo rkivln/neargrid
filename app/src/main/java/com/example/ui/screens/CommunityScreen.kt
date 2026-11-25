@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,22 +25,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,32 +46,43 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CommunityIssue
 import com.example.data.model.CommunityNotice
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
+import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.PillPrimaryButton
 import com.example.ui.components.PostMediaCarousel
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PaleWarmGray
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AmberGlow
+import com.example.ui.theme.AmberLight
+import com.example.ui.theme.AmberSoft
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltPillGradient
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmDivider
-import com.example.ui.theme.WarmIvory
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.example.ui.theme.SubtleSlate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,21 +102,19 @@ fun CommunityScreen(
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize().testTag("community_pull_to_refresh")
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("community_pull_to_refresh")
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(WarmIvory)
-        ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top Header
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = PureWhite,
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+        AuraMeshBackground(variant = AuraVariant.MIXED) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header + Segment Toggle
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -114,57 +122,68 @@ fun CommunityScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Community pulse",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 26.sp,
-                                color = PrimaryText
+                                text = "Civic Noticeboard",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = FieryCoralGlow
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Municipal bulletin and neighbor-led civic resolutions",
-                                fontFamily = DMSansFontFamily,
+                                text = "Community Pulse",
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp,
+                                lineHeight = 30.sp,
+                                color = PureWhite
+                            )
+                            Text(
+                                text = "Municipal bulletin & neighbor-led resolutions",
+                                fontFamily = PlusJakartaFontFamily,
                                 fontSize = 12.sp,
-                                color = SecondaryText
+                                color = MutedSlate
                             )
                         }
 
                         if (selectedTab == 1) {
-                            Button(
-                                onClick = onOpenReportIssue,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = PrimaryText,
-                                    contentColor = PureWhite
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                                modifier = Modifier.testTag("report_issue_button")
+                            Box(
+                                modifier = Modifier
+                                    .height(42.dp)
+                                    .clip(CircleShape)
+                                    .background(CobaltPillGradient)
+                                    .border(1.dp, CobaltGlow.copy(alpha = 0.5f), CircleShape)
+                                    .clickable { onOpenReportIssue() }
+                                    .padding(horizontal = 14.dp)
+                                    .testTag("report_issue_button"),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = PureWhite,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Report",
-                                    fontFamily = DMSansFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 13.sp,
-                                    color = PureWhite
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = PureWhite,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "Report",
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = PureWhite
+                                    )
+                                }
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Segment Tabs: Noticeboard vs Issue Tracker
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = SoftCream,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        shape = CircleShape,
+                        color = DarkGlassCard,
+                        border = BorderStroke(1.dp, HairlineGlassBorder)
                     ) {
                         Row(
                             modifier = Modifier
@@ -175,285 +194,272 @@ fun CommunityScreen(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selectedTab == 0) PureWhite else Color.Transparent)
-                                    .border(
-                                        1.dp,
-                                        if (selectedTab == 0) WarmBorder else Color.Transparent,
-                                        RoundedCornerShape(12.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (selectedTab == 0) CobaltPillGradient else Brush.horizontalGradient(
+                                            listOf(Color.Transparent, Color.Transparent)
+                                        )
                                     )
                                     .clickable { selectedTab = 0 }
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "Noticeboard (${notices.size})",
-                                    fontFamily = DMSansFontFamily,
-                                    fontWeight = if (selectedTab == 0) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 13.sp,
-                                    color = PrimaryText
+                                    color = if (selectedTab == 0) PureWhite else MutedSlate
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selectedTab == 1) PureWhite else Color.Transparent)
-                                    .border(
-                                        1.dp,
-                                        if (selectedTab == 1) WarmBorder else Color.Transparent,
-                                        RoundedCornerShape(12.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (selectedTab == 1) CobaltPillGradient else Brush.horizontalGradient(
+                                            listOf(Color.Transparent, Color.Transparent)
+                                        )
                                     )
                                     .clickable { selectedTab = 1 }
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "Issue tracker (${issues.size})",
-                                    fontFamily = DMSansFontFamily,
-                                    fontWeight = if (selectedTab == 1) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 13.sp,
-                                    color = PrimaryText
+                                    color = if (selectedTab == 1) PureWhite else MutedSlate
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // Tab Content
-            if (selectedTab == 0) {
-                // Noticeboard Feed
-                if (notices.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Card(
+                if (selectedTab == 0) {
+                    if (notices.isEmpty()) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("empty_notices_card"),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = PureWhite),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                                .fillMaxSize()
+                                .navigationBarsPadding()
+                                .padding(start = 24.dp, end = 24.dp, bottom = 92.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            DarkGlassCard(
+                                modifier = Modifier.testTag("empty_notices_card"),
+                                cornerRadius = 24.dp
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(CircleShape)
-                                        .background(PastelPeach.copy(alpha = 0.4f)),
-                                    contentAlignment = Alignment.Center
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PushPin,
-                                        contentDescription = null,
-                                        tint = PastelCoral,
-                                        modifier = Modifier.size(24.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .clip(CircleShape)
+                                            .background(FieryCoralSoft)
+                                            .border(1.dp, FieryCoral.copy(alpha = 0.5f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PushPin,
+                                            contentDescription = null,
+                                            tint = FieryCoralGlow,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text(
+                                        text = "No Civic Notices",
+                                        fontFamily = OutfitFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 21.sp,
+                                        color = PureWhite
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Scheduled maintenance, municipal updates, and neighborhood advisories will appear here.",
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontSize = 13.sp,
+                                        color = MutedSlate,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 19.sp
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(14.dp))
-                                Text(
-                                    text = "No Civic Notices",
-                                    fontFamily = DMSerifFontFamily,
-                                    fontSize = 20.sp,
-                                    color = PrimaryText
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Scheduled maintenance, water valve diagnostics, and neighborhood advisories from civic organizers will appear here.",
-                                    fontFamily = DMSansFontFamily,
-                                    fontSize = 13.sp,
-                                    color = SecondaryText,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    lineHeight = 18.sp
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp)
+                        ) {
+                            items(notices, key = { it.id }) { notice ->
+                                NoticeCard(notice = notice)
+                            }
+                            item {
+                                Spacer(
+                                    modifier = Modifier
+                                        .height(118.dp)
+                                        .navigationBarsPadding()
                                 )
                             }
                         }
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(notices, key = { it.id }) { notice ->
-                            NoticeCard(notice = notice)
-                        }
                         item {
-                            Spacer(modifier = Modifier.height(100.dp))
-                        }
-                    }
-                }
-            } else {
-                // Issue-to-Resolution Tracker
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Filter chips for issue statuses
-                    item {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        ) {
-                            val statuses = listOf(
-                                "ALL" to "All issues",
-                                "REPORTED" to "Reported",
-                                "ACKNOWLEDGED" to "Acknowledged",
-                                "IN_PROGRESS" to "In progress",
-                                "RESOLVED" to "Resolved"
-                            )
-                            items(statuses) { (status, label) ->
-                                val isSelected = issueStatusFilter == status
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { issueStatusFilter = status },
-                                    label = {
-                                        Text(
-                                            label,
-                                            fontFamily = DMSansFontFamily,
-                                            fontSize = 12.sp
-                                        )
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = PastelPeach,
-                                        selectedLabelColor = PrimaryText,
-                                        containerColor = PureWhite,
-                                        labelColor = SecondaryText
-                                    ),
-                                    border = FilterChipDefaults.filterChipBorder(
-                                        borderColor = if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder,
-                                        enabled = true,
-                                        selected = isSelected
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    val filteredIssues = issues.filter {
-                        if (issueStatusFilter == "ALL") true else it.status == issueStatusFilter
-                    }
-
-                    if (filteredIssues.isEmpty()) {
-                        item {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp)
-                                    .testTag("empty_issues_card"),
-                                shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = PureWhite),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(28.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(CircleShape)
-                                            .background(PastelMint.copy(alpha = 0.4f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Shield,
-                                            contentDescription = null,
-                                            tint = PrimaryText,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(14.dp))
-                                    Text(
-                                        text = "All Clear in the Neighborhood",
-                                        fontFamily = DMSerifFontFamily,
-                                        fontSize = 20.sp,
-                                        color = PrimaryText
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "No civic maintenance issues or safety hazards reported. Spot a broken lamp, pothole, or fallen branch?",
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 13.sp,
-                                        color = SecondaryText,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        lineHeight = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(18.dp))
-                                    Button(
-                                        onClick = onOpenReportIssue,
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrimaryText,
-                                            contentColor = PureWhite
+                                val statuses = listOf(
+                                    "ALL" to "All issues",
+                                    "REPORTED" to "Reported",
+                                    "ACKNOWLEDGED" to "Acknowledged",
+                                    "IN_PROGRESS" to "In progress",
+                                    "RESOLVED" to "Resolved"
+                                )
+                                items(statuses) { (status, label) ->
+                                    val isSelected = issueStatusFilter == status
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { issueStatusFilter = status },
+                                        label = {
+                                            Text(
+                                                label,
+                                                fontFamily = PlusJakartaFontFamily,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 12.sp
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = CobaltSoft,
+                                            selectedLabelColor = PureWhite,
+                                            containerColor = DarkGlassCard,
+                                            labelColor = MutedSlate
                                         ),
-                                        modifier = Modifier.testTag("fresh_report_issue_button")
-                                    ) {
-                                        Text(
-                                            text = "Report an Issue",
-                                            fontFamily = DMSansFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp
-                                        )
-                                    }
+                                        border = FilterChipDefaults.filterChipBorder(
+                                            borderColor = if (isSelected) ElectricCobalt else HairlineGlassBorder,
+                                            enabled = true,
+                                            selected = isSelected
+                                        ),
+                                        shape = CircleShape
+                                    )
                                 }
                             }
                         }
-                    } else {
-                        items(filteredIssues, key = { it.id }) { issue ->
-                            IssueCard(
-                                issue = issue,
-                                onUpvote = { onToggleUpvote(issue) },
-                                onAdvanceStatus = {
-                                    val nextStatus = when (issue.status) {
-                                        "REPORTED" -> "ACKNOWLEDGED"
-                                        "ACKNOWLEDGED" -> "IN_PROGRESS"
-                                        "IN_PROGRESS" -> "RESOLVED"
-                                        else -> "RESOLVED"
+
+                        val filteredIssues = issues.filter {
+                            if (issueStatusFilter == "ALL") true else it.status == issueStatusFilter
+                        }
+
+                        if (filteredIssues.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    DarkGlassCard(
+                                        modifier = Modifier.testTag("empty_issues_card"),
+                                        cornerRadius = 24.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(CircleShape)
+                                                    .background(EmeraldSoft)
+                                                    .border(1.dp, EmeraldMint.copy(alpha = 0.5f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Shield,
+                                                    contentDescription = null,
+                                                    tint = EmeraldLight,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(14.dp))
+                                            Text(
+                                                text = "All Clear in the Neighborhood",
+                                                fontFamily = OutfitFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 20.sp,
+                                                color = PureWhite
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "No civic maintenance issues or safety hazards reported. Spot a broken lamp or pothole?",
+                                                fontFamily = PlusJakartaFontFamily,
+                                                fontSize = 13.sp,
+                                                color = MutedSlate,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 19.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(18.dp))
+                                            PillPrimaryButton(
+                                                text = "Report an Issue",
+                                                onClick = onOpenReportIssue,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("fresh_report_issue_button")
+                                            )
+                                        }
                                     }
-                                    onUpdateIssueStatus(issue.id, nextStatus, "Assigned Local Volunteers")
                                 }
+                            }
+                        } else {
+                            items(filteredIssues, key = { it.id }) { issue ->
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    IssueCard(
+                                        issue = issue,
+                                        onUpvote = { onToggleUpvote(issue) },
+                                        onAdvanceStatus = {
+                                            val nextStatus = when (issue.status) {
+                                                "REPORTED" -> "ACKNOWLEDGED"
+                                                "ACKNOWLEDGED" -> "IN_PROGRESS"
+                                                "IN_PROGRESS" -> "RESOLVED"
+                                                else -> "RESOLVED"
+                                            }
+                                            onUpdateIssueStatus(issue.id, nextStatus, "Assigned Local Volunteers")
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            Spacer(
+                                modifier = Modifier
+                                    .height(118.dp)
+                                    .navigationBarsPadding()
                             )
                         }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
             }
         }
     }
 }
-}
 
 @Composable
 fun NoticeCard(notice: CommunityNotice) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("notice_card_${notice.id}"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
-        border = androidx.compose.foundation.BorderStroke(
+        shape = RoundedCornerShape(24.dp),
+        color = DarkGlassCard,
+        border = BorderStroke(
             1.dp,
-            if (notice.isUrgent) PastelCoral else WarmBorder
+            if (notice.isUrgent) FieryCoral.copy(alpha = 0.55f) else HairlineGlassBorder
         )
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
@@ -466,15 +472,16 @@ fun NoticeCard(notice: CommunityNotice) {
                     if (notice.isPinned) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
-                                .background(PastelPeach.copy(alpha = 0.6f)),
+                                .background(AmberSoft)
+                                .border(1.dp, AmberGlow.copy(alpha = 0.5f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PushPin,
                                 contentDescription = "Pinned",
-                                tint = PrimaryText,
+                                tint = AmberLight,
                                 modifier = Modifier.size(13.dp)
                             )
                         }
@@ -482,34 +489,35 @@ fun NoticeCard(notice: CommunityNotice) {
                     }
                     if (notice.isUrgent) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = PastelCoral.copy(alpha = 0.2f)
+                            shape = CircleShape,
+                            color = FieryCoralSoft,
+                            border = BorderStroke(1.dp, FieryCoral.copy(alpha = 0.55f))
                         ) {
                             Text(
                                 text = "Urgent",
-                                color = PastelCoral,
-                                fontFamily = DMSansFontFamily,
+                                color = FieryCoralGlow,
+                                fontFamily = PlusJakartaFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
                         text = notice.authorityName,
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        color = SecondaryText
+                        color = CobaltGlow
                     )
                 }
 
                 Text(
                     text = notice.dateLabel,
-                    fontFamily = DMSansFontFamily,
+                    fontFamily = PlusJakartaFontFamily,
                     fontSize = 11.sp,
-                    color = SecondaryText
+                    color = SubtleSlate
                 )
             }
 
@@ -517,20 +525,21 @@ fun NoticeCard(notice: CommunityNotice) {
 
             Text(
                 text = notice.title,
-                fontFamily = DMSerifFontFamily,
-                fontSize = 19.sp,
-                lineHeight = 24.sp,
-                color = PrimaryText
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                lineHeight = 25.sp,
+                color = PureWhite
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = notice.content,
-                fontFamily = DMSansFontFamily,
-                fontSize = 13.sp,
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.5.sp,
                 lineHeight = 20.sp,
-                color = SecondaryText
+                color = MutedSlate
             )
         }
     }
@@ -542,52 +551,54 @@ fun IssueCard(
     onUpvote: () -> Unit,
     onAdvanceStatus: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("issue_card_${issue.id}"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
-        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+        shape = RoundedCornerShape(24.dp),
+        color = DarkGlassCard,
+        border = BorderStroke(1.dp, HairlineGlassBorder)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            // Header: Category and Status Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SoftCream
+                    shape = CircleShape,
+                    color = ElevatedGlassSurface,
+                    border = BorderStroke(1.dp, HairlineGlassBorder)
                 ) {
                     Text(
                         text = issue.category.lowercase().replaceFirstChar { it.uppercase() },
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp,
-                        color = SecondaryText,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        color = MutedSlate,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
 
-                val (statusColor, statusBg) = when (issue.status) {
-                    "REPORTED" -> PastelCoral to PastelCoral.copy(alpha = 0.15f)
-                    "ACKNOWLEDGED" -> PrimaryText to PastelButterYellow.copy(alpha = 0.5f)
-                    "IN_PROGRESS" -> PrimaryText to PastelSoftCyan.copy(alpha = 0.35f)
-                    else -> PrimaryText to PastelMint.copy(alpha = 0.5f)
+                val (statusColor, statusBg, statusBorder) = when (issue.status) {
+                    "REPORTED" -> Triple(FieryCoralGlow, FieryCoralSoft, FieryCoral.copy(alpha = 0.55f))
+                    "ACKNOWLEDGED" -> Triple(AmberLight, AmberSoft, AmberGlow.copy(alpha = 0.55f))
+                    "IN_PROGRESS" -> Triple(CobaltGlow, CobaltSoft, ElectricCobalt.copy(alpha = 0.55f))
+                    else -> Triple(EmeraldLight, EmeraldSoft, EmeraldMint.copy(alpha = 0.55f))
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = statusBg
+                    shape = CircleShape,
+                    color = statusBg,
+                    border = BorderStroke(1.dp, statusBorder)
                 ) {
                     Text(
                         text = issue.status.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
                         color = statusColor,
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -596,108 +607,93 @@ fun IssueCard(
 
             Text(
                 text = issue.title,
-                fontFamily = DMSerifFontFamily,
-                fontSize = 18.sp,
-                lineHeight = 23.sp,
-                color = PrimaryText
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 19.sp,
+                lineHeight = 24.sp,
+                color = PureWhite
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = issue.description,
-                fontFamily = DMSansFontFamily,
-                fontSize = 13.sp,
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.5.sp,
                 lineHeight = 19.sp,
-                color = SecondaryText
+                color = MutedSlate
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "Location: ${issue.locationSnippet}",
-                fontFamily = DMSansFontFamily,
+                fontFamily = PlusJakartaFontFamily,
                 fontSize = 11.sp,
-                color = SecondaryText
+                color = SubtleSlate
             )
 
             issue.assignedVolunteer?.let { volunteer ->
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "Assigned: $volunteer",
-                    fontFamily = DMSansFontFamily,
+                    fontFamily = PlusJakartaFontFamily,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp,
-                    color = PastelCoral
+                    color = EmeraldLight
                 )
             }
 
             if (issue.mediaUris.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                PostMediaCarousel(
-                    mediaUris = issue.mediaUris,
-                    mediaTypes = issue.mediaTypes
-                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(modifier = Modifier.clip(RoundedCornerShape(18.dp))) {
+                    PostMediaCarousel(
+                        mediaUris = issue.mediaUris,
+                        mediaTypes = issue.mediaTypes
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-
-            // Progress Timeline Stepper
             StatusTimeline(currentStatus = issue.status)
-
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Footer: Upvotes button and Status Progress button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Upvote Button
-                OutlinedButton(
+                GlassSecondaryPillButton(
+                    text = "${issue.upvotesCount} Upvotes",
+                    icon = if (issue.hasUserUpvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                     onClick = onUpvote,
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (issue.hasUserUpvoted) PastelCoral else WarmBorder
-                    ),
+                    surfaceTint = if (issue.hasUserUpvoted) FieryCoralSoft else ElevatedGlassSurface,
+                    contentColor = if (issue.hasUserUpvoted) FieryCoralGlow else ObsidianInk,
+                    borderColor = if (issue.hasUserUpvoted) FieryCoral else HairlineGlassBorder,
+                    height = 40.dp,
                     modifier = Modifier.testTag("upvote_issue_${issue.id}")
-                ) {
-                    Icon(
-                        imageVector = if (issue.hasUserUpvoted) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
-                        contentDescription = "Upvote",
-                        tint = if (issue.hasUserUpvoted) PastelCoral else SecondaryText,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${issue.upvotesCount} upvotes",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 12.sp,
-                        color = if (issue.hasUserUpvoted) PastelCoral else PrimaryText
-                    )
-                }
+                )
 
-                // Advance status action
                 if (issue.status != "RESOLVED") {
-                    Button(
-                        onClick = onAdvanceStatus,
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryText,
-                            contentColor = PureWhite
-                        ),
-                        modifier = Modifier.testTag("advance_issue_${issue.id}")
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(CircleShape)
+                            .background(CobaltPillGradient)
+                            .border(1.dp, CobaltGlow.copy(alpha = 0.5f), CircleShape)
+                            .clickable { onAdvanceStatus() }
+                            .padding(horizontal = 16.dp)
+                            .testTag("advance_issue_${issue.id}"),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = when (issue.status) {
                                 "REPORTED" -> "Acknowledge"
-                                "ACKNOWLEDGED" -> "Start work"
-                                else -> "Mark resolved"
+                                "ACKNOWLEDGED" -> "Start Work"
+                                else -> "Mark Resolved"
                             },
-                            fontFamily = DMSansFontFamily,
-                            fontWeight = FontWeight.Medium,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
                             color = PureWhite
                         )
@@ -716,10 +712,10 @@ fun StatusTimeline(currentStatus: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SoftCream)
-            .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .clip(CircleShape)
+            .background(ElevatedGlassSurface)
+            .border(1.dp, HairlineGlassBorder, CircleShape)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -729,9 +725,9 @@ fun StatusTimeline(currentStatus: String) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(7.dp)
                         .clip(CircleShape)
-                        .background(if (isPassedOrCurrent) PastelCoral else PaleWarmGray)
+                        .background(if (isPassedOrCurrent) ElectricCobalt else HairlineGlassBorder)
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
@@ -741,9 +737,10 @@ fun StatusTimeline(currentStatus: String) {
                         "IN_PROGRESS" -> "Work"
                         else -> "Done"
                     },
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 11.sp,
-                    color = if (isPassedOrCurrent) PrimaryText else SecondaryText
+                    fontFamily = PlusJakartaFontFamily,
+                    fontWeight = if (isPassedOrCurrent) FontWeight.Bold else FontWeight.Medium,
+                    fontSize = 10.sp,
+                    color = if (isPassedOrCurrent) PureWhite else SubtleSlate
                 )
             }
         }

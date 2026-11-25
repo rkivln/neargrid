@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,15 +31,12 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -59,19 +59,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.PastelButterYellow
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PastelSoftCyan
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AmberGlow
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
+import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
+import com.example.ui.theme.SubtleGlassDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,63 +129,65 @@ fun CreateIntentSheet(
 
     val categories = listOf("TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
 
-    val typeAccent = when (selectedTab) {
-        0 -> PastelCoral
-        1 -> PastelMint
-        2 -> PastelButterYellow
-        else -> PastelSoftCyan
-    }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = WarmIvory
+        containerColor = ObsidianCanvas,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 40.dp)
+                .padding(bottom = 32.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "NEW DISPATCH",
+                        style = AuraKickerStyle,
+                        color = CobaltGlow
+                    )
                     Text(
                         text = "New neighborhood post",
-                        fontFamily = DMSerifFontFamily,
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
                         fontSize = 24.sp,
-                        color = PrimaryText
+                        color = PureWhite
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Coordinate directly with nearby residents",
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp,
-                        color = SecondaryText
+                        color = MutedSlate
                     )
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.testTag("close_create_sheet")) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = PrimaryText
-                    )
-                }
+                CircularOutlineIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = "Close",
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("close_create_sheet")
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Action type tabs
+            // Capsule Segmented Action Tabs
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = SoftCream,
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                shape = CircleShape,
+                color = ElevatedGlassSurface,
+                border = BorderStroke(1.dp, HairlineGlassBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -187,65 +198,77 @@ fun CreateIntentSheet(
                     val tabs = listOf("Need", "Offer", "Civic", "Meetup")
                     tabs.forEachIndexed { idx, label ->
                         val isSelected = selectedTab == idx
+                        val activeBg = when (idx) {
+                            0 -> FieryCoral
+                            1 -> EmeraldMint
+                            2 -> AmberGlow
+                            else -> ElectricCobalt
+                        }
+                        val activeTextColor = if (idx == 2) ObsidianBlack else PureWhite
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) PureWhite else Color.Transparent)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) WarmBorder else Color.Transparent,
-                                    RoundedCornerShape(12.dp)
-                                )
+                                .clip(CircleShape)
+                                .background(if (isSelected) activeBg else Color.Transparent)
                                 .clickable { selectedTab = idx }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = label,
-                                fontFamily = DMSansFontFamily,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 12.sp,
-                                color = PrimaryText
+                                color = if (isSelected) activeTextColor else MutedSlate
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Privacy guarantee card
+            // Privacy Guarantee Card
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = PureWhite,
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                shape = RoundedCornerShape(18.dp),
+                color = EmeraldSoft,
+                border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.45f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Shield,
                         contentDescription = null,
-                        tint = PastelCoral,
-                        modifier = Modifier.size(16.dp)
+                        tint = EmeraldLight,
+                        modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Zero address leak: Only your neighborhood cell and fuzzy distance band (< 400m) will be shown.",
-                        fontFamily = DMSansFontFamily,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
-                        color = SecondaryText
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        color = ObsidianInk
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Title input
+            val darkFieldColors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ElectricCobalt,
+                unfocusedBorderColor = HairlineGlassBorder,
+                focusedTextColor = PureWhite,
+                unfocusedTextColor = ObsidianInk,
+                focusedContainerColor = ElevatedGlassSurface,
+                unfocusedContainerColor = ElevatedGlassSurface,
+                focusedLabelColor = CobaltGlow,
+                unfocusedLabelColor = MutedSlate
+            )
+
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -257,41 +280,26 @@ fun CreateIntentSheet(
                             2 -> "What is the civic issue? (e.g. Streetlamp out)"
                             else -> "Meetup title (e.g. Saturday Cricket, Book swap)"
                         },
-                        fontFamily = DMSansFontFamily,
+                        fontFamily = PlusJakartaFontFamily,
                         fontSize = 12.sp
                     )
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryText,
-                    unfocusedBorderColor = WarmBorder,
-                    focusedTextColor = PrimaryText,
-                    unfocusedTextColor = PrimaryText,
-                    focusedContainerColor = PureWhite,
-                    unfocusedContainerColor = PureWhite
-                ),
-                shape = RoundedCornerShape(16.dp),
+                colors = darkFieldColors,
+                shape = RoundedCornerShape(18.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("create_title_input"),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Description input
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Details, availability or context", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryText,
-                    unfocusedBorderColor = WarmBorder,
-                    focusedTextColor = PrimaryText,
-                    unfocusedTextColor = PrimaryText,
-                    focusedContainerColor = PureWhite,
-                    unfocusedContainerColor = PureWhite
-                ),
-                shape = RoundedCornerShape(16.dp),
+                label = { Text("Details, availability or context", fontFamily = PlusJakartaFontFamily, fontSize = 12.sp) },
+                colors = darkFieldColors,
+                shape = RoundedCornerShape(18.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("create_desc_input"),
@@ -299,44 +307,34 @@ fun CreateIntentSheet(
                 maxLines = 5
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Issue specific: Location snippet
             if (selectedTab == 2) {
                 OutlinedTextField(
                     value = locationOrSpot,
                     onValueChange = { locationOrSpot = it },
-                    label = { Text("Approximate location (e.g. Elm St & 4th Cross)", fontFamily = DMSansFontFamily, fontSize = 12.sp) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryText,
-                        unfocusedBorderColor = WarmBorder,
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText,
-                        focusedContainerColor = PureWhite,
-                        unfocusedContainerColor = PureWhite
-                    ),
-                    shape = RoundedCornerShape(16.dp),
+                    label = { Text("Approximate location (e.g. Elm St & 4th Cross)", fontFamily = PlusJakartaFontFamily, fontSize = 12.sp) },
+                    colors = darkFieldColors,
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("create_location_input"),
                     singleLine = true
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Category Selector
             Text(
-                text = "Category",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 15.sp,
-                color = PrimaryText
+                text = "CATEGORY",
+                style = AuraKickerStyle,
+                color = MutedSlate
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
+            Spacer(modifier = Modifier.height(6.dp))
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                categories.forEach { cat ->
+                itemsIndexed(categories) { _, cat ->
                     val isSelected = selectedCategory == cat
                     val icon = getCategoryIcon(cat)
                     FilterChip(
@@ -346,45 +344,44 @@ fun CreateIntentSheet(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                modifier = Modifier.size(13.dp),
-                                tint = if (isSelected) PrimaryText else SecondaryText
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isSelected) CobaltGlow else MutedSlate
                             )
                         },
                         label = {
                             Text(
                                 cat.lowercase().replaceFirstChar { it.uppercase() },
-                                fontFamily = DMSansFontFamily,
+                                fontFamily = PlusJakartaFontFamily,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 fontSize = 12.sp
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PastelPeach,
-                            selectedLabelColor = PrimaryText,
-                            containerColor = PureWhite,
-                            labelColor = SecondaryText
+                            selectedContainerColor = CobaltSoft,
+                            selectedLabelColor = PureWhite,
+                            containerColor = ElevatedGlassSurface,
+                            labelColor = MutedSlate
                         ),
                         border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (isSelected) PastelCoral.copy(alpha = 0.5f) else WarmBorder,
+                            borderColor = if (isSelected) ElectricCobalt else HairlineGlassBorder,
                             enabled = true,
                             selected = isSelected
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CircleShape,
                         modifier = Modifier.testTag("category_chip_$cat")
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Need specific: Urgency
             if (selectedTab == 0) {
                 Text(
-                    text = "Urgency level",
-                    fontFamily = DMSerifFontFamily,
-                    fontSize = 15.sp,
-                    color = PrimaryText
+                    text = "URGENCY LEVEL",
+                    style = AuraKickerStyle,
+                    color = MutedSlate
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("NORMAL" to "Normal", "TIME_SENSITIVE" to "Time-sensitive", "URGENT" to "Urgent").forEach { (urg, label) ->
                         val isSelected = selectedUrgency == urg
@@ -394,37 +391,36 @@ fun CreateIntentSheet(
                             label = {
                                 Text(
                                     label,
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PastelCoral.copy(alpha = 0.25f),
-                                selectedLabelColor = PastelCoral,
-                                containerColor = PureWhite,
-                                labelColor = SecondaryText
+                                selectedContainerColor = FieryCoralSoft,
+                                selectedLabelColor = FieryCoralGlow,
+                                containerColor = ElevatedGlassSurface,
+                                labelColor = MutedSlate
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                borderColor = if (isSelected) PastelCoral else WarmBorder,
+                                borderColor = if (isSelected) FieryCoral else HairlineGlassBorder,
                                 enabled = true,
                                 selected = isSelected
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = CircleShape
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Expiry hours
             if (selectedTab != 2) {
                 Text(
-                    text = "Auto-expires after",
-                    fontFamily = DMSerifFontFamily,
-                    fontSize = 15.sp,
-                    color = PrimaryText
+                    text = "AUTO-EXPIRES AFTER",
+                    style = AuraKickerStyle,
+                    color = MutedSlate
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(6 to "6 hours", 24 to "24 hours", 72 to "3 days").forEach { (hours, label) ->
                         val isSelected = selectedExpiryHours == hours
@@ -434,65 +430,48 @@ fun CreateIntentSheet(
                             label = {
                                 Text(
                                     label,
-                                    fontFamily = DMSansFontFamily,
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PastelMint.copy(alpha = 0.4f),
-                                selectedLabelColor = PrimaryText,
-                                containerColor = PureWhite,
-                                labelColor = SecondaryText
+                                selectedContainerColor = EmeraldSoft,
+                                selectedLabelColor = EmeraldLight,
+                                containerColor = ElevatedGlassSurface,
+                                labelColor = MutedSlate
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                borderColor = if (isSelected) PastelMint else WarmBorder,
+                                borderColor = if (isSelected) EmeraldMint else HairlineGlassBorder,
                                 enabled = true,
                                 selected = isSelected
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = CircleShape
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Photos & Videos Attachment Section
             Text(
-                text = "Photos & Videos",
-                fontFamily = DMSerifFontFamily,
-                fontSize = 15.sp,
-                color = PrimaryText
+                text = "PHOTOS & VIDEOS",
+                style = AuraKickerStyle,
+                color = MutedSlate
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedButton(
+            GlassSecondaryPillButton(
+                text = if (mediaUris.isEmpty()) "Attach Photos or Videos" else "Add More Media (${mediaUris.size}/5)",
+                icon = Icons.Default.AddPhotoAlternate,
                 onClick = {
                     photoPickerLauncher.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                     )
                 },
-                shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = PureWhite),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("add_photos_videos_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = null,
-                    tint = PrimaryText,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (mediaUris.isEmpty()) "Attach Photos or Videos" else "Add More Media (${mediaUris.size}/5)",
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    color = PrimaryText
-                )
-            }
+            )
 
             if (mediaUris.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -505,9 +484,9 @@ fun CreateIntentSheet(
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(SoftCream)
-                                .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(ElevatedGlassSurface)
+                                .border(1.dp, HairlineGlassBorder, RoundedCornerShape(14.dp))
                         ) {
                             AsyncImage(
                                 model = uriStr,
@@ -520,7 +499,7 @@ fun CreateIntentSheet(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                        .background(Color.Black.copy(alpha = 0.35f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -532,14 +511,13 @@ fun CreateIntentSheet(
                                 }
                             }
 
-                            // Remove Button Overlay
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(4.dp)
                                     .size(20.dp)
                                     .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.7f))
+                                    .background(ObsidianCanvas.copy(alpha = 0.85f))
                                     .clickable {
                                         mediaUris.removeAt(index)
                                         if (index < mediaTypes.size) {
@@ -560,37 +538,42 @@ fun CreateIntentSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Real-Time GPS Notice Badge
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PureWhite)
-                    .border(1.dp, WarmBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(DarkGlassCard)
+                    .border(1.dp, HairlineGlassBorder, RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(PastelCoral)
+                        .background(FieryCoral)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "Live GPS coordinates will be attached for exact distance calculation to nearby neighbors.",
-                    fontFamily = DMSansFontFamily,
-                    fontSize = 12.sp,
-                    color = SecondaryText,
+                    fontFamily = PlusJakartaFontFamily,
+                    fontSize = 11.sp,
+                    color = MutedSlate,
                     lineHeight = 16.sp
                 )
             }
 
-            // Submit Button
-            Button(
+            WhiteHeroPillButton(
+                text = when (selectedTab) {
+                    0 -> "Post Need to Neighbors"
+                    1 -> "Publish Resource Offer"
+                    2 -> "Submit Civic Issue"
+                    else -> "Publish Neighborhood Meetup"
+                },
+                enabled = title.isNotBlank(),
                 onClick = {
                     if (title.isNotBlank()) {
                         val urisList = mediaUris.toList()
@@ -603,30 +586,10 @@ fun CreateIntentSheet(
                         }
                     }
                 },
-                enabled = title.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag("submit_action_button"),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryText,
-                    contentColor = PureWhite
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = when (selectedTab) {
-                        0 -> "Post Need to Neighbors"
-                        1 -> "Publish Resource Offer"
-                        2 -> "Submit Civic Issue"
-                        else -> "Publish Neighborhood Meetup"
-                    },
-                    fontFamily = DMSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = PureWhite
-                )
-            }
+                    .testTag("submit_action_button")
+            )
         }
     }
 }

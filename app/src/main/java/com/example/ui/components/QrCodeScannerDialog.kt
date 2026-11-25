@@ -15,11 +15,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,13 +43,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -76,18 +74,22 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.example.data.model.GridCell
-import com.example.ui.theme.DMSerifFontFamily
-import com.example.ui.theme.DMSansFontFamily
-import com.example.ui.theme.DeepNavy
-import com.example.ui.theme.PastelCoral
-import com.example.ui.theme.PastelMint
-import com.example.ui.theme.PastelPeach
-import com.example.ui.theme.PrimaryText
+import com.example.ui.theme.AuraKickerStyle
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.CobaltSoft
+import com.example.ui.theme.DarkGlassCard
+import com.example.ui.theme.ElectricCobalt
+import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.HairlineGlassBorder
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.ObsidianBlack
+import com.example.ui.theme.ObsidianCanvas
+import com.example.ui.theme.ObsidianInk
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SecondaryText
-import com.example.ui.theme.SoftCream
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmIvory
+import com.example.ui.theme.SubtleGlassDivider
 import com.example.util.QrCodePayloadHelper
 
 @Composable
@@ -124,26 +126,26 @@ fun QrCodeScannerDialog(
     var manualInput by remember { mutableStateOf("") }
     var detectedCellCode by remember { mutableStateOf<String?>(null) }
 
-    // Laser scanning line animation
-    val infiniteTransition = rememberInfiniteTransition()
-    val laserOffsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val infiniteTransition = rememberInfiniteTransition(label = "qr_laser")
+    val laserOffsetFraction by infiniteTransition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.92f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            animation = tween(durationMillis = 1900, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "qr_laser_y"
     )
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Surface(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp)
                 .testTag("qr_scanner_dialog"),
             shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = PureWhite),
-            border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+            color = DarkGlassCard,
+            border = BorderStroke(1.dp, HairlineGlassBorder)
         ) {
             Column(
                 modifier = Modifier
@@ -151,7 +153,6 @@ fun QrCodeScannerDialog(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -160,63 +161,60 @@ fun QrCodeScannerDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(PastelPeach),
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(CobaltSoft)
+                                .border(1.dp, ElectricCobalt.copy(alpha = 0.45f), RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.QrCodeScanner,
                                 contentDescription = null,
-                                tint = DeepNavy,
+                                tint = CobaltGlow,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Scan Grid QR Code",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 20.sp,
-                                color = PrimaryText,
-                                modifier = Modifier.testTag("qr_scanner_title")
+                                text = "QR SCANNER",
+                                style = AuraKickerStyle,
+                                color = CobaltGlow
                             )
                             Text(
-                                text = "Instantly join a neighbor's cell",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = SecondaryText
+                                text = "Scan Grid QR Code",
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = PureWhite,
+                                modifier = Modifier.testTag("qr_scanner_title")
                             )
                         }
                     }
 
-                    IconButton(
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = "Close",
                         onClick = onDismiss,
                         modifier = Modifier.testTag("qr_scanner_close")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = PrimaryText
-                        )
-                    }
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Camera Viewfinder Box
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1.1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(DeepNavy)
-                        .border(2.dp, PastelCoral.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                        .aspectRatio(1.12f)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(ObsidianBlack)
+                        .border(1.5.dp, ElectricCobalt.copy(alpha = 0.7f), RoundedCornerShape(22.dp))
                         .testTag("camera_viewfinder_box"),
                     contentAlignment = Alignment.Center
                 ) {
                     if (hasCameraPermission) {
-                        // CameraX Preview Engine
                         AndroidView(
                             factory = { ctx ->
                                 val previewView = PreviewView(ctx)
@@ -243,7 +241,6 @@ fun QrCodeScannerDialog(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // Permission Fallback View
                         Column(
                             modifier = Modifier.padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -251,87 +248,83 @@ fun QrCodeScannerDialog(
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = null,
-                                tint = PureWhite.copy(alpha = 0.7f),
-                                modifier = Modifier.size(44.dp)
+                                tint = CobaltGlow,
+                                modifier = Modifier.size(40.dp)
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "Camera Permission Required",
-                                fontFamily = DMSerifFontFamily,
-                                fontSize = 16.sp,
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
                                 color = PureWhite
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Grant permission to scan physical QR code posters or select a sample cell below.",
-                                fontFamily = DMSansFontFamily,
-                                fontSize = 11.sp,
-                                color = PureWhite.copy(alpha = 0.7f),
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 12.sp,
+                                color = MutedSlate,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                                colors = ButtonDefaults.buttonColors(containerColor = PastelCoral),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Allow Camera", fontFamily = DMSansFontFamily, fontSize = 12.sp)
-                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            PillPrimaryButton(
+                                text = "Allow Camera",
+                                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                            )
                         }
                     }
 
-                    // Scanner Target Overlay Box with corner reticles
-                    Box(
+                    BoxWithConstraints(
                         modifier = Modifier
-                            .size(190.dp)
-                            .border(2.dp, PureWhite.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
+                            .size(188.dp)
+                            .border(1.5.dp, Color.White.copy(alpha = 0.72f), RoundedCornerShape(18.dp))
                     ) {
-                        // Laser scan line
+                        val laserY = maxHeight * laserOffsetFraction
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(3.dp)
-                                .align(Alignment.TopCenter)
+                                .offset(y = laserY)
+                                .height(2.5.dp)
                                 .padding(horizontal = 8.dp)
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(PastelCoral.copy(alpha = 0.2f), PastelCoral, PastelCoral.copy(alpha = 0.2f))
+                                        listOf(
+                                            CobaltGlow.copy(alpha = 0.15f),
+                                            FieryCoral,
+                                            CobaltGlow.copy(alpha = 0.15f)
+                                        )
                                     )
                                 )
                         )
                     }
 
-                    // Scanner Live Label
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 12.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        color = PureWhite.copy(alpha = 0.9f)
+                        shape = CircleShape,
+                        color = ObsidianCanvas.copy(alpha = 0.88f),
+                        border = BorderStroke(1.dp, HairlineGlassBorder)
                     ) {
                         Text(
-                            text = if (detectedCellCode != null) "Detected: $detectedCellCode" else "Align QR code inside frame",
-                            fontFamily = DMSansFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            color = PrimaryText,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                            text = if (detectedCellCode != null) "DETECTED: $detectedCellCode" else "ALIGN QR CODE INSIDE FRAME",
+                            style = AuraKickerStyle,
+                            color = PureWhite,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Simulated QR Scan / Quick Join Options for Testing & Convenience
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Or tap a nearby cell invitation:",
-                        fontFamily = DMSansFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = PrimaryText
+                        text = "NEARBY INVITATIONS",
+                        style = AuraKickerStyle,
+                        color = MutedSlate
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     val optionsToDisplay = sampleCells.ifEmpty {
                         listOf(
@@ -347,11 +340,11 @@ fun QrCodeScannerDialog(
                     ) {
                         items(optionsToDisplay) { cell ->
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = SoftCream,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder),
+                                shape = CircleShape,
+                                color = ElevatedGlassSurface,
+                                border = BorderStroke(1.dp, HairlineGlassBorder),
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(CircleShape)
                                     .clickable {
                                         detectedCellCode = cell.code
                                         onScannedGeohash(cell.code)
@@ -359,22 +352,23 @@ fun QrCodeScannerDialog(
                                     .testTag("sample_qr_cell_${cell.id}")
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = cell.name,
-                                        fontFamily = DMSansFontFamily,
+                                        fontFamily = PlusJakartaFontFamily,
                                         fontWeight = FontWeight.Medium,
-                                        fontSize = 11.sp,
-                                        color = PrimaryText
+                                        fontSize = 12.sp,
+                                        color = ObsidianInk
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = cell.code,
-                                        fontFamily = DMSansFontFamily,
-                                        fontSize = 10.sp,
-                                        color = PastelCoral
+                                        fontFamily = PlusJakartaFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = CobaltGlow
                                     )
                                 }
                             }
@@ -384,20 +378,28 @@ fun QrCodeScannerDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Manual Geohash Code / Offline Pass Input field
                 OutlinedTextField(
                     value = manualInput,
                     onValueChange = { manualInput = it },
-                    placeholder = { Text("Paste code (e.g. #9q8yyk8 or NEARGRID pass)", fontSize = 12.sp) },
+                    placeholder = {
+                        Text(
+                            "Paste code (e.g. #9q8yyk8 or NEARGRID pass)",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontSize = 12.sp,
+                            color = MutedSlate
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("qr_manual_input"),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PastelCoral,
-                        unfocusedBorderColor = WarmBorder,
-                        focusedContainerColor = SoftCream,
-                        unfocusedContainerColor = PureWhite
+                        focusedBorderColor = ElectricCobalt,
+                        unfocusedBorderColor = HairlineGlassBorder,
+                        focusedContainerColor = ElevatedGlassSurface,
+                        unfocusedContainerColor = ElevatedGlassSurface,
+                        focusedTextColor = PureWhite,
+                        unfocusedTextColor = ObsidianInk
                     ),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -412,7 +414,7 @@ fun QrCodeScannerDialog(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Submit Code",
-                                    tint = PastelCoral
+                                    tint = CobaltGlow
                                 )
                             }
                         }
@@ -426,39 +428,17 @@ fun QrCodeScannerDialog(
                     if (raw.isNotBlank()) QrCodePayloadHelper.parsePayload(raw) else null
                 }
 
-                // Action Button
-                Button(
+                WhiteHeroPillButton(
+                    text = if (parsedActive != null) "Join ${parsedActive.name} (${parsedActive.code})" else "Join Scanned Cell",
+                    icon = Icons.Default.QrCodeScanner,
                     onClick = {
                         val target = detectedCellCode ?: manualInput.ifBlank { "#9q8yyk8" }
                         onScannedGeohash(target)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("join_scanned_cell_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryText,
-                        contentColor = PureWhite
-                    )
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = null,
-                            tint = PureWhite,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (parsedActive != null) "Join ${parsedActive.name} (${parsedActive.code})" else "Join Scanned Cell",
-                            fontFamily = DMSansFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = PureWhite
-                        )
-                    }
-                }
+                        .testTag("join_scanned_cell_button")
+                )
             }
         }
     }

@@ -128,6 +128,7 @@ dependencies {
   implementation(libs.play.services.location)
   implementation(libs.osmdroid.android)
   implementation(libs.retrofit)
+  implementation(libs.kyant.backdrop)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
