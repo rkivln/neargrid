@@ -62,7 +62,6 @@ import com.example.ui.components.AuraVariant
 import com.example.ui.components.CircularOutlineIconButton
 import com.example.ui.components.DarkGlassCard
 import com.example.ui.components.GlassSecondaryPillButton
-import com.example.ui.components.GlowingOrbVisualizer
 import com.example.ui.components.NearGridBrandMark
 import com.example.ui.components.rememberResolvedBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -396,52 +395,36 @@ fun OnboardingSlideDiscovery() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 24.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
+        verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(235.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            GlowingOrbVisualizer(
-                modifier = Modifier.size(230.dp),
-                activeNodesCount = 6,
-                radiusMeters = 800,
-                isScanning = true
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            FrostedOnboardingTag(text = "H3 Spatial Mesh")
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = buildAnnotatedString {
-                    append("Privacy Without\n")
-                    withStyle(SpanStyle(color = FieryCoralGlow)) {
-                        append("Isolation.")
-                    }
-                },
-                fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 33.sp,
-                lineHeight = 38.sp,
-                color = PureWhite,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "Geographic rings determine nearby discovery without ever revealing your exact residential pin.",
-                fontFamily = PlusJakartaFontFamily,
-                fontSize = 14.sp,
-                lineHeight = 21.sp,
-                color = MutedSlate,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-        }
+        FrostedOnboardingTag(text = "H3 Spatial Mesh")
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = buildAnnotatedString {
+                append("Privacy Without\n")
+                withStyle(SpanStyle(color = FieryCoralGlow)) {
+                    append("Isolation.")
+                }
+            },
+            fontFamily = OutfitFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 38.sp,
+            lineHeight = 43.sp,
+            color = PureWhite,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "Geographic rings determine nearby discovery without ever revealing your exact residential pin.",
+            fontFamily = PlusJakartaFontFamily,
+            fontSize = 15.sp,
+            lineHeight = 23.sp,
+            color = MutedSlate,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
     }
 }
 

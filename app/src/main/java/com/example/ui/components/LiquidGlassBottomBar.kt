@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -75,7 +76,6 @@ import com.example.ui.theme.PureBlack
 import com.example.ui.theme.PureWhite
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -149,9 +149,8 @@ fun LiquidGlassBottomBar(
     val jellyScaleX = 1f + stretchFactor + swellFactor
     val jellyScaleY = (1f - stretchFactor * 0.38f + swellFactor).coerceAtLeast(0.82f)
 
-    val tabsBackdrop = rememberLayerBackdrop()
-    val lensCombinedBackdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop)
-    val activeGlassBlue = Color(0xFF4F94FF)
+    val dockBackdrop = rememberLayerBackdrop()
+    val activeGlassBlue = Color(0xFF60A5FF)
 
     Box(
         modifier = modifier
@@ -160,42 +159,6 @@ fun LiquidGlassBottomBar(
             .height(66.dp)
             .testTag("bottom_nav_bar")
             .onSizeChanged { containerWidthPx = it.width }
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { pillShape },
-                effects = {
-                    vibrancy()
-                    blur(20.dp.toPx())
-                    lens(
-                        refractionHeight = 14.dp.toPx(),
-                        refractionAmount = 28.dp.toPx(),
-                        depthEffect = true,
-                        chromaticAberration = true
-                    )
-                },
-                highlight = { Highlight.Default },
-                shadow = {
-                    Shadow(
-                        radius = 24.dp,
-                        offset = DpOffset(0.dp, 10.dp),
-                        color = PureBlack.copy(alpha = 0.52f)
-                    )
-                },
-                innerShadow = { InnerShadow.Default },
-                onDrawSurface = {
-                    drawRect(Color(0xFF0E121C).copy(alpha = 0.72f))
-                }
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        PureWhite.copy(alpha = 0.30f),
-                        HairlineGlassBorder.copy(alpha = 0.65f)
-                    )
-                ),
-                shape = pillShape
-            )
             .pointerInput(destinations, containerWidthPx) {
                 if (containerWidthPx <= 0) return@pointerInput
                 detectHorizontalDragGestures(
@@ -259,106 +222,25 @@ fun LiquidGlassBottomBar(
                     }
                 )
             }
-            .padding(horizontal = horizontalInsetDp, vertical = 5.dp)
     ) {
-        // Destination Slots captured into tabsBackdrop for real-time lens magnification
-        Row(
+        // Layer 1: Dark Smoked Liquid Glass Dock captured into dockBackdrop
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(tabsBackdrop),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .layerBackdrop(dockBackdrop)
         ) {
-            destinations.forEachIndexed { index, destination ->
-                val isSelected = index == selectedIndex
-                val (iconFilled, iconOutlined) = when (destination) {
-                    NavigationDestination.HOME -> Icons.Filled.Home to Icons.Outlined.Home
-                    NavigationDestination.MAP -> Icons.Filled.Map to Icons.Outlined.Map
-                    NavigationDestination.RADAR -> Icons.Filled.Radar to Icons.Outlined.Radar
-                    NavigationDestination.COMMUNITY -> Icons.Filled.Campaign to Icons.Outlined.Campaign
-                    NavigationDestination.INBOX -> Icons.Filled.ChatBubble to Icons.Outlined.ChatBubbleOutline
-                    NavigationDestination.PROFILE -> Icons.Filled.Person to Icons.Outlined.Person
-                }
-
-                val compactDisplayLabel = when (destination) {
-                    NavigationDestination.HOME -> "Feed"
-                    NavigationDestination.MAP -> "Map"
-                    NavigationDestination.RADAR -> "Radar"
-                    NavigationDestination.COMMUNITY -> "Pulse"
-                    NavigationDestination.INBOX -> "Inbox"
-                    NavigationDestination.PROFILE -> "Profile"
-                }
-
-                val tintColor by animateColorAsState(
-                    targetValue = when {
-                        isSelected && destination == NavigationDestination.COMMUNITY -> FieryCoralGlow
-                        isSelected -> activeGlassBlue
-                        else -> PureWhite.copy(alpha = 0.88f)
-                    },
-                    label = "navTint"
-                )
-
-                val interactionSource = remember { MutableInteractionSource() }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(innerPillShape)
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = ripple(bounded = true, color = PureWhite.copy(alpha = 0.14f)),
-                            role = Role.Tab,
-                            onClick = {
-                                if (!isSelected) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onSelectDestination(destination)
-                                }
-                            }
-                        )
-                        .testTag("nav_item_${destination.name.lowercase()}"),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = if (isSelected) iconFilled else iconOutlined,
-                        contentDescription = destination.label,
-                        tint = tintColor,
-                        modifier = Modifier.size(19.dp)
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = compactDisplayLabel,
-                        fontFamily = PlusJakartaFontFamily,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        color = tintColor
-                    )
-                }
-            }
-        }
-
-        // Clear Chromatic Magnifying Jelly Lens Capsule riding smoothly over the tabs
-        if (containerWidthPx > 0) {
-            val indicatorWidthDp = with(density) { slotWidthPx.toDp() }
-            val indicatorOffsetX = (animatedIndex.value * slotWidthPx).roundToInt()
-
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(x = indicatorOffsetX, y = 0) }
-                    .width(indicatorWidthDp)
-                    .fillMaxHeight()
+                    .fillMaxSize()
                     .drawBackdrop(
-                        backdrop = lensCombinedBackdrop,
-                        shape = { innerPillShape },
+                        backdrop = backdrop,
+                        shape = { pillShape },
                         effects = {
                             vibrancy()
+                            blur(20.dp.toPx())
                             lens(
-                                refractionHeight = 20.dp.toPx(),
-                                refractionAmount = 42.dp.toPx(),
+                                refractionHeight = 14.dp.toPx(),
+                                refractionAmount = 28.dp.toPx(),
                                 depthEffect = true,
                                 chromaticAberration = true
                             )
@@ -366,32 +248,172 @@ fun LiquidGlassBottomBar(
                         highlight = { Highlight.Default },
                         shadow = {
                             Shadow(
-                                radius = 12.dp,
-                                offset = DpOffset(0.dp, 4.dp),
-                                color = PureBlack.copy(alpha = 0.34f)
+                                radius = 24.dp,
+                                offset = DpOffset(0.dp, 10.dp),
+                                color = PureBlack.copy(alpha = 0.52f)
                             )
                         },
                         innerShadow = { InnerShadow.Default },
-                        layerBlock = {
-                            this.scaleX = jellyScaleX
-                            this.scaleY = jellyScaleY
-                        },
                         onDrawSurface = {
-                            drawRect(PureWhite.copy(alpha = 0.05f))
+                            drawRect(Color(0xFF0E121C).copy(alpha = 0.72f))
                         }
                     )
                     .border(
                         width = 1.dp,
                         brush = Brush.verticalGradient(
                             listOf(
-                                PureWhite.copy(alpha = 0.56f),
-                                activeGlassBlue.copy(alpha = 0.24f),
-                                PureWhite.copy(alpha = 0.34f)
+                                PureWhite.copy(alpha = 0.30f),
+                                HairlineGlassBorder.copy(alpha = 0.65f)
                             )
                         ),
-                        shape = innerPillShape
+                        shape = pillShape
                     )
             )
+        }
+
+        // Layer 2 + Layer 3: Clear Jelly Glass Pill underneath razor-sharp tab icons and labels
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = horizontalInsetDp, vertical = 5.dp)
+        ) {
+            // Clear Chromatic Jelly Lens Capsule (no blur; placed behind icons/labels so contents remain crystal clear)
+            if (containerWidthPx > 0) {
+                val indicatorWidthDp = with(density) { slotWidthPx.toDp() }
+                val indicatorOffsetX = (animatedIndex.value * slotWidthPx).roundToInt()
+
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(x = indicatorOffsetX, y = 0) }
+                        .width(indicatorWidthDp)
+                        .fillMaxHeight()
+                        .drawBackdrop(
+                            backdrop = dockBackdrop,
+                            shape = { innerPillShape },
+                            effects = {
+                                vibrancy()
+                                lens(
+                                    refractionHeight = 10.dp.toPx(),
+                                    refractionAmount = 22.dp.toPx(),
+                                    depthEffect = true,
+                                    chromaticAberration = true
+                                )
+                            },
+                            highlight = { Highlight.Default },
+                            shadow = {
+                                Shadow(
+                                    radius = 12.dp,
+                                    offset = DpOffset(0.dp, 4.dp),
+                                    color = PureBlack.copy(alpha = 0.28f)
+                                )
+                            },
+                            innerShadow = { InnerShadow.Default },
+                            layerBlock = {
+                                this.scaleX = jellyScaleX
+                                this.scaleY = jellyScaleY
+                            },
+                            onDrawSurface = {
+                                drawRect(PureWhite.copy(alpha = 0.11f))
+                            }
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    PureWhite.copy(alpha = 0.58f),
+                                    activeGlassBlue.copy(alpha = 0.28f),
+                                    PureWhite.copy(alpha = 0.36f)
+                                )
+                            ),
+                            shape = innerPillShape
+                        )
+                )
+            }
+
+            // Crisp Destination Slots rendered cleanly above the clear glass pill without blur
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                destinations.forEachIndexed { index, destination ->
+                    val isSelected = index == selectedIndex
+                    val focusProximity = (1f - abs(animatedIndex.value - index)).coerceIn(0f, 1f)
+                    val contentScale = 1f + 0.08f * focusProximity
+
+                    val (iconFilled, iconOutlined) = when (destination) {
+                        NavigationDestination.HOME -> Icons.Filled.Home to Icons.Outlined.Home
+                        NavigationDestination.MAP -> Icons.Filled.Map to Icons.Outlined.Map
+                        NavigationDestination.RADAR -> Icons.Filled.Radar to Icons.Outlined.Radar
+                        NavigationDestination.COMMUNITY -> Icons.Filled.Campaign to Icons.Outlined.Campaign
+                        NavigationDestination.INBOX -> Icons.Filled.ChatBubble to Icons.Outlined.ChatBubbleOutline
+                        NavigationDestination.PROFILE -> Icons.Filled.Person to Icons.Outlined.Person
+                    }
+
+                    val compactDisplayLabel = when (destination) {
+                        NavigationDestination.HOME -> "Feed"
+                        NavigationDestination.MAP -> "Map"
+                        NavigationDestination.RADAR -> "Radar"
+                        NavigationDestination.COMMUNITY -> "Pulse"
+                        NavigationDestination.INBOX -> "Inbox"
+                        NavigationDestination.PROFILE -> "Profile"
+                    }
+
+                    val tintColor by animateColorAsState(
+                        targetValue = when {
+                            isSelected && destination == NavigationDestination.COMMUNITY -> FieryCoralGlow
+                            isSelected -> activeGlassBlue
+                            else -> PureWhite.copy(alpha = 0.90f)
+                        },
+                        label = "navTint"
+                    )
+
+                    val interactionSource = remember { MutableInteractionSource() }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(innerPillShape)
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = ripple(bounded = true, color = PureWhite.copy(alpha = 0.14f)),
+                                role = Role.Tab,
+                                onClick = {
+                                    if (!isSelected) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSelectDestination(destination)
+                                    }
+                                }
+                            )
+                            .graphicsLayer {
+                                scaleX = contentScale
+                                scaleY = contentScale
+                            }
+                            .testTag("nav_item_${destination.name.lowercase()}"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isSelected) iconFilled else iconOutlined,
+                            contentDescription = destination.label,
+                            tint = tintColor,
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = compactDisplayLabel,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            color = tintColor
+                        )
+                    }
+                }
+            }
         }
     }
 }

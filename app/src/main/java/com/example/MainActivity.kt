@@ -363,7 +363,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         onOpenCreateDialog = { viewModel.openCreateDialog(it) },
                         updateInfo = updateInfo,
                         isUpdateBannerDismissed = isUpdateBannerDismissed,
-                        onDismissUpdateBanner = { viewModel.dismissUpdateBanner() }
+                        onDismissUpdateBanner = { viewModel.dismissUpdateBanner() },
+                        nearbyNeighborsCount = nearbyNeighbors.size
                     )
                 }
 
@@ -400,6 +401,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
                         latitude = currentLocation?.latitude ?: 0.0,
                         longitude = currentLocation?.longitude ?: 0.0,
                         localityName = currentLocation?.localityName ?: "",
+                        discoveryRadiusMeters = uiState.discoveryRadiusMeters,
+                        nearbyNeighborsCount = nearbyNeighbors.size,
                         isLocating = uiState.isLocating,
                         isPostingGeohashMessage = uiState.isPostingGeohashMessage,
                         geohashPostStatus = uiState.geohashPostStatus,

@@ -60,7 +60,6 @@ import com.example.R
 import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.DarkGlassCard
-import com.example.ui.components.GlowingOrbVisualizer
 import com.example.ui.components.NearGridBrandMark
 import com.example.ui.components.WhiteHeroPillButton
 import com.example.ui.theme.AmberLight
@@ -104,7 +103,16 @@ fun SignInScreen(
 
         coroutineScope.launch {
             try {
-                val credentialManager = CredentialManager.create(context)
+                val activity = generateSequence(context) {
+                    if (it is android.content.ContextWrapper) it.baseContext else null
+                }.filterIsInstance<android.app.Activity>().firstOrNull()
+                    ?: context as? android.app.Activity
+
+                if (activity == null) {
+                    throw IllegalStateException("Activity context is required for Google Sign-In.")
+                }
+
+                val credentialManager = CredentialManager.create(activity)
                 val serverClientId = context.getString(R.string.default_web_client_id)
                 if (serverClientId.isBlank() || serverClientId == "YOUR_DEFAULT_WEB_CLIENT_ID") {
                     throw IllegalStateException("Google Sign-In is not configured. Missing valid Web Client ID.")
@@ -118,7 +126,7 @@ fun SignInScreen(
 
                 val result = credentialManager.getCredential(
                     request = request,
-                    context = context
+                    context = activity
                 )
 
                 val credential = result.credential
@@ -130,8 +138,9 @@ fun SignInScreen(
                 onSignInSuccess()
             } catch (e: GetCredentialCancellationException) {
                 isLoading = false
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 isLoading = false
+                android.util.Log.e("SignInScreen", "Google Sign-In failed with error", e)
                 errorMessage = e.localizedMessage ?: "Unable to complete Google Sign-In. Please try again."
             }
         }
@@ -186,28 +195,12 @@ fun SignInScreen(
                 }
             }
 
-            // Atmospheric Orb + Zentra Headline
+            // Pure Atmospheric Cobalt Aura + Crisp Outfit Headline
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 28.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(175.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    GlowingOrbVisualizer(
-                        modifier = Modifier.size(175.dp),
-                        activeNodesCount = 5,
-                        radiusMeters = 500,
-                        isScanning = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
                 Text(
                     text = buildAnnotatedString {
                         append("Own Your Block,\nProtect ")
@@ -217,18 +210,18 @@ fun SignInScreen(
                     },
                     fontFamily = OutfitFontFamily,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    lineHeight = 37.sp,
+                    fontSize = 36.sp,
+                    lineHeight = 41.sp,
                     color = PureWhite
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = "Spatial mesh mutual aid and hyper-local civic resilience for verified neighbors.",
                     fontFamily = PlusJakartaFontFamily,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
                     color = MutedSlate
                 )
             }

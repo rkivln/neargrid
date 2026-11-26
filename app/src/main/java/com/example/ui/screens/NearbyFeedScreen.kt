@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,14 +32,13 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -74,7 +75,12 @@ import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.CircularOutlineIconButton
 import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.FrostedGlassBurgerPopup
+import com.example.ui.components.FrostedMenuOptionPill
+import com.example.ui.components.FrostedMenuSectionTitle
 import com.example.ui.components.LiquidGlassBackButton
+import com.example.ui.components.LiquidGlassBurgerMenuButton
+import com.example.ui.components.LiquidGlassSwitch
 import com.example.ui.components.PillPrimaryButton
 import com.example.ui.theme.AmberGlow
 import com.example.ui.theme.AmberLight
@@ -495,6 +501,7 @@ fun NearbyFeedTopHeader(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NearbyControlsBar(
     selectedRadiusMeters: Int,
@@ -509,167 +516,181 @@ fun NearbyControlsBar(
     isRefreshing: Boolean,
     onRefresh: () -> Unit
 ) {
-    DarkGlassCard(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-        cornerRadius = 22.dp,
-        containerColor = DarkGlassCard.copy(alpha = 0.92f),
-        borderColor = HairlineGlassBorder,
-        contentPadding = PaddingValues(14.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "RADIUS",
-                style = AuraKickerStyle,
-                color = MutedSlate
-            )
+    var showMenu by remember { mutableStateOf(false) }
+    val activeCount = (if (selectedType != "ALL") 1 else 0) +
+        (if (onlyWithPhotos) 1 else 0) +
+        (if (!sortByDistance) 1 else 0)
+    val typeSummary = when (selectedType) {
+        "NEED" -> "Needs"
+        "OFFER" -> "Offers"
+        "MEETUP" -> "Meetups"
+        else -> "All"
+    }
+    val sortSummary = if (sortByDistance) "Closest first" else "Newest first"
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
-                items(radiusOptions) { (meters, label) ->
-                    val isSelected = selectedRadiusMeters == meters
-                    Surface(
-                        shape = CircleShape,
-                        color = if (isSelected) ElectricCobalt else ElevatedGlassSurface,
-                        border = BorderStroke(1.dp, if (isSelected) CobaltGlow else HairlineGlassBorder),
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .clickable { onRadiusSelect(meters) }
-                            .testTag("radius_chip_$label")
-                    ) {
-                        Text(
-                            text = label,
-                            fontFamily = PlusJakartaFontFamily,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) PureWhite else ObsidianInk,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-            }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "$itemCount nearby · ${LocationHelper.formatDistance(selectedRadiusMeters.toFloat())}",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = PureWhite,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "$typeSummary · $sortSummary" + if (onlyWithPhotos) " · Photos" else "",
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 12.sp,
+                color = if (activeCount > 0) CobaltGlow else MutedSlate,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
         Row(
-            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                val types = listOf(
-                    "ALL" to "All",
-                    "NEED" to "Needs",
-                    "OFFER" to "Offers",
-                    "MEETUP" to "Meetups"
+            CircularOutlineIconButton(
+                icon = Icons.Default.Refresh,
+                contentDescription = "Refresh",
+                onClick = onRefresh,
+                size = 42.dp,
+                containerColor = ElevatedGlassSurface,
+                borderColor = HairlineGlassBorder,
+                iconTint = PureWhite,
+                modifier = Modifier.testTag("nearby_feed_refresh_button")
+            )
+
+            Box {
+                LiquidGlassBurgerMenuButton(
+                    activeFilterCount = activeCount,
+                    onClick = { showMenu = !showMenu },
+                    contentDescription = "Open nearby sort and filter menu",
+                    modifier = Modifier.testTag("nearby_filter_menu_button")
                 )
-                items(types) { (key, label) ->
-                    val isSelected = selectedType == key
-                    val selectedBg = when (key) {
-                        "NEED" -> FieryCoral
-                        "OFFER" -> EmeraldMint
-                        "MEETUP" -> AmberGlow
-                        else -> ElectricCobalt
-                    }
-                    Surface(
-                        shape = CircleShape,
-                        color = if (isSelected) selectedBg else ElevatedGlassSurface,
-                        border = BorderStroke(1.dp, if (isSelected) selectedBg else HairlineGlassBorder),
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .clickable { onTypeSelect(key) }
-                            .testTag("type_filter_$key")
+
+                FrostedGlassBurgerPopup(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    width = 304.dp
+                ) {
+                    Text(
+                        text = "Nearby Filters",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = PureWhite
+                    )
+
+                    HorizontalDivider(thickness = 1.dp, color = com.example.ui.theme.SubtleGlassDivider)
+
+                    FrostedMenuSectionTitle("Sort Order")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = label,
-                            fontFamily = PlusJakartaFontFamily,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) PureWhite else ObsidianInk,
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                        FrostedMenuOptionPill(
+                            label = "Closest First",
+                            selected = sortByDistance,
+                            onClick = {
+                                if (!sortByDistance) onToggleSort()
+                                showMenu = false
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("nearby_feed_sort_button")
+                        )
+                        FrostedMenuOptionPill(
+                            label = "Newest First",
+                            selected = !sortByDistance,
+                            onClick = {
+                                if (sortByDistance) onToggleSort()
+                                showMenu = false
+                            },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                }
 
-                item {
-                    Surface(
-                        shape = CircleShape,
-                        color = if (onlyWithPhotos) AmberSoft else ElevatedGlassSurface,
-                        border = BorderStroke(1.dp, if (onlyWithPhotos) AmberGlow else HairlineGlassBorder),
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .clickable { onTogglePhotos() }
-                            .testTag("photos_only_filter_button")
+                    FrostedMenuSectionTitle("Post Type")
+                    val types = listOf(
+                        "ALL" to "All",
+                        "NEED" to "Needs",
+                        "OFFER" to "Offers",
+                        "MEETUP" to "Meetups"
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Image,
-                                contentDescription = null,
-                                tint = if (onlyWithPhotos) AmberLight else ObsidianInk,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Photos",
-                                fontFamily = PlusJakartaFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = if (onlyWithPhotos) FontWeight.Bold else FontWeight.Medium,
-                                color = if (onlyWithPhotos) AmberLight else ObsidianInk
+                        types.forEach { (key, label) ->
+                            val selectedBg = when (key) {
+                                "NEED" -> FieryCoral
+                                "OFFER" -> EmeraldMint
+                                "MEETUP" -> AmberGlow
+                                else -> ElectricCobalt
+                            }
+                            FrostedMenuOptionPill(
+                                label = label,
+                                selected = selectedType == key,
+                                selectedColor = selectedBg,
+                                onClick = {
+                                    onTypeSelect(key)
+                                    showMenu = false
+                                },
+                                modifier = Modifier.testTag("type_filter_$key")
                             )
                         }
                     }
+
+                    FrostedMenuSectionTitle("Radius")
+                    val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        radiusOptions.forEach { (meters, label) ->
+                            FrostedMenuOptionPill(
+                                label = label,
+                                selected = selectedRadiusMeters == meters,
+                                onClick = {
+                                    onRadiusSelect(meters)
+                                    showMenu = false
+                                },
+                                modifier = Modifier.testTag("radius_chip_$label")
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Photos only",
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = PureWhite
+                        )
+                        LiquidGlassSwitch(
+                            checked = onlyWithPhotos,
+                            onCheckedChange = { onTogglePhotos() },
+                            modifier = Modifier.testTag("photos_only_filter_button")
+                        )
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularOutlineIconButton(
-                    icon = Icons.Default.Sort,
-                    contentDescription = if (sortByDistance) "Sorted by Distance" else "Sorted by Date",
-                    onClick = onToggleSort,
-                    size = 38.dp,
-                    containerColor = if (sortByDistance) CobaltSoft else ElevatedGlassSurface,
-                    borderColor = if (sortByDistance) CobaltBorder else HairlineGlassBorder,
-                    iconTint = if (sortByDistance) CobaltGlow else ObsidianInk,
-                    modifier = Modifier.testTag("nearby_feed_sort_button")
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                CircularOutlineIconButton(
-                    icon = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    onClick = onRefresh,
-                    size = 38.dp,
-                    containerColor = ElevatedGlassSurface,
-                    borderColor = HairlineGlassBorder,
-                    iconTint = PureWhite,
-                    modifier = Modifier.testTag("nearby_feed_refresh_button")
-                )
-            }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "$itemCount posts found within ${LocationHelper.formatDistance(selectedRadiusMeters.toFloat())}",
-            fontFamily = PlusJakartaFontFamily,
-            fontSize = 11.sp,
-            color = MutedSlate
-        )
     }
 }
 

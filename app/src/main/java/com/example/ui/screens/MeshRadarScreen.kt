@@ -47,7 +47,7 @@ import com.example.ui.components.CapsuleChevronRow
 import com.example.ui.components.CircularOutlineIconButton
 import com.example.ui.components.DarkGlassCard
 import com.example.ui.components.GeohashMessageComposer
-import com.example.ui.components.GlowingOrbVisualizer
+import com.example.ui.components.LiquidGlassSectorBadge
 import com.example.ui.theme.CobaltGlow
 import com.example.ui.theme.CobaltSoft
 import com.example.ui.theme.ElectricCobalt
@@ -74,6 +74,8 @@ fun MeshRadarScreen(
     latitude: Double = 0.0,
     longitude: Double = 0.0,
     localityName: String = "",
+    discoveryRadiusMeters: Int = 800,
+    nearbyNeighborsCount: Int = 0,
     isLocating: Boolean = false,
     isPostingGeohashMessage: Boolean = false,
     geohashPostStatus: String? = null,
@@ -134,76 +136,17 @@ fun MeshRadarScreen(
                     }
                 }
 
-                // Glowing Cosmic Cobalt Orb Card (Orb style)
+                // Crisp Liquid Glass Sector Telemetry Badge with live neighbor & broadcast counters
                 item {
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        DarkGlassCard(
-                            cornerRadius = 28.dp,
-                            contentPadding = PaddingValues(18.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = CobaltSoft,
-                                        border = BorderStroke(1.dp, ElectricCobalt.copy(alpha = 0.5f))
-                                    ) {
-                                        Text(
-                                            text = if (currentGeohash.isNotBlank()) "Cell #${currentGeohash.uppercase()}" else "Cell Active",
-                                            fontFamily = PlusJakartaFontFamily,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp,
-                                            color = PureWhite,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                        )
-                                    }
-
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = EmeraldSoft,
-                                        border = BorderStroke(1.dp, EmeraldMint.copy(alpha = 0.5f))
-                                    ) {
-                                        Text(
-                                            text = if (isLocating) "Scanning..." else "${geohashMessages.size} Dispatches",
-                                            fontFamily = PlusJakartaFontFamily,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 11.sp,
-                                            color = EmeraldLight,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                        )
-                                    }
-                                }
-
-                                GlowingOrbVisualizer(
-                                    modifier = Modifier.size(195.dp),
-                                    activeNodesCount = (geohashMessages.size + 4).coerceIn(4, 8),
-                                    radiusMeters = 1000,
-                                    isScanning = isLocating
-                                )
-
-                                Text(
-                                    text = currentCell?.name ?: localityName.ifBlank { "Oakwood Sector" },
-                                    fontFamily = OutfitFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
-                                    color = PureWhite
-                                )
-                                Spacer(modifier = Modifier.height(3.dp))
-                                Text(
-                                    text = "1 km privacy-preserving radio broadcast zone",
-                                    fontFamily = PlusJakartaFontFamily,
-                                    fontSize = 12.sp,
-                                    color = MutedSlate
-                                )
-                            }
-                        }
+                        LiquidGlassSectorBadge(
+                            sectorName = currentCell?.name ?: localityName.ifBlank { "Oakwood Sector" },
+                            geohash = currentGeohash,
+                            radiusMeters = discoveryRadiusMeters,
+                            neighborCount = nearbyNeighborsCount,
+                            dispatchCount = geohashMessages.size,
+                            isScanning = isLocating
+                        )
                     }
                 }
 

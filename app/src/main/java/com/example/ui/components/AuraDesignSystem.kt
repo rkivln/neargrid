@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,6 +13,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -42,6 +47,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,6 +71,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -78,14 +87,21 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import com.example.ui.theme.AuraKickerStyle
 import com.example.ui.theme.AuraOrange
+import com.example.ui.theme.CobaltBorder
 import com.example.ui.theme.CobaltDeep
 import com.example.ui.theme.CobaltGlow
 import com.example.ui.theme.CobaltHeroGradient
+import com.example.ui.theme.CobaltSoft
 import com.example.ui.theme.DarkGlassCard
 import com.example.ui.theme.ElectricCobalt
 import com.example.ui.theme.ElevatedGlassSurface
+import com.example.ui.theme.EmeraldLight
 import com.example.ui.theme.EmeraldMint
+import com.example.ui.theme.EmeraldSoft
 import com.example.ui.theme.FieryCoral
 import com.example.ui.theme.HairlineGlassBorder
 import com.example.ui.theme.MutedSlate
@@ -109,9 +125,7 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 val LocalAuraBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 
@@ -1316,130 +1330,489 @@ fun LiquidGlassSwitch(
 }
 
 /**
- * Animated glowing cosmic cobalt orb visualizer inspired by the Orb AI / Mesh UI.
+ * Crisp Liquid Glass Sector Telemetry Badge replacing the 3D sphere on Radar and Sector Drawer.
+ * Surfaces the geohash cell, discovery perimeter, and live neighbor & dispatch counters.
  */
 @Composable
-fun GlowingOrbVisualizer(
+fun LiquidGlassSectorBadge(
+    sectorName: String,
+    geohash: String,
+    radiusMeters: Int,
+    neighborCount: Int,
+    dispatchCount: Int,
+    isScanning: Boolean = false,
+    compact: Boolean = false,
     modifier: Modifier = Modifier,
-    activeNodesCount: Int = 0,
-    radiusMeters: Int = 500,
-    isScanning: Boolean = false
+    backdrop: Backdrop? = null
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "cobaltOrb")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2f * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = if (isScanning) 3200 else 5600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "orbPhase"
-    )
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orbPulse"
-    )
+    val resolvedBackdrop = rememberResolvedBackdrop(backdrop)
+    val badgeShape = RoundedCornerShape(if (compact) 22.dp else 26.dp)
+    val perimeterLabel = if (radiusMeters >= 1000) {
+        val km = radiusMeters / 1000f
+        if (km % 1f == 0f) "${km.toInt()} km" else "${String.format("%.1f", km)} km"
+    } else {
+        "${radiusMeters} m"
+    }
+    val cellLabel = if (geohash.isNotBlank()) {
+        "Cell #${geohash.removePrefix("#").uppercase()}"
+    } else {
+        "Sector Active"
+    }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val baseR = minOf(size.width, size.height) * 0.34f * pulse
-
-            // Outer ambient cobalt halo
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        ElectricCobalt.copy(alpha = 0.42f),
-                        CobaltDeep.copy(alpha = 0.16f),
-                        Color.Transparent
-                    ),
-                    center = center,
-                    radius = baseR * 1.65f
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBackdrop(
+                backdrop = resolvedBackdrop,
+                shape = { badgeShape },
+                effects = {
+                    vibrancy()
+                    blur(18.dp.toPx())
+                    lens(
+                        refractionHeight = 10.dp.toPx(),
+                        refractionAmount = 20.dp.toPx(),
+                        depthEffect = true,
+                        chromaticAberration = true
+                    )
+                },
+                highlight = { Highlight.Default },
+                shadow = {
+                    Shadow(
+                        radius = 18.dp,
+                        offset = DpOffset(0.dp, 8.dp),
+                        color = PureBlack.copy(alpha = 0.36f)
+                    )
+                },
+                innerShadow = { InnerShadow.Default },
+                onDrawSurface = {
+                    drawRect(Color(0xFF0E1422).copy(alpha = 0.74f))
+                }
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        PureWhite.copy(alpha = 0.32f),
+                        HairlineGlassBorder.copy(alpha = 0.65f)
+                    )
                 ),
-                center = center,
-                radius = baseR * 1.65f
+                shape = badgeShape
+            )
+            .padding(if (compact) 14.dp else 18.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Top sector geohash + perimeter pills
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = CobaltSoft.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, CobaltBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(if (isScanning) EmeraldMint else CobaltGlow)
+                        )
+                        Text(
+                            text = cellLabel,
+                            fontFamily = PlusJakartaFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = PureWhite
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = PureWhite.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.18f))
+                ) {
+                    Text(
+                        text = "$perimeterLabel zone",
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = ObsidianInk,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(if (compact) 10.dp else 14.dp))
+
+            Text(
+                text = sectorName.ifBlank { "Local Sector" },
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = if (compact) 19.sp else 23.sp,
+                lineHeight = if (compact) 23.sp else 27.sp,
+                color = PureWhite,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (isScanning) {
+                    "Scanning local sector frequencies..."
+                } else {
+                    "Encrypted coarse-grid neighborhood perimeter"
+                },
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 12.sp,
+                color = MutedSlate,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            // Deep core sphere
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFF0A1438),
-                        CobaltDeep.copy(alpha = 0.65f),
-                        ElectricCobalt.copy(alpha = 0.85f)
-                    ),
-                    center = center + Offset(baseR * 0.18f, -baseR * 0.18f),
-                    radius = baseR
-                ),
-                center = center,
-                radius = baseR
-            )
+            Spacer(modifier = Modifier.height(if (compact) 12.dp else 16.dp))
 
-            // Orbital luminous plasma ribbons
-            drawArc(
-                brush = Brush.sweepGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        CobaltGlow.copy(alpha = 0.9f),
-                        PureWhite.copy(alpha = 0.92f),
-                        ElectricCobalt.copy(alpha = 0.7f),
-                        Color.Transparent
-                    ),
-                    center = center
-                ),
-                startAngle = Math.toDegrees(phase.toDouble()).toFloat(),
-                sweepAngle = 220f,
-                useCenter = false,
-                topLeft = Offset(center.x - baseR * 0.96f, center.y - baseR * 0.72f),
-                size = androidx.compose.ui.geometry.Size(baseR * 1.92f, baseR * 1.44f),
-                style = Stroke(width = 3.2.dp.toPx(), cap = StrokeCap.Round)
-            )
-
-            drawArc(
-                brush = Brush.sweepGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color(0xFF93C5FD).copy(alpha = 0.85f),
-                        ElectricCobalt,
-                        Color.Transparent
-                    ),
-                    center = center
-                ),
-                startAngle = -Math.toDegrees(phase.toDouble()).toFloat() + 110f,
-                sweepAngle = 190f,
-                useCenter = false,
-                topLeft = Offset(center.x - baseR * 0.78f, center.y - baseR * 0.98f),
-                size = androidx.compose.ui.geometry.Size(baseR * 1.56f, baseR * 1.96f),
-                style = Stroke(width = 2.4.dp.toPx(), cap = StrokeCap.Round)
-            )
-
-            // Crisp luminous rim
-            drawCircle(
-                color = CobaltGlow.copy(alpha = 0.75f),
-                radius = baseR,
-                center = center,
-                style = Stroke(width = 1.6.dp.toPx())
-            )
-
-            // Orbiting neighbor nodes around the orb
-            val dotCount = activeNodesCount.coerceIn(3, 8)
-            for (i in 0 until dotCount) {
-                val angle = phase * 0.75f + (i * (2f * Math.PI.toFloat() / dotCount))
-                val orbitDist = baseR * (1.22f + (i % 2) * 0.18f)
-                val px = center.x + cos(angle) * orbitDist
-                val py = center.y + sin(angle) * orbitDist * 0.82f
-                drawCircle(
-                    color = if (i % 3 == 0) FieryCoral else CobaltGlow,
-                    radius = if (i % 2 == 0) 4.5.dp.toPx() else 3.2.dp.toPx(),
-                    center = Offset(px, py)
+            // Side-by-side crisp neighbor and broadcast counters
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SectorCounterTile(
+                    icon = Icons.Default.Group,
+                    valueText = neighborCount.toString(),
+                    label = if (neighborCount == 1) "Neighbor" else "Neighbors",
+                    accentBg = CobaltSoft,
+                    accentTint = CobaltGlow,
+                    compact = compact,
+                    modifier = Modifier.weight(1f)
+                )
+                SectorCounterTile(
+                    icon = Icons.Default.Sensors,
+                    valueText = dispatchCount.toString(),
+                    label = if (dispatchCount == 1) "Broadcast" else "Broadcasts",
+                    accentBg = EmeraldSoft,
+                    accentTint = EmeraldLight,
+                    compact = compact,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SectorCounterTile(
+    icon: ImageVector,
+    valueText: String,
+    label: String,
+    accentBg: Color,
+    accentTint: Color,
+    compact: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val tileShape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = modifier
+            .clip(tileShape)
+            .background(PureWhite.copy(alpha = 0.06f))
+            .border(1.dp, PureWhite.copy(alpha = 0.14f), tileShape)
+            .padding(horizontal = if (compact) 10.dp else 12.dp, vertical = if (compact) 9.dp else 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(if (compact) 32.dp else 36.dp)
+                .clip(CircleShape)
+                .background(accentBg)
+                .border(1.dp, accentTint.copy(alpha = 0.38f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentTint,
+                modifier = Modifier.size(if (compact) 16.dp else 18.dp)
+            )
+        }
+        Column {
+            Text(
+                text = valueText,
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = if (compact) 18.sp else 20.sp,
+                lineHeight = if (compact) 20.sp else 22.sp,
+                color = PureWhite
+            )
+            Text(
+                text = label,
+                fontFamily = PlusJakartaFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                color = MutedSlate
+            )
+        }
+    }
+}
+
+/**
+ * Single compact Apple Liquid Glass burger menu button with an optional active-filter count badge.
+ */
+@Composable
+fun LiquidGlassBurgerMenuButton(
+    activeFilterCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backdrop: Backdrop? = null,
+    contentDescription: String = "Open sort and filter menu"
+) {
+    val resolvedBackdrop = rememberResolvedBackdrop(backdrop)
+    val interactionSource = remember { MutableInteractionSource() }
+    val (jellyX, jellyY) = rememberJellyPressScale(interactionSource)
+
+    Box(
+        modifier = modifier
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .drawBackdrop(
+                    backdrop = resolvedBackdrop,
+                    shape = { CircleShape },
+                    effects = {
+                        vibrancy()
+                        blur(14.dp.toPx())
+                        lens(
+                            refractionHeight = 8.dp.toPx(),
+                            refractionAmount = 16.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = true
+                        )
+                    },
+                    highlight = { Highlight.Default },
+                    shadow = {
+                        Shadow(
+                            radius = 12.dp,
+                            offset = DpOffset(0.dp, 4.dp),
+                            color = PureBlack.copy(alpha = 0.34f)
+                        )
+                    },
+                    innerShadow = { InnerShadow.Default },
+                    layerBlock = {
+                        scaleX = jellyX
+                        scaleY = jellyY
+                    },
+                    onDrawSurface = {
+                        val tint = if (activeFilterCount > 0) {
+                            Color(0xFF1A346A).copy(alpha = 0.80f)
+                        } else {
+                            Color(0xFF121826).copy(alpha = 0.72f)
+                        }
+                        drawRect(tint)
+                    }
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            if (activeFilterCount > 0) CobaltGlow.copy(alpha = 0.65f) else PureWhite.copy(alpha = 0.35f),
+                            HairlineGlassBorder
+                        )
+                    ),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = contentDescription,
+                tint = if (activeFilterCount > 0) PureWhite else ObsidianInk,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        if (activeFilterCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 2.dp, end = 2.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(ElectricCobalt)
+                    .border(1.dp, PureWhite.copy(alpha = 0.85f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = activeFilterCount.toString(),
+                    fontFamily = PlusJakartaFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = PureWhite
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Elevated Frosted Glass Burger Popover Menu anchored beneath the single menu button.
+ */
+@Composable
+fun FrostedGlassBurgerPopup(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    width: Dp = 296.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val density = LocalDensity.current
+    if (!expanded) return
+
+    val popupBackdrop = rememberCanvasBackdrop {
+        drawRect(Color(0xFF0B0F1A))
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    ElectricCobalt.copy(alpha = 0.28f),
+                    Color.Transparent
+                ),
+                center = Offset(size.width * 0.85f, size.height * 0.12f),
+                radius = size.width * 0.85f
+            ),
+            center = Offset(size.width * 0.85f, size.height * 0.12f),
+            radius = size.width * 0.85f
+        )
+    }
+
+    Popup(
+        alignment = Alignment.TopEnd,
+        offset = IntOffset(0, with(density) { 52.dp.roundToPx() }),
+        onDismissRequest = onDismissRequest,
+        properties = PopupProperties(focusable = true)
+    ) {
+        val menuShape = RoundedCornerShape(24.dp)
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(tween(150)) + scaleIn(
+                initialScale = 0.92f,
+                transformOrigin = TransformOrigin(1f, 0f),
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium)
+            ),
+            exit = fadeOut(tween(110)) + scaleOut(targetScale = 0.94f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(width)
+                    .drawBackdrop(
+                        backdrop = popupBackdrop,
+                        shape = { menuShape },
+                        effects = {
+                            vibrancy()
+                            blur(22.dp.toPx())
+                            lens(
+                                refractionHeight = 10.dp.toPx(),
+                                refractionAmount = 18.dp.toPx(),
+                                depthEffect = true,
+                                chromaticAberration = true
+                            )
+                        },
+                        highlight = { Highlight.Default },
+                        shadow = {
+                            Shadow(
+                                radius = 24.dp,
+                                offset = DpOffset(0.dp, 12.dp),
+                                color = PureBlack.copy(alpha = 0.56f)
+                            )
+                        },
+                        innerShadow = { InnerShadow.Default },
+                        onDrawSurface = {
+                            drawRect(Color(0xFF101624).copy(alpha = 0.88f))
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                PureWhite.copy(alpha = 0.34f),
+                                HairlineGlassBorder.copy(alpha = 0.7f)
+                            )
+                        ),
+                        shape = menuShape
+                    )
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    content = content
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FrostedMenuSectionTitle(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text.uppercase(),
+        style = AuraKickerStyle,
+        color = MutedSlate,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun FrostedMenuOptionPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selectedColor: Color = ElectricCobalt
+) {
+    val haptic = LocalHapticFeedback.current
+    val pillShape = CircleShape
+    Box(
+        modifier = modifier
+            .clip(pillShape)
+            .background(
+                if (selected) selectedColor.copy(alpha = 0.90f) else PureWhite.copy(alpha = 0.08f)
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) PureWhite.copy(alpha = 0.42f) else PureWhite.copy(alpha = 0.14f),
+                shape = pillShape
+            )
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontFamily = PlusJakartaFontFamily,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 12.sp,
+            color = if (selected) PureWhite else ObsidianInk,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

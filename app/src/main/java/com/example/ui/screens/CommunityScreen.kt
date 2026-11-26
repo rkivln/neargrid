@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,8 +31,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -58,7 +58,11 @@ import com.example.data.model.CommunityNotice
 import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.DarkGlassCard
+import com.example.ui.components.FrostedGlassBurgerPopup
+import com.example.ui.components.FrostedMenuOptionPill
+import com.example.ui.components.FrostedMenuSectionTitle
 import com.example.ui.components.GlassSecondaryPillButton
+import com.example.ui.components.LiquidGlassBurgerMenuButton
 import com.example.ui.components.PillPrimaryButton
 import com.example.ui.components.PostMediaCarousel
 import com.example.ui.theme.AmberGlow
@@ -82,9 +86,10 @@ import com.example.ui.theme.ObsidianInk
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SubtleGlassDivider
 import com.example.ui.theme.SubtleSlate
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CommunityScreen(
     isRefreshing: Boolean = false,
@@ -98,6 +103,7 @@ fun CommunityScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Noticeboard, 1 = Issue Tracker
     var issueStatusFilter by remember { mutableStateOf("ALL") }
+    var showIssueFilterMenu by remember { mutableStateOf(false) }
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -314,44 +320,68 @@ fun CommunityScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            val statuses = listOf(
+                                "ALL" to "All issues",
+                                "REPORTED" to "Reported",
+                                "ACKNOWLEDGED" to "Acknowledged",
+                                "IN_PROGRESS" to "In progress",
+                                "RESOLVED" to "Resolved"
+                            )
+                            val activeLabel = statuses.firstOrNull { it.first == issueStatusFilter }?.second ?: "All issues"
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val statuses = listOf(
-                                    "ALL" to "All issues",
-                                    "REPORTED" to "Reported",
-                                    "ACKNOWLEDGED" to "Acknowledged",
-                                    "IN_PROGRESS" to "In progress",
-                                    "RESOLVED" to "Resolved"
+                                Text(
+                                    text = "Showing: $activeLabel",
+                                    fontFamily = PlusJakartaFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = if (issueStatusFilter != "ALL") CobaltGlow else MutedSlate
                                 )
-                                items(statuses) { (status, label) ->
-                                    val isSelected = issueStatusFilter == status
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = { issueStatusFilter = status },
-                                        label = {
-                                            Text(
-                                                label,
-                                                fontFamily = PlusJakartaFontFamily,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 12.sp
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = CobaltSoft,
-                                            selectedLabelColor = PureWhite,
-                                            containerColor = DarkGlassCard,
-                                            labelColor = MutedSlate
-                                        ),
-                                        border = FilterChipDefaults.filterChipBorder(
-                                            borderColor = if (isSelected) ElectricCobalt else HairlineGlassBorder,
-                                            enabled = true,
-                                            selected = isSelected
-                                        ),
-                                        shape = CircleShape
+
+                                Box {
+                                    LiquidGlassBurgerMenuButton(
+                                        activeFilterCount = if (issueStatusFilter != "ALL") 1 else 0,
+                                        onClick = { showIssueFilterMenu = !showIssueFilterMenu },
+                                        contentDescription = "Filter civic issues",
+                                        modifier = Modifier.testTag("community_filter_menu_button")
                                     )
+
+                                    FrostedGlassBurgerPopup(
+                                        expanded = showIssueFilterMenu,
+                                        onDismissRequest = { showIssueFilterMenu = false },
+                                        width = 276.dp
+                                    ) {
+                                        Text(
+                                            text = "Issue Status",
+                                            fontFamily = OutfitFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 17.sp,
+                                            color = PureWhite
+                                        )
+                                        HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+                                        FrostedMenuSectionTitle("Filter By Status")
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            statuses.forEach { (status, label) ->
+                                                FrostedMenuOptionPill(
+                                                    label = label,
+                                                    selected = issueStatusFilter == status,
+                                                    onClick = {
+                                                        issueStatusFilter = status
+                                                        showIssueFilterMenu = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
