@@ -1,9 +1,11 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +25,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,10 +52,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.R
+import com.example.data.auth.AuthState
+import com.example.data.auth.findValidActivity
 import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.DarkGlassCard
@@ -66,7 +63,6 @@ import com.example.ui.theme.AmberLight
 import com.example.ui.theme.AmberSoft
 import com.example.ui.theme.CobaltGlow
 import com.example.ui.theme.DarkGlassCard
-import com.example.ui.theme.ElectricCobalt
 import com.example.ui.theme.EmeraldLight
 import com.example.ui.theme.EmeraldSoft
 import com.example.ui.theme.FieryCoral
@@ -74,74 +70,35 @@ import com.example.ui.theme.FieryCoralGlow
 import com.example.ui.theme.FieryCoralSoft
 import com.example.ui.theme.HairlineGlassBorder
 import com.example.ui.theme.MutedSlate
-import com.example.ui.theme.ObsidianBlack
 import com.example.ui.theme.ObsidianInk
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SubtleSlate
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 @Composable
 fun SignInScreen(
-    onSignInSuccess: () -> Unit,
+    authState: AuthState = AuthState.Unauthenticated,
+    onSignInClick: (Activity) -> Unit = {},
+    onDismissError: () -> Unit = {},
+    onSignInSuccess: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var localContextError by remember { mutableStateOf<String?>(null) }
+
+    val isLoading = authState is AuthState.Authenticating
+    val errorMessage = localContextError ?: (authState as? AuthState.Error)?.message
 
     val handleGoogleSignIn = {
-        isLoading = true
-        errorMessage = null
-
-        coroutineScope.launch {
-            try {
-                val activity = generateSequence(context) {
-                    if (it is android.content.ContextWrapper) it.baseContext else null
-                }.filterIsInstance<android.app.Activity>().firstOrNull()
-                    ?: context as? android.app.Activity
-
-                if (activity == null) {
-                    throw IllegalStateException("Activity context is required for Google Sign-In.")
-                }
-
-                val credentialManager = CredentialManager.create(activity)
-                val serverClientId = context.getString(R.string.default_web_client_id)
-                if (serverClientId.isBlank() || serverClientId == "YOUR_DEFAULT_WEB_CLIENT_ID") {
-                    throw IllegalStateException("Google Sign-In is not configured. Missing valid Web Client ID.")
-                }
-                val googleOption = GetSignInWithGoogleOption.Builder(serverClientId = serverClientId)
-                    .build()
-
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleOption)
-                    .build()
-
-                val result = credentialManager.getCredential(
-                    request = request,
-                    context = activity
-                )
-
-                val credential = result.credential
-                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-
-                FirebaseAuth.getInstance().signInWithCredential(authCredential).await()
-                isLoading = false
-                onSignInSuccess()
-            } catch (e: GetCredentialCancellationException) {
-                isLoading = false
-            } catch (e: Throwable) {
-                isLoading = false
-                android.util.Log.e("SignInScreen", "Google Sign-In failed with error", e)
-                errorMessage = e.localizedMessage ?: "Unable to complete Google Sign-In. Please try again."
+        if (!isLoading) {
+            localContextError = null
+            onDismissError()
+            val activity = context.findValidActivity()
+            if (activity == null) {
+                localContextError = "Unable to start Google Sign-In because the screen is not ready. Please try again."
+            } else {
+                onSignInClick(activity)
             }
         }
     }
@@ -284,15 +241,36 @@ fun SignInScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
+                            .testTag("sign_in_error_banner")
                     ) {
-                        Text(
-                            text = errorMessage ?: "",
-                            fontFamily = PlusJakartaFontFamily,
-                            fontSize = 12.sp,
-                            color = ObsidianInk,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = errorMessage ?: "",
+                                fontFamily = PlusJakartaFontFamily,
+                                fontSize = 12.sp,
+                                color = ObsidianInk,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.Start
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Dismiss error",
+                                tint = ObsidianInk,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clickable {
+                                        localContextError = null
+                                        onDismissError()
+                                    }
+                            )
+                        }
                     }
                 }
 

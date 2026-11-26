@@ -1,11 +1,16 @@
 package com.example.ui
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
-import androidx.credentials.ClearCredentialStateRequest
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.BuildConfig
+import com.example.data.auth.AuthSignInOutcome
+import com.example.data.auth.AuthState
+import com.example.data.auth.AuthenticatedUser
+import com.example.data.auth.GoogleAuthRepository
+import com.example.data.auth.SessionValidationResult
 import com.example.data.local.AppDatabase
 import com.example.data.model.AppSettings
 import com.example.data.model.ChatMessage
@@ -19,11 +24,10 @@ import com.example.data.model.NearbyNeighbor
 import com.example.data.model.NeighborPost
 import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
-import com.example.BuildConfig
+import com.example.data.remote.FirebaseBootstrap
 import com.example.data.repository.FirestoreRepository
 import com.example.data.repository.NearGridRepository
 import com.example.data.update.AppUpdateInfo
-import com.example.data.update.AppUpdateService
 import com.example.util.CrashTelemetryManager
 import com.example.util.LocationHelper
 import com.example.util.QrCodePayloadHelper
@@ -32,7 +36,10 @@ import com.example.util.StorageUsage
 import com.example.util.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,8 +51,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 enum class NavigationDestination(val label: String) {
     HOME("Home"),
@@ -101,48 +111,42 @@ data class NearGridUiState(
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
 
     private val coroutineExceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
-        android.util.Log.e("NearGridViewModel", "Caught unhandled coroutine exception in ViewModel", throwable)
+        if (throwable !is CancellationException) {
+            android.util.Log.e("NearGridViewModel", "Caught unhandled coroutine exception in ViewModel", throwable)
+        }
     }
 
-    private val auth: FirebaseAuth by lazy {
-        try {
-            FirebaseAuth.getInstance()
-        } catch (e: Exception) {
-            val app = com.google.firebase.FirebaseApp.getApps(application).firstOrNull()
-                ?: try { com.google.firebase.FirebaseApp.initializeApp(application) } catch (ignored: Exception) { null }
-            if (app != null) FirebaseAuth.getInstance(app) else FirebaseAuth.getInstance()
-        }
+    private val auth: FirebaseAuth? by lazy {
+        FirebaseBootstrap.getAuth(application)
+    }
+
+    private val googleAuthRepository: GoogleAuthRepository by lazy {
+        GoogleAuthRepository(application)
     }
 
     private val firestoreRepository: FirestoreRepository = try {
         FirestoreRepository(application)
     } catch (e: Exception) {
         android.util.Log.e("NearGridViewModel", "Failed to create FirestoreRepository, creating fallback", e)
-        val defaultDb = try {
-            com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        } catch (fatal: Exception) {
-            val app = com.google.firebase.FirebaseApp.getApps(application).firstOrNull()
-                ?: try { com.google.firebase.FirebaseApp.initializeApp(application) } catch (ignored: Exception) { null }
-            if (app != null) com.google.firebase.firestore.FirebaseFirestore.getInstance(app) else com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        }
+        val defaultDb = FirebaseBootstrap.getFirestore(application)
+            ?: com.google.firebase.firestore.FirebaseFirestore.getInstance()
         FirestoreRepository(defaultDb)
     }
 
-    private val localRepository: NearGridRepository = try {
-        NearGridRepository(AppDatabase.getDatabase(application))
-    } catch (e: Exception) {
-        android.util.Log.e("NearGridViewModel", "Failed to initialize Room repository, fallback instance created", e)
-        NearGridRepository(AppDatabase.getDatabase(application))
-    }
+    private val localRepository: NearGridRepository = NearGridRepository(AppDatabase.getDatabase(application))
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(
-        try {
-            FirebaseAuth.getInstance().currentUser
-        } catch (e: Exception) {
-            null
-        }
-    )
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Initializing)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
+
+    private val authActionInFlight = AtomicBoolean(false)
+    private var signInJob: Job? = null
+    private var signOutJob: Job? = null
+    private var sessionJob: Job? = null
+    private var activeSessionUid: String? = null
+    private var lastVerifiedUid: String? = null
 
     private val _currentLocation = MutableStateFlow<UserLocation?>(null)
     val currentLocation: StateFlow<UserLocation?> = _currentLocation.asStateFlow()
@@ -326,7 +330,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     fun sendPostComment(text: String, parentId: String? = null) {
         val post = _activePostForComments.value ?: return
         if (text.isBlank()) return
-        val user = auth.currentUser
+        val user = auth?.currentUser
         val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
         val initials = author.split(" ")
             .filter { it.isNotBlank() }
@@ -363,34 +367,62 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private val authStateListener = FirebaseAuth.AuthStateListener { fbAuth ->
-        val user = fbAuth.currentUser
-        _currentUser.value = user
-        if (user != null) {
-            syncUserSession(user)
+    private inline fun launchSafely(
+        contextLabel: String,
+        crossinline block: suspend CoroutineScope.() -> Unit
+    ): Job {
+        return viewModelScope.launch(coroutineExceptionHandler) {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                android.util.Log.e("NearGridViewModel", "$contextLabel failed: ${t.message}", t)
+            }
         }
+    }
+
+    private val authStateListener = FirebaseAuth.AuthStateListener { fbAuth ->
+        handleFirebaseUserChanged(fbAuth.currentUser)
     }
 
     init {
         viewModelScope.launch(coroutineExceptionHandler) {
             try {
                 localRepository.seedInitialDataIfEmpty()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.w("NearGridViewModel", "Seed initial data failed", e)
             }
         }
 
-        try {
-            auth.addAuthStateListener(authStateListener)
-            val initialUser = auth.currentUser
-            if (initialUser != null) {
-                syncUserSession(initialUser)
+        val firebaseAuth = auth
+        if (firebaseAuth == null) {
+            _authState.value = AuthState.Error(
+                "Firebase Authentication could not be initialized. Please verify configuration."
+            )
+        } else {
+            try {
+                val initialUser = runCatching { firebaseAuth.currentUser }.getOrNull()
+                if (initialUser != null) {
+                    _currentUser.value = initialUser
+                    _authState.value = AuthState.Authenticated(AuthenticatedUser.fromFirebaseUser(initialUser))
+                    syncUserSession(initialUser)
+                    verifySessionOnForeground()
+                } else {
+                    _authState.value = AuthState.Unauthenticated
+                }
+                firebaseAuth.addAuthStateListener(authStateListener)
+            } catch (e: Exception) {
+                android.util.Log.w("NearGridViewModel", "AuthStateListener attachment failed", e)
+                _authState.value = AuthState.Error(
+                    "Unable to initialize authentication listener. Please restart the app."
+                )
             }
-        } catch (e: Exception) {
-            android.util.Log.w("NearGridViewModel", "AuthStateListener attachment failed", e)
         }
 
-        // Immediately attempt fresh device GPS acquisition
+        // Immediately attempt fresh device GPS acquisition when permitted
         try {
             refreshGridData()
         } catch (e: Exception) {
@@ -409,12 +441,149 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         checkForUpdates(isManual = false)
     }
 
+    private fun handleFirebaseUserChanged(user: FirebaseUser?) {
+        _currentUser.value = user
+        if (user != null) {
+            if (_authState.value !is AuthState.Authenticating) {
+                val currentAuth = _authState.value
+                if (currentAuth !is AuthState.Authenticated || currentAuth.uid != user.uid) {
+                    _authState.value = AuthState.Authenticated(AuthenticatedUser.fromFirebaseUser(user))
+                }
+                syncUserSession(user)
+            }
+        } else {
+            stopSessionSync()
+            clearUserScopedState()
+            val currentAuth = _authState.value
+            if (currentAuth !is AuthState.Authenticating && currentAuth !is AuthState.Error) {
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+    }
+
+    fun signInWithGoogle(activity: Activity) {
+        if (!authActionInFlight.compareAndSet(false, true)) {
+            return
+        }
+        if (_authState.value is AuthState.Authenticating || _authState.value is AuthState.Authenticated) {
+            authActionInFlight.set(false)
+            return
+        }
+        _authState.value = AuthState.Authenticating
+        signInJob = viewModelScope.launch(coroutineExceptionHandler) {
+            try {
+                when (val outcome = googleAuthRepository.signInWithGoogle(activity)) {
+                    is AuthSignInOutcome.Success -> {
+                        val user = outcome.session.firebaseUser
+                        if (user == null) {
+                            _authState.value = AuthState.Error("Firebase user session was unavailable after sign-in.")
+                            return@launch
+                        }
+                        _currentUser.value = user
+                        val profileResult = firestoreRepository.ensureUserProfileExists(
+                            user = user,
+                            cellId = _uiState.value.selectedCell?.id ?: "cell_local",
+                            cellName = _currentLocation.value?.displayAreaName ?: "My Neighborhood"
+                        )
+                        if (profileResult.isFailure) {
+                            android.util.Log.w(
+                                "NearGridViewModel",
+                                "Initial Firestore profile sync failed; session remains active",
+                                profileResult.exceptionOrNull()
+                            )
+                        }
+                        syncUserSession(user)
+                        _authState.value = AuthState.Authenticated(outcome.session)
+                        refreshGridData()
+                    }
+                    is AuthSignInOutcome.Cancelled -> {
+                        _authState.value = AuthState.Unauthenticated
+                    }
+                    is AuthSignInOutcome.Error -> {
+                        _authState.value = AuthState.Error(outcome.message)
+                    }
+                }
+            } catch (e: CancellationException) {
+                if (_authState.value is AuthState.Authenticating) {
+                    _authState.value = AuthState.Unauthenticated
+                }
+                throw e
+            } catch (t: Throwable) {
+                android.util.Log.e("NearGridViewModel", "Unexpected Google Sign-In failure", t)
+                _authState.value = AuthState.Error(GoogleAuthRepository.mapAuthErrorToMessage(t))
+            } finally {
+                authActionInFlight.set(false)
+            }
+        }
+    }
+
+    fun clearAuthError() {
+        if (_authState.value is AuthState.Error) {
+            _authState.value = AuthState.Unauthenticated
+        }
+    }
+
+    fun verifySessionOnForeground() {
+        val currentAuth = _authState.value as? AuthState.Authenticated ?: return
+        val user = currentAuth.user ?: return
+        if (lastVerifiedUid == user.uid && signOutJob?.isActive == true) return
+        viewModelScope.launch(coroutineExceptionHandler) {
+            when (googleAuthRepository.validateSession(user)) {
+                SessionValidationResult.VALID -> {
+                    lastVerifiedUid = user.uid
+                }
+                SessionValidationResult.OFFLINE_OR_TRANSIENT -> {
+                    // Keep persisted user authenticated while offline
+                }
+                SessionValidationResult.EXPIRED_OR_INVALID -> {
+                    stopSessionSync()
+                    googleAuthRepository.clearCredentialAndSignOut(getApplication())
+                    clearUserScopedState()
+                    _currentUser.value = null
+                    _authState.value = AuthState.Error(
+                        "Your session has expired or been revoked. Please sign in again with Google."
+                    )
+                }
+            }
+        }
+    }
+
+    private fun stopSessionSync() {
+        sessionJob?.cancel()
+        sessionJob = null
+        activeSessionUid = null
+        lastVerifiedUid = null
+    }
+
+    private fun clearUserScopedState() {
+        _firestorePosts.value = emptyList()
+        _firestoreIssues.value = emptyList()
+        _firestoreConversations.value = emptyList()
+        _firestoreUsers.value = emptyList()
+        _activePostForComments.value = null
+        _uiState.value = _uiState.value.copy(
+            currentDestination = NavigationDestination.HOME,
+            activeConversation = null,
+            showCreateDialog = false,
+            showUserProfileEditor = false,
+            showAppSettingsScreen = false,
+            showGridQrScreen = false,
+            showQrScannerDialog = false,
+            userNickname = "Local Resident",
+            userHandle = "@resident",
+            userBio = "Civic community member connected via Google Resident Pass.",
+            avatarUri = null,
+            avatarPresetIndex = 0,
+            blockedUserIds = emptyList()
+        )
+    }
+
     fun refreshDeviceLocation() {
         refreshGridData()
     }
 
     fun refreshGridData() {
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             _uiState.value = _uiState.value.copy(isRefreshing = true, isLocating = true)
             val location = LocationHelper.getFreshDeviceLocation(getApplication())
             if (location != null) {
@@ -447,14 +616,18 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     isRefreshing = false,
                     gpsModeEnabled = true
                 )
-                viewModelScope.launch(Dispatchers.IO) {
-                    try {
-                        firestoreRepository.updateUserLocationPresence(
-                            location.latitude,
-                            location.longitude,
-                            computedGeohash
-                        )
-                    } catch (ignored: Exception) {}
+                if (auth?.currentUser != null) {
+                    viewModelScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
+                        try {
+                            firestoreRepository.updateUserLocationPresence(
+                                location.latitude,
+                                location.longitude,
+                                computedGeohash
+                            )
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (ignored: Exception) {}
+                    }
                 }
             } else {
                 _uiState.value = _uiState.value.copy(isLocating = false, isRefreshing = false)
@@ -464,140 +637,139 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     private fun syncUserSession(user: FirebaseUser?) {
         if (user == null) return
-        viewModelScope.launch {
-            try {
-                firestoreRepository.observeUserProfile(user.uid).collect { profile ->
-                    if (profile != null) {
-                        _uiState.value = _uiState.value.copy(
-                            userNickname = profile.displayName.ifBlank { user.displayName ?: "Local Resident" },
-                            userHandle = profile.handle.ifBlank { "@${user.email?.substringBefore("@") ?: "resident"}" },
-                            userBio = profile.bio,
-                            avatarUri = profile.avatarUri ?: user.photoUrl?.toString(),
-                            avatarPresetIndex = profile.avatarPresetIndex,
-                            neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
-                            fuzzyCoordinateOffset = profile.fuzzyCoords,
-                            incognitoGridPresence = profile.incognito,
-                            allowProximityMessaging = profile.allowDMs,
-                            locationPrecision = profile.locationPrecision,
-                            hideOnlineStatus = profile.hideOnlineStatus,
-                            hideExactDistance = profile.hideExactDistance,
-                            blockedUserIds = profile.blockedUserIds
-                        )
-                    } else {
-                        val defaultName = user.displayName?.ifBlank { "Local Resident" } ?: "Local Resident"
-                        val defaultHandle = "@${user.email?.substringBefore("@") ?: "resident"}"
-                        val loc = _currentLocation.value
-                        val newProfile = UserProfile(
-                            userId = user.uid,
-                            email = user.email ?: "",
-                            displayName = defaultName,
-                            handle = defaultHandle,
-                            bio = "Civic resident connected via Google Resident Pass.",
-                            cellId = _uiState.value.selectedCell?.id ?: "cell_local",
-                            cellName = loc?.displayAreaName ?: "My Neighborhood",
-                            avatarUri = user.photoUrl?.toString(),
-                            privacyRadiusMeters = 1000,
-                            fuzzyCoords = false,
-                            incognito = false,
-                            allowDMs = true
-                        )
-                        try {
-                            firestoreRepository.saveUserProfile(newProfile)
-                        } catch (ignored: Exception) {}
+        if (activeSessionUid == user.uid && sessionJob?.isActive == true) {
+            return
+        }
+        sessionJob?.cancel()
+        activeSessionUid = user.uid
+
+        sessionJob = viewModelScope.launch(coroutineExceptionHandler) {
+            supervisorScope {
+                launch {
+                    val ensured = firestoreRepository.ensureUserProfileExists(
+                        user = user,
+                        cellId = _uiState.value.selectedCell?.id ?: "cell_local",
+                        cellName = _currentLocation.value?.displayAreaName ?: "My Neighborhood"
+                    )
+                    ensured.getOrNull()?.let { profile ->
+                        applyProfileToUiState(user, profile)
                     }
 
-                    // Automatically update live GPS presence on user session sync
-                    val loc = _currentLocation.value
-                    val hash = _currentGeohash.value
-                    if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
-                        try {
-                            firestoreRepository.updateUserLocationPresence(loc.latitude, loc.longitude, hash)
-                        } catch (ignored: Exception) {}
-                    }
-                }
-            } catch (ignored: Exception) {}
-        }
-
-        // Live real-time posts from Firestore filtered by user's current geohash prefix
-        viewModelScope.launch {
-            try {
-                _currentGeohash.flatMapLatest { rawGeohash ->
-                    val geohashPrefix = rawGeohash.removePrefix("#").take(5)
-                    firestoreRepository.observePosts(geohashPrefix = geohashPrefix)
-                }.collect { posts ->
-                    _firestorePosts.value = posts
-                }
-            } catch (ignored: Exception) {
-                _firestorePosts.value = emptyList()
-            }
-        }
-
-        // Live real-time nearby users from Firestore filtered by current geohash prefix
-        viewModelScope.launch {
-            try {
-                _currentGeohash.flatMapLatest { rawGeohash ->
-                    val geohashPrefix = rawGeohash.removePrefix("#").take(3)
-                    firestoreRepository.observeNearbyUsers(geohashPrefix = geohashPrefix)
-                }.collect { users ->
-                    _firestoreUsers.value = users
-                }
-            } catch (ignored: Exception) {
-                _firestoreUsers.value = emptyList()
-            }
-        }
-
-        // Live real-time community issues from Firestore
-        viewModelScope.launch {
-            try {
-                firestoreRepository.observeIssues().collect { issuesList ->
-                    _firestoreIssues.value = issuesList
-                }
-            } catch (ignored: Exception) {
-                _firestoreIssues.value = emptyList()
-            }
-        }
-
-        // Live real-time conversations from Firestore with Push Notification triggers
-        viewModelScope.launch {
-            try {
-                var isInitialLoad = true
-                val lastSeenTimes = mutableMapOf<String, Long>()
-
-                firestoreRepository.observeConversations().collect { convs ->
-                    val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                    val activeConvId = _uiState.value.activeConversation?.id
-
-                    if (!isInitialLoad) {
-                        for (conv in convs) {
-                            val previousTime = lastSeenTimes[conv.id] ?: 0L
-                            if (conv.lastMessageTime > previousTime && conv.lastMessage.isNotBlank()) {
-                                val isFromOtherUser = conv.lastMessageSenderId.isNotBlank() && conv.lastMessageSenderId != currentUid
-                                val isNotActiveScreen = conv.id != activeConvId
-
-                                if (isFromOtherUser && isNotActiveScreen) {
-                                    com.example.util.ChatNotificationManager.showChatNotification(
-                                        context = getApplication(),
-                                        conversationId = conv.id,
-                                        senderName = conv.participantName,
-                                        messageText = conv.lastMessage
+                    firestoreRepository.observeUserProfile(user.uid)
+                        .catch { error ->
+                            android.util.Log.w("NearGridViewModel", "User profile stream error", error)
+                        }
+                        .collect { profile ->
+                            if (profile != null) {
+                                applyProfileToUiState(user, profile)
+                            }
+                            val loc = _currentLocation.value
+                            val hash = _currentGeohash.value
+                            if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
+                                runCatching {
+                                    firestoreRepository.updateUserLocationPresence(
+                                        loc.latitude,
+                                        loc.longitude,
+                                        hash
                                     )
                                 }
                             }
                         }
-                    } else {
-                        isInitialLoad = false
-                    }
-
-                    for (conv in convs) {
-                        lastSeenTimes[conv.id] = conv.lastMessageTime
-                    }
-
-                    _firestoreConversations.value = convs
                 }
-            } catch (ignored: Exception) {
-                _firestoreConversations.value = emptyList()
+
+                // Live real-time posts from Firestore filtered by user's current geohash prefix
+                launch {
+                    _currentGeohash.flatMapLatest { rawGeohash ->
+                        val geohashPrefix = rawGeohash.removePrefix("#").take(5)
+                        firestoreRepository.observePosts(geohashPrefix = geohashPrefix)
+                    }.catch {
+                        emit(emptyList())
+                    }.collect { posts ->
+                        _firestorePosts.value = posts
+                    }
+                }
+
+                // Live real-time nearby users from Firestore filtered by current geohash prefix
+                launch {
+                    _currentGeohash.flatMapLatest { rawGeohash ->
+                        val geohashPrefix = rawGeohash.removePrefix("#").take(3)
+                        firestoreRepository.observeNearbyUsers(geohashPrefix = geohashPrefix)
+                    }.catch {
+                        emit(emptyList())
+                    }.collect { users ->
+                        _firestoreUsers.value = users
+                    }
+                }
+
+                // Live real-time community issues from Firestore
+                launch {
+                    firestoreRepository.observeIssues()
+                        .catch { emit(emptyList()) }
+                        .collect { issuesList ->
+                            _firestoreIssues.value = issuesList
+                        }
+                }
+
+                // Live real-time conversations from Firestore with Push Notification triggers
+                launch {
+                    var isInitialLoad = true
+                    val lastSeenTimes = mutableMapOf<String, Long>()
+
+                    firestoreRepository.observeConversations()
+                        .catch { emit(emptyList()) }
+                        .collect { convs ->
+                            val currentUid = auth?.currentUser?.uid ?: ""
+                            val activeConvId = _uiState.value.activeConversation?.id
+
+                            if (!isInitialLoad) {
+                                for (conv in convs) {
+                                    val previousTime = lastSeenTimes[conv.id] ?: 0L
+                                    if (conv.lastMessageTime > previousTime && conv.lastMessage.isNotBlank()) {
+                                        val isFromOtherUser = conv.lastMessageSenderId.isNotBlank() &&
+                                            conv.lastMessageSenderId != currentUid
+                                        val isNotActiveScreen = conv.id != activeConvId
+
+                                        if (isFromOtherUser && isNotActiveScreen) {
+                                            com.example.util.ChatNotificationManager.showChatNotification(
+                                                context = getApplication(),
+                                                conversationId = conv.id,
+                                                senderName = conv.participantName,
+                                                messageText = conv.lastMessage
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                isInitialLoad = false
+                            }
+
+                            for (conv in convs) {
+                                lastSeenTimes[conv.id] = conv.lastMessageTime
+                            }
+
+                            _firestoreConversations.value = convs
+                        }
+                }
             }
         }
+    }
+
+    private fun applyProfileToUiState(user: FirebaseUser, profile: UserProfile) {
+        _uiState.value = _uiState.value.copy(
+            userNickname = profile.displayName.ifBlank { user.displayName ?: "Local Resident" },
+            userHandle = profile.handle.ifBlank { "@${user.email?.substringBefore("@") ?: "resident"}" },
+            userBio = profile.bio,
+            avatarUri = profile.avatarUri ?: user.photoUrl?.toString(),
+            avatarPresetIndex = profile.avatarPresetIndex,
+            neighborhoodPrivacyRadiusMeters = profile.privacyRadiusMeters,
+            fuzzyCoordinateOffset = profile.fuzzyCoords,
+            incognitoGridPresence = profile.incognito,
+            allowProximityMessaging = profile.allowDMs,
+            locationPrecision = profile.locationPrecision,
+            hideOnlineStatus = profile.hideOnlineStatus,
+            hideExactDistance = profile.hideExactDistance,
+            blockedUserIds = profile.blockedUserIds
+        )
     }
 
     // Dynamic grid cells synthesized from current GPS fix & real active Firestore posts
@@ -807,30 +979,21 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun submitSupportTicket(category: String, message: String) {
         if (message.isBlank()) return
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             _uiState.value = _uiState.value.copy(supportTicketStatus = "Submitting ticket...")
-            try {
-                val user = auth.currentUser
-                val uid = user?.uid ?: "anonymous"
-                val name = _uiState.value.userNickname
-                val ticket = mapOf(
-                    "ticketId" to UUID.randomUUID().toString(),
-                    "userId" to uid,
-                    "userName" to name,
-                    "userEmail" to (user?.email ?: ""),
-                    "category" to category,
-                    "message" to message.trim(),
-                    "appVersion" to _uiState.value.appSettings.appVersion,
-                    "createdAt" to System.currentTimeMillis(),
-                    "status" to "OPEN"
-                )
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    .collection("support_tickets")
-                    .add(ticket)
-                _uiState.value = _uiState.value.copy(supportTicketStatus = "Ticket submitted successfully! Our team will respond shortly.")
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(supportTicketStatus = "Saved locally. Feedback recorded.")
-            }
+            val result = firestoreRepository.submitSupportTicket(
+                category = category,
+                message = message,
+                userNickname = _uiState.value.userNickname,
+                appVersion = _uiState.value.appSettings.appVersion
+            )
+            _uiState.value = _uiState.value.copy(
+                supportTicketStatus = if (result.isSuccess) {
+                    "Ticket submitted successfully! Our team will respond shortly."
+                } else {
+                    "Saved locally. Feedback recorded."
+                }
+            )
         }
     }
 
@@ -951,17 +1114,17 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     val currentUserId: String
-        get() = auth.currentUser?.uid ?: ""
+        get() = auth?.currentUser?.uid ?: ""
 
     fun deletePost(postId: String) {
-        viewModelScope.launch {
+        launchSafely("deletePost") {
             firestoreRepository.deletePost(postId)
             localRepository.deletePost(postId)
         }
     }
 
     fun editPost(postId: String, title: String, description: String, category: String, urgency: String) {
-        viewModelScope.launch {
+        launchSafely("editPost") {
             firestoreRepository.updatePostContent(postId, title, description, category, urgency)
             localRepository.updatePostContent(postId, title, description, category, urgency)
         }
@@ -970,13 +1133,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     fun sendMessageToActive(text: String, isMeetingPoint: Boolean = false, meetingPoint: String? = null) {
         val active = _uiState.value.activeConversation ?: return
         if (text.isBlank()) return
-        viewModelScope.launch {
+        launchSafely("sendMessageToActive") {
             firestoreRepository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
         }
     }
 
     fun deleteChatMessage(conversationId: String, messageId: String) {
-        viewModelScope.launch {
+        launchSafely("deleteChatMessage") {
             firestoreRepository.deleteChatMessage(conversationId, messageId)
             localRepository.deleteChatMessage(messageId)
         }
@@ -984,14 +1147,14 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun editChatMessage(conversationId: String, messageId: String, newText: String) {
         if (newText.isBlank()) return
-        viewModelScope.launch {
+        launchSafely("editChatMessage") {
             firestoreRepository.editChatMessage(conversationId, messageId, newText.trim())
             localRepository.editChatMessage(messageId, newText.trim())
         }
     }
 
     fun connectFromPost(post: NeighborPost) {
-        viewModelScope.launch {
+        launchSafely("connectFromPost") {
             val result = firestoreRepository.startConversationForPost(post)
             val convId = result.getOrNull() ?: localRepository.startConversationForPost(post)
             val conv = Conversation(
@@ -1010,7 +1173,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun connectWithNeighbor(neighbor: NearbyNeighbor) {
-        viewModelScope.launch {
+        launchSafely("connectWithNeighbor") {
             val neighborUser = neighbor.user
             val result = firestoreRepository.startDirectConversationWithNeighbor(
                 neighborUser.userId,
@@ -1033,7 +1196,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun toggleIssueUpvote(issue: CommunityIssue) {
-        viewModelScope.launch {
+        launchSafely("toggleIssueUpvote") {
             firestoreRepository.toggleIssueUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
         }
     }
@@ -1078,9 +1241,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             showUserProfileEditor = false
         )
 
-        val user = auth.currentUser
+        val user = auth?.currentUser
         if (user != null) {
-            viewModelScope.launch {
+            launchSafely("updateUserProfile") {
                 val loc = _currentLocation.value
                 val profile = UserProfile(
                     userId = user.uid,
@@ -1134,8 +1297,8 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun persistQuickProfileState(state: NearGridUiState) {
-        val user = auth.currentUser ?: return
-        viewModelScope.launch {
+        val user = auth?.currentUser ?: return
+        launchSafely("persistQuickProfileState") {
             val loc = _currentLocation.value
             val profile = UserProfile(
                 userId = user.uid,
@@ -1166,7 +1329,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (!currentBlocked.contains(targetUserId)) {
             currentBlocked.add(targetUserId)
             _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
-            viewModelScope.launch {
+            launchSafely("blockUser") {
                 firestoreRepository.blockUser(targetUserId)
             }
         }
@@ -1178,26 +1341,26 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (currentBlocked.contains(targetUserId)) {
             currentBlocked.remove(targetUserId)
             _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
-            viewModelScope.launch {
+            launchSafely("unblockUser") {
                 firestoreRepository.unblockUser(targetUserId)
             }
         }
     }
 
     fun reportUser(targetUserId: String, targetDisplayName: String, reason: String, notes: String) {
-        viewModelScope.launch {
+        launchSafely("reportUser") {
             firestoreRepository.reportUser(targetUserId, targetDisplayName, reason, notes)
         }
     }
 
     fun togglePostUpvote(post: NeighborPost) {
-        viewModelScope.launch {
+        launchSafely("togglePostUpvote") {
             firestoreRepository.togglePostUpvote(post.id, post.upvotesCount, post.hasUserUpvoted)
         }
     }
 
     fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?) {
-        viewModelScope.launch {
+        launchSafely("updateIssueStatus") {
             firestoreRepository.updateIssueStatus(issueId, newStatus, volunteer)
         }
     }
@@ -1211,13 +1374,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaUris: List<String> = emptyList(),
         mediaTypes: List<String> = emptyList()
     ) {
-        viewModelScope.launch {
+        launchSafely("createNeed") {
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
-            val user = auth.currentUser
+            val user = auth?.currentUser
             val loc = _currentLocation.value
             if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
                 closeCreateDialog()
-                return@launch
+                return@launchSafely
             }
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
             val realLocName = loc.displayAreaName.ifBlank { "Local Area" }
@@ -1259,13 +1422,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaUris: List<String> = emptyList(),
         mediaTypes: List<String> = emptyList()
     ) {
-        viewModelScope.launch {
+        launchSafely("createOffer") {
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
-            val user = auth.currentUser
+            val user = auth?.currentUser
             val loc = _currentLocation.value
             if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
                 closeCreateDialog()
-                return@launch
+                return@launchSafely
             }
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
             val realLocName = loc.displayAreaName.ifBlank { "Local Area" }
@@ -1307,9 +1470,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaUris: List<String> = emptyList(),
         mediaTypes: List<String> = emptyList()
     ) {
-        viewModelScope.launch {
+        launchSafely("createIssue") {
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
-            val user = auth.currentUser
+            val user = auth?.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
@@ -1344,9 +1507,9 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         mediaUris: List<String> = emptyList(),
         mediaTypes: List<String> = emptyList()
     ) {
-        viewModelScope.launch {
+        launchSafely("createMeetup") {
             val processedMediaUris = com.example.util.MediaUploadHelper.processMediaUris(getApplication(), mediaUris)
-            val user = auth.currentUser
+            val user = auth?.currentUser
             val loc = _currentLocation.value
             val cell = _uiState.value.selectedCell
             val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
@@ -1384,45 +1547,55 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     ) {
         val trimmed = text.trim()
         if (trimmed.isBlank()) return
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             _uiState.value = _uiState.value.copy(isPostingGeohashMessage = true, geohashPostStatus = null)
-            val loc = _currentLocation.value
-            if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
-                _uiState.value = _uiState.value.copy(
-                    isPostingGeohashMessage = false,
-                    geohashPostStatus = "Error: Live GPS coordinates required to broadcast. Please wait for GPS lock."
-                )
-                onComplete?.invoke(Result.failure(IllegalStateException("Active device GPS required")))
-                return@launch
-            }
-            val lat = loc.latitude
-            val lon = loc.longitude
-            val geohash = LocationHelper.computeGeohash(lat, lon, 7).removePrefix("#")
-            val user = auth.currentUser
-            val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
-            val locality = loc.displayAreaName.ifBlank { "Local Area" }
+            try {
+                val loc = _currentLocation.value
+                if (loc == null || loc.latitude == 0.0 || loc.longitude == 0.0) {
+                    _uiState.value = _uiState.value.copy(
+                        isPostingGeohashMessage = false,
+                        geohashPostStatus = "Error: Live GPS coordinates required to broadcast. Please wait for GPS lock."
+                    )
+                    onComplete?.invoke(Result.failure(IllegalStateException("Active device GPS required")))
+                    return@launch
+                }
+                val lat = loc.latitude
+                val lon = loc.longitude
+                val geohash = LocationHelper.computeGeohash(lat, lon, 7).removePrefix("#")
+                val user = auth?.currentUser
+                val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
+                val locality = loc.displayAreaName.ifBlank { "Local Area" }
 
-            val result = firestoreRepository.postGeohashMessage(
-                text = trimmed,
-                latitude = lat,
-                longitude = lon,
-                geohash = geohash,
-                authorName = author,
-                localityName = locality
-            )
+                val result = firestoreRepository.postGeohashMessage(
+                    text = trimmed,
+                    latitude = lat,
+                    longitude = lon,
+                    geohash = geohash,
+                    authorName = author,
+                    localityName = locality
+                )
 
-            if (result.isSuccess) {
+                if (result.isSuccess) {
+                    _uiState.value = _uiState.value.copy(
+                        isPostingGeohashMessage = false,
+                        geohashPostStatus = "Broadcast posted to geohash #$geohash"
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isPostingGeohashMessage = false,
+                        geohashPostStatus = "Error: ${result.exceptionOrNull()?.message}"
+                    )
+                }
+                onComplete?.invoke(result)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isPostingGeohashMessage = false,
-                    geohashPostStatus = "Broadcast posted to geohash #$geohash"
+                    geohashPostStatus = "Error: ${e.message ?: "Unable to broadcast message"}"
                 )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    isPostingGeohashMessage = false,
-                    geohashPostStatus = "Error: ${result.exceptionOrNull()?.message}"
-                )
+                onComplete?.invoke(Result.failure(e))
             }
-            onComplete?.invoke(result)
         }
     }
 
@@ -1431,22 +1604,33 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resetToFreshGrid() {
-        viewModelScope.launch {
+        launchSafely("resetToFreshGrid") {
             localRepository.resetToFreshState()
             refreshDeviceLocation()
         }
     }
 
     fun signOut(context: Context) {
-        viewModelScope.launch {
-            try {
-                val credentialManager = CredentialManager.create(context)
-                credentialManager.clearCredentialState(ClearCredentialStateRequest())
-            } catch (e: Exception) {
-                // Ignore credential manager clear failures
+        if (signOutJob?.isActive == true) return
+        signOutJob = viewModelScope.launch(coroutineExceptionHandler) {
+            signInJob?.cancel()
+            authActionInFlight.set(false)
+            stopSessionSync()
+            withTimeoutOrNull(1200L) {
+                firestoreRepository.markUserOfflineBestEffort()
             }
-            auth.signOut()
+            googleAuthRepository.clearCredentialAndSignOut(context)
+            clearUserScopedState()
             _currentUser.value = null
+            _authState.value = AuthState.Unauthenticated
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        runCatching { auth?.removeAuthStateListener(authStateListener) }
+        stopSessionSync()
+        signInJob?.cancel()
+        signOutJob?.cancel()
     }
 }

@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,31 +12,51 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.auth.AuthState
+import com.example.data.auth.findValidActivity
 import com.example.ui.NavigationDestination
 import com.example.ui.NearGridViewModel
+import com.example.ui.components.AuraMeshBackground
+import com.example.ui.components.AuraVariant
 import com.example.ui.components.AuthVerificationDialog
 import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
 import com.example.ui.components.GeohashQrInviteDialog
 import com.example.ui.components.LiquidGlassBottomBar
+import com.example.ui.components.NearGridBrandMark
 import com.example.ui.components.PostCommentsSheet
 import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.AppSettingsScreen
@@ -50,11 +71,18 @@ import com.example.ui.screens.RealtimeMapScreen
 import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.UserProfileScreen
 import com.example.ui.theme.BackgroundCanvas
+import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.MutedSlate
 import com.example.ui.theme.NearGridTheme
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PlusJakartaFontFamily
+import com.example.ui.theme.PureWhite
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 class MainActivity : ComponentActivity() {
+    private var intentVersionState = mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
@@ -68,17 +96,26 @@ class MainActivity : ComponentActivity() {
         try {
             setContent {
                 NearGridTheme {
-                    NearGridApp()
+                    NearGridApp(intentVersion = intentVersionState.intValue)
                 }
             }
         } catch (t: Throwable) {
             android.util.Log.e("MainActivity", "Fatal error during Activity setContent", t)
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intentVersionState.intValue += 1
+    }
 }
 
 @Composable
-fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
+fun NearGridApp(
+    viewModel: NearGridViewModel = viewModel(),
+    intentVersion: Int = 0
+) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cells by viewModel.cells.collectAsStateWithLifecycle()
@@ -116,9 +153,27 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         ActivityResultContracts.RequestPermission()
     ) { /* Notification permission result */ }
 
-    val activity = context as? android.app.Activity
+    val activity = context.findValidActivity()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val isAuthenticated = authState is AuthState.Authenticated
 
-    LaunchedEffect(Unit) {
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                viewModel.verifySessionOnForeground()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(isAuthenticated) {
+        if (!isAuthenticated) return@LaunchedEffect
+
         val hasLocationPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -146,7 +201,8 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
     }
 
     // Handle deep link notification click to open corresponding conversation directly
-    LaunchedEffect(activity?.intent, conversations) {
+    LaunchedEffect(intentVersion, activity?.intent, conversations, isAuthenticated) {
+        if (!isAuthenticated) return@LaunchedEffect
         val convId = activity?.intent?.getStringExtra(com.example.util.ChatNotificationManager.EXTRA_CONVERSATION_ID)
         if (!convId.isNullOrBlank()) {
             val matchingConv = conversations.find { it.id == convId }
@@ -178,14 +234,25 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
         }
     }
 
-    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-
-    // Authentication Gate: Render Google Sign-In when unauthenticated
-    if (currentUser == null) {
-        SignInScreen(
-            onSignInSuccess = { /* Managed reactively by Firebase AuthStateListener */ }
-        )
-        return
+    // Authentication Gate: Prevent login screen flash during session restoration
+    when (val currentAuth = authState) {
+        is AuthState.Initializing -> {
+            AuthInitializingScreen()
+            return
+        }
+        is AuthState.Unauthenticated,
+        is AuthState.Authenticating,
+        is AuthState.Error -> {
+            SignInScreen(
+                authState = currentAuth,
+                onSignInClick = { hostActivity -> viewModel.signInWithGoogle(hostActivity) },
+                onDismissError = { viewModel.clearAuthError() }
+            )
+            return
+        }
+        is AuthState.Authenticated -> {
+            // Proceed into authenticated main application
+        }
     }
 
     // Full-screen Onboarding experience if active
@@ -580,5 +647,44 @@ fun NearGridApp(viewModel: NearGridViewModel = viewModel()) {
             },
             onDismiss = { viewModel.closePostComments() }
         )
+    }
+}
+
+@Composable
+private fun AuthInitializingScreen() {
+    AuraMeshBackground(
+        variant = AuraVariant.COBALT,
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("auth_initializing_screen")
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            NearGridBrandMark(size = 56.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "NearGrid",
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                color = PureWhite
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Restoring your verified session...",
+                fontFamily = PlusJakartaFontFamily,
+                fontSize = 13.sp,
+                color = MutedSlate
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            CircularProgressIndicator(
+                color = CobaltGlow,
+                strokeWidth = 2.5.dp,
+                modifier = Modifier.size(28.dp)
+            )
+        }
     }
 }

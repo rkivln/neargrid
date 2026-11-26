@@ -1,7 +1,6 @@
 package com.example.data.repository
 
 import android.content.Context
-import com.example.R
 import com.example.data.model.ChatMessage
 import com.example.data.model.CommunityIssue
 import com.example.data.model.Conversation
@@ -9,12 +8,15 @@ import com.example.data.model.GeohashMessage
 import com.example.data.model.NeighborPost
 import com.example.data.model.PostComment
 import com.example.data.model.UserProfile
+import com.example.data.remote.FirebaseBootstrap
 import com.example.data.remote.OperationType
 import com.example.data.remote.handleFirestoreError
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -30,96 +32,87 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     private val auth: FirebaseAuth?
         get() = try {
-            FirebaseAuth.getInstance()
+            FirebaseAuth.getInstance(db.app)
         } catch (e: Exception) {
-            android.util.Log.w("FirestoreRepository", "FirebaseAuth.getInstance() failed: ${e.message}")
-            null
+            try {
+                FirebaseAuth.getInstance()
+            } catch (ignored: Exception) {
+                android.util.Log.w("FirestoreRepository", "FirebaseAuth.getInstance() failed: ${e.message}")
+                null
+            }
         }
 
     companion object {
+        private val ALLOWED_LOCATION_PRECISIONS = setOf("EXACT", "APPROXIMATE", "NEIGHBORHOOD")
+
         private fun getSafeFirestoreInstance(context: Context): FirebaseFirestore {
-            // Ensure FirebaseApp is active before requesting Firestore
-            val appContext = context.applicationContext
-            if (com.google.firebase.FirebaseApp.getApps(appContext).isEmpty()) {
-                try {
-                    com.google.firebase.FirebaseApp.initializeApp(appContext)
-                } catch (e: Exception) {
-                    try {
-                        val options = com.google.firebase.FirebaseOptions.Builder()
-                            .setApplicationId("1:253737365034:android:858656ab161612d795dd53")
-                            .setProjectId("gen-lang-client-0509703417")
-                            .setApiKey("AIzaSyBSc8bWTsIYVL8Sj7kicx9zSZLOAcLD1LA")
-                            .setGcmSenderId("253737365034")
-                            .setStorageBucket("gen-lang-client-0509703417.firebasestorage.app")
-                            .build()
-                        com.google.firebase.FirebaseApp.initializeApp(appContext, options)
-                    } catch (ignored: Exception) {}
-                }
-            }
-
-            val databaseId = try {
-                appContext.getString(R.string.firestore_database_id)
-            } catch (e: Exception) {
-                ""
-            }
-
-            if (databaseId.isNotBlank() && databaseId != "(default)") {
-                try {
-                    return FirebaseFirestore.getInstance(databaseId)
-                } catch (e: Exception) {
-                    android.util.Log.w("FirestoreRepository", "Named database ($databaseId) failed, falling back to default", e)
-                }
-            }
-
-            return try {
-                FirebaseFirestore.getInstance()
-            } catch (e: Exception) {
-                android.util.Log.e("FirestoreRepository", "Default Firestore instance failed, attempting app fallback", e)
-                val app = com.google.firebase.FirebaseApp.getApps(appContext).firstOrNull()
-                    ?: try { com.google.firebase.FirebaseApp.initializeApp(appContext) } catch (ignored: Exception) { null }
-                if (app != null) FirebaseFirestore.getInstance(app) else FirebaseFirestore.getInstance()
-            }
+            return FirebaseBootstrap.getFirestore(context)
+                ?: FirebaseFirestore.getInstance()
         }
-    }
 
-    fun requireUserId(): String {
-        return auth?.currentUser?.uid
-            ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
-    }
+        internal fun sanitizeUserProfilePayload(
+            uid: String,
+            profile: UserProfile,
+            includeCreatedAt: Boolean = false
+        ): HashMap<String, Any> {
+            val safeDisplayName = profile.displayName.trim().ifBlank { "Local Resident" }.take(100)
+            val safeEmail = profile.email.trim().take(200)
+            val safeHandle = profile.handle.trim().take(60)
+            val safeBio = profile.bio.trim().take(500)
+            val safeCellId = profile.cellId.trim().ifBlank { "cell_local" }.take(80)
+            val safeCellName = profile.cellName.trim().ifBlank { "Local Area" }.take(100)
+            val safePrecision = if (profile.locationPrecision in ALLOWED_LOCATION_PRECISIONS) {
+                profile.locationPrecision
+            } else {
+                "EXACT"
+            }
 
-    // --- User Profile ---
-
-    fun observeUserProfile(userId: String): Flow<UserProfile?> = callbackFlow {
-        val uid = auth?.currentUser?.uid
-        if (uid == null || userId.isBlank()) {
-            trySend(null)
-            close()
-            return@callbackFlow
+            val payload = hashMapOf<String, Any>(
+                "userId" to uid,
+                "email" to safeEmail,
+                "displayName" to safeDisplayName,
+                "handle" to safeHandle,
+                "bio" to safeBio,
+                "cellId" to safeCellId,
+                "cellName" to safeCellName,
+                "avatarPresetIndex" to profile.avatarPresetIndex,
+                "privacyRadiusMeters" to profile.privacyRadiusMeters,
+                "fuzzyCoords" to profile.fuzzyCoords,
+                "incognito" to profile.incognito,
+                "allowDMs" to profile.allowDMs,
+                "locationPrecision" to safePrecision,
+                "hideOnlineStatus" to profile.hideOnlineStatus,
+                "hideExactDistance" to profile.hideExactDistance,
+                "blockedUserIds" to profile.blockedUserIds.take(200),
+                "isOnline" to profile.isOnline,
+                "lastActiveAt" to FieldValue.serverTimestamp(),
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+            profile.avatarUri?.trim()?.takeIf { it.isNotEmpty() }?.let { uri ->
+                payload["avatarUri"] = uri.take(1000)
+            }
+            if (profile.latitude != 0.0 && profile.longitude != 0.0) {
+                payload["latitude"] = profile.latitude
+                payload["longitude"] = profile.longitude
+            }
+            if (profile.geohash.isNotBlank()) {
+                payload["geohash"] = profile.geohash.removePrefix("#").lowercase(Locale.ROOT).take(32)
+            }
+            if (includeCreatedAt) {
+                payload["createdAt"] = FieldValue.serverTimestamp()
+            }
+            return payload
         }
-        val docRef = db.collection("users").document(userId)
-        val listener = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                handleFirestoreError(error, OperationType.GET, docRef.path)
-                trySend(null)
-                close()
-                return@addSnapshotListener
-            }
-            if (snapshot == null || !snapshot.exists()) {
-                trySend(null)
-                return@addSnapshotListener
-            }
-            val data = snapshot.data ?: run {
-                trySend(null)
-                return@addSnapshotListener
-            }
-            val profile = UserProfile(
+
+        internal fun parseUserProfile(userId: String, data: Map<String, Any?>): UserProfile {
+            return UserProfile(
                 userId = userId,
                 email = data["email"] as? String ?: "",
-                displayName = data["displayName"] as? String ?: "",
+                displayName = data["displayName"] as? String ?: "Neighbor",
                 handle = data["handle"] as? String ?: "",
                 bio = data["bio"] as? String ?: "",
                 cellId = data["cellId"] as? String ?: "cell_oakwood_center",
-                cellName = data["cellName"] as? String ?: "Oakwood Grove",
+                cellName = data["cellName"] as? String ?: "Local Area",
                 avatarPresetIndex = (data["avatarPresetIndex"] as? Number)?.toInt() ?: 0,
                 avatarUri = data["avatarUri"] as? String,
                 privacyRadiusMeters = (data["privacyRadiusMeters"] as? Number)?.toInt() ?: 500,
@@ -134,10 +127,116 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
                 geohash = data["geohash"] as? String ?: "",
                 isOnline = data["isOnline"] as? Boolean ?: false,
-                lastActiveAt = (data["lastActiveAt"] as? Timestamp)?.toDate()?.time ?: (data["lastActiveAt"] as? Number)?.toLong() ?: 0L,
+                lastActiveAt = (data["lastActiveAt"] as? Timestamp)?.toDate()?.time
+                    ?: (data["lastActiveAt"] as? Number)?.toLong() ?: 0L,
                 createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
             )
-            trySend(profile)
+        }
+    }
+
+    fun requireUserId(): String {
+        return auth?.currentUser?.uid
+            ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
+    }
+
+    // --- User Profile ---
+
+    /**
+     * Ensures a Firestore `users/{uid}` document exists after Google Sign-In,
+     * retrieving the existing document without overwriting user customizations or
+     * creating a rule-compliant profile if none exists yet.
+     */
+    suspend fun ensureUserProfileExists(
+        user: FirebaseUser,
+        cellId: String = "cell_local",
+        cellName: String = "My Neighborhood"
+    ): Result<UserProfile> = withContext(Dispatchers.IO) {
+        val currentUid = auth?.currentUser?.uid
+        val uid = user.uid
+        if (currentUid == null || currentUid != uid) {
+            return@withContext Result.failure(
+                IllegalStateException("Authenticated Firebase UID mismatch while synchronizing user profile.")
+            )
+        }
+        val docRef = db.collection("users").document(uid)
+        try {
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                val existing = parseUserProfile(uid, snapshot.data.orEmpty())
+                val updates = hashMapOf<String, Any>(
+                    "isOnline" to true,
+                    "lastActiveAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                val email = user.email?.trim()?.take(200).orEmpty()
+                if (existing.email.isBlank() && email.isNotBlank()) {
+                    updates["email"] = email
+                }
+                runCatching { docRef.update(updates).await() }
+                Result.success(existing)
+            } else {
+                val defaultEmail = user.email?.trim()?.take(200).orEmpty()
+                val defaultName = user.displayName?.trim()?.ifBlank { null }
+                    ?: defaultEmail.substringBefore("@").ifBlank { "Local Resident" }
+                val defaultHandlePrefix = defaultEmail.substringBefore("@")
+                    .filter { it.isLetterOrDigit() || it == '_' }
+                    .ifBlank { "resident" }
+                val newProfile = UserProfile(
+                    userId = uid,
+                    email = defaultEmail,
+                    displayName = defaultName.take(100),
+                    handle = "@$defaultHandlePrefix".take(60),
+                    bio = "Civic resident connected via Google Resident Pass.",
+                    cellId = cellId.ifBlank { "cell_local" }.take(80),
+                    cellName = cellName.ifBlank { "My Neighborhood" }.take(100),
+                    avatarUri = user.photoUrl?.toString()?.take(1000),
+                    privacyRadiusMeters = 1000,
+                    fuzzyCoords = false,
+                    incognito = false,
+                    allowDMs = true,
+                    locationPrecision = "EXACT",
+                    isOnline = true
+                )
+                val payload = sanitizeUserProfilePayload(
+                    uid = uid,
+                    profile = newProfile,
+                    includeCreatedAt = true
+                )
+                docRef.set(payload).await()
+                Result.success(newProfile)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    fun observeUserProfile(userId: String): Flow<UserProfile?> = callbackFlow {
+        val uid = auth?.currentUser?.uid
+        if (uid == null || userId.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val docRef = db.collection("users").document(userId)
+        val listener = docRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                handleFirestoreError(error, OperationType.GET, docRef.path)
+                // Close with error instead of emitting null so transient failures never overwrite profile
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            val data = snapshot.data ?: run {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            trySend(parseUserProfile(userId, data))
         }
         awaitClose { listener.remove() }
     }
@@ -145,45 +244,26 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     suspend fun saveUserProfile(profile: UserProfile): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
         val docRef = db.collection("users").document(uid)
-        val payload = hashMapOf<String, Any>(
-            "userId" to uid,
-            "email" to profile.email,
-            "displayName" to profile.displayName,
-            "handle" to profile.handle,
-            "bio" to profile.bio,
-            "cellId" to profile.cellId,
-            "cellName" to profile.cellName,
-            "avatarPresetIndex" to profile.avatarPresetIndex,
-            "privacyRadiusMeters" to profile.privacyRadiusMeters,
-            "fuzzyCoords" to profile.fuzzyCoords,
-            "incognito" to profile.incognito,
-            "allowDMs" to profile.allowDMs,
-            "locationPrecision" to profile.locationPrecision,
-            "hideOnlineStatus" to profile.hideOnlineStatus,
-            "hideExactDistance" to profile.hideExactDistance,
-            "blockedUserIds" to profile.blockedUserIds,
-            "isOnline" to profile.isOnline,
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-        if (profile.avatarUri != null) {
-            payload["avatarUri"] = profile.avatarUri
-        }
-        if (profile.latitude != 0.0 && profile.longitude != 0.0) {
-            payload["latitude"] = profile.latitude
-            payload["longitude"] = profile.longitude
-        }
-        if (profile.geohash.isNotBlank()) {
-            payload["geohash"] = profile.geohash.removePrefix("#").lowercase(Locale.ROOT)
-        }
         try {
             val snapshot = docRef.get().await()
             if (!snapshot.exists()) {
-                payload["createdAt"] = FieldValue.serverTimestamp()
+                val payload = sanitizeUserProfilePayload(
+                    uid = uid,
+                    profile = profile,
+                    includeCreatedAt = true
+                )
                 docRef.set(payload).await()
             } else {
+                val payload = sanitizeUserProfilePayload(
+                    uid = uid,
+                    profile = profile,
+                    includeCreatedAt = false
+                )
                 docRef.update(payload).await()
             }
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.WRITE, docRef.path)
             Result.failure(e)
@@ -194,7 +274,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
         if (latitude == 0.0 && longitude == 0.0) return@withContext Result.success(Unit)
         val docRef = db.collection("users").document(uid)
-        val cleanHash = geohash.removePrefix("#").lowercase(Locale.ROOT)
+        val cleanHash = geohash.removePrefix("#").lowercase(Locale.ROOT).take(32)
         val updates = hashMapOf<String, Any>(
             "latitude" to latitude,
             "longitude" to longitude,
@@ -209,37 +289,86 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 docRef.update(updates).await()
             } else {
                 val user = auth?.currentUser
-                val initialProfile = hashMapOf<String, Any>(
-                    "userId" to uid,
-                    "email" to (user?.email ?: ""),
-                    "displayName" to (user?.displayName?.ifBlank { "Neighbor" } ?: "Neighbor"),
-                    "handle" to "@" + (user?.displayName?.replace(" ", "")?.lowercase(Locale.ROOT) ?: "resident"),
-                    "bio" to "Local neighbor on NearGrid",
-                    "cellId" to "cell_local",
-                    "cellName" to "Local Area",
-                    "avatarPresetIndex" to 0,
-                    "avatarUri" to (user?.photoUrl?.toString() ?: ""),
-                    "privacyRadiusMeters" to 500,
-                    "fuzzyCoords" to true,
-                    "incognito" to false,
-                    "allowDMs" to true,
-                    "locationPrecision" to "EXACT",
-                    "hideOnlineStatus" to false,
-                    "hideExactDistance" to false,
-                    "blockedUserIds" to emptyList<String>(),
-                    "latitude" to latitude,
-                    "longitude" to longitude,
-                    "geohash" to cleanHash,
-                    "isOnline" to true,
-                    "lastActiveAt" to FieldValue.serverTimestamp(),
-                    "createdAt" to FieldValue.serverTimestamp(),
-                    "updatedAt" to FieldValue.serverTimestamp()
+                val email = user?.email?.trim()?.take(200).orEmpty()
+                val defaultName = user?.displayName?.trim()?.ifBlank { null } ?: "Neighbor"
+                val defaultHandle = "@" + (user?.displayName?.replace(" ", "")?.lowercase(Locale.ROOT)?.ifBlank { null } ?: "resident")
+                val initialProfile = UserProfile(
+                    userId = uid,
+                    email = email,
+                    displayName = defaultName,
+                    handle = defaultHandle,
+                    bio = "Local neighbor on NearGrid",
+                    cellId = "cell_local",
+                    cellName = "Local Area",
+                    avatarUri = user?.photoUrl?.toString()?.take(1000),
+                    privacyRadiusMeters = 500,
+                    fuzzyCoords = true,
+                    incognito = false,
+                    allowDMs = true,
+                    locationPrecision = "EXACT",
+                    latitude = latitude,
+                    longitude = longitude,
+                    geohash = cleanHash,
+                    isOnline = true
                 )
-                docRef.set(initialProfile).await()
+                docRef.set(sanitizeUserProfilePayload(uid, initialProfile, includeCreatedAt = true)).await()
             }
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun markUserOfflineBestEffort() = withContext(Dispatchers.IO) {
+        val uid = auth?.currentUser?.uid ?: return@withContext
+        val docRef = db.collection("users").document(uid)
+        try {
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                docRef.update(
+                    mapOf(
+                        "isOnline" to false,
+                        "lastActiveAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.d("FirestoreRepository", "Offline presence update skipped on sign-out: ${e.message}")
+        }
+    }
+
+    suspend fun submitSupportTicket(
+        category: String,
+        message: String,
+        userNickname: String,
+        appVersion: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val user = auth?.currentUser
+        val uid = user?.uid ?: "anonymous"
+        val ticket = mapOf(
+            "ticketId" to UUID.randomUUID().toString(),
+            "userId" to uid,
+            "userName" to userNickname,
+            "userEmail" to (user?.email ?: ""),
+            "category" to category,
+            "message" to message.trim(),
+            "appVersion" to appVersion,
+            "createdAt" to System.currentTimeMillis(),
+            "status" to "OPEN"
+        )
+        try {
+            db.collection("support_tickets").add(ticket).await()
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.CREATE, "support_tickets")
             Result.failure(e)
         }
     }
@@ -266,6 +395,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             if (error != null) {
                 handleFirestoreError(error, OperationType.LIST, "users")
                 trySend(emptyList())
+                close()
                 return@addSnapshotListener
             }
             if (snapshot == null) {
@@ -274,31 +404,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             }
             val users = snapshot.documents.mapNotNull { doc ->
                 val data = doc.data ?: return@mapNotNull null
-                UserProfile(
-                    userId = doc.id,
-                    email = data["email"] as? String ?: "",
-                    displayName = data["displayName"] as? String ?: "Neighbor",
-                    handle = data["handle"] as? String ?: "",
-                    bio = data["bio"] as? String ?: "",
-                    cellId = data["cellId"] as? String ?: "cell_oakwood_center",
-                    cellName = data["cellName"] as? String ?: "Local Area",
-                    avatarPresetIndex = (data["avatarPresetIndex"] as? Number)?.toInt() ?: 0,
-                    avatarUri = data["avatarUri"] as? String,
-                    privacyRadiusMeters = (data["privacyRadiusMeters"] as? Number)?.toInt() ?: 500,
-                    fuzzyCoords = data["fuzzyCoords"] as? Boolean ?: true,
-                    incognito = data["incognito"] as? Boolean ?: false,
-                    allowDMs = data["allowDMs"] as? Boolean ?: true,
-                    locationPrecision = data["locationPrecision"] as? String ?: "EXACT",
-                    hideOnlineStatus = data["hideOnlineStatus"] as? Boolean ?: false,
-                    hideExactDistance = data["hideExactDistance"] as? Boolean ?: false,
-                    blockedUserIds = (data["blockedUserIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                    latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
-                    longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
-                    geohash = data["geohash"] as? String ?: "",
-                    isOnline = data["isOnline"] as? Boolean ?: false,
-                    lastActiveAt = (data["lastActiveAt"] as? Timestamp)?.toDate()?.time ?: 0L,
-                    createdAt = (data["createdAt"] as? Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
-                )
+                parseUserProfile(doc.id, data)
             }
             trySend(users)
         }

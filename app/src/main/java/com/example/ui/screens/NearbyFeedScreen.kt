@@ -108,9 +108,7 @@ import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
 import com.example.util.LocationHelper
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.data.remote.FirebaseBootstrap
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -183,11 +181,7 @@ fun NearbyFeedComponent(
             errorMessage = null
 
             try {
-                val db = try {
-                    FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
-                } catch (e: Exception) {
-                    null
-                }
+                val db = FirebaseBootstrap.getFirestore(context)
 
                 if (db != null) {
                     val snapshot = withContext(Dispatchers.IO) {
@@ -202,7 +196,7 @@ fun NearbyFeedComponent(
                     }
 
                     if (snapshot != null && !snapshot.isEmpty) {
-                        val currentUid = Firebase.auth.currentUser?.uid ?: ""
+                        val currentUid = FirebaseBootstrap.getAuth(context)?.currentUser?.uid ?: ""
                         val items = snapshot.documents.mapNotNull { doc ->
                             try {
                                 val data = doc.data ?: return@mapNotNull null
@@ -266,12 +260,12 @@ fun NearbyFeedComponent(
     DisposableEffect(Unit) {
         var listenerRegistration: ListenerRegistration? = null
         try {
-            val db = FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
-            listenerRegistration = db.collection("posts")
-                .whereEqualTo("status", "ACTIVE")
-                .addSnapshotListener { snapshot, error ->
+            val db = FirebaseBootstrap.getFirestore(context)
+            listenerRegistration = db?.collection("posts")
+                ?.whereEqualTo("status", "ACTIVE")
+                ?.addSnapshotListener { snapshot, error ->
                     if (error == null && snapshot != null && !snapshot.isEmpty) {
-                        val currentUid = Firebase.auth.currentUser?.uid ?: ""
+                        val currentUid = FirebaseBootstrap.getAuth(context)?.currentUser?.uid ?: ""
                         val items = snapshot.documents.mapNotNull { doc ->
                             try {
                                 val data = doc.data ?: return@mapNotNull null
