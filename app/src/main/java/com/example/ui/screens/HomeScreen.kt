@@ -9,8 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,9 +74,10 @@ import com.example.ui.components.AuraVariant
 import com.example.ui.components.CircularOutlineIconButton
 import com.example.ui.components.CobaltHeroCard
 import com.example.ui.components.DarkGlassCard
-import com.example.ui.components.FrostedGlassBurgerPopup
+import com.example.ui.components.FrostedGlassFilterSheet
 import com.example.ui.components.FrostedMenuOptionPill
 import com.example.ui.components.FrostedMenuSectionTitle
+import com.example.ui.components.FrostedMenuWrapRow
 import com.example.ui.components.GeohashMessageComposer
 import com.example.ui.components.GlassSecondaryPillButton
 import com.example.ui.components.IntentMatchCard
@@ -108,10 +107,8 @@ import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SubtleGlassDivider
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isRefreshing: Boolean = false,
@@ -171,12 +168,9 @@ fun HomeScreen(
             .testTag("home_pull_to_refresh")
     ) {
         AuraMeshBackground(variant = AuraVariant.MIXED) {
-            val feedBackdrop = rememberLayerBackdrop()
             if (isNearbyFeedMode) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .layerBackdrop(feedBackdrop)
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     TopNeighborhoodBar(
                         currentCell = currentCell,
@@ -233,9 +227,7 @@ fun HomeScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .layerBackdrop(feedBackdrop),
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
@@ -334,156 +326,12 @@ fun HomeScreen(
                                 )
                             }
 
-                            Box {
-                                LiquidGlassBurgerMenuButton(
-                                    activeFilterCount = activeFilterCount,
-                                    onClick = { showFilterMenu = !showFilterMenu },
-                                    backdrop = feedBackdrop,
-                                    contentDescription = "Open feed sort and filter menu",
-                                    modifier = Modifier.testTag("home_filter_menu_button")
-                                )
-
-                                FrostedGlassBurgerPopup(
-                                    expanded = showFilterMenu,
-                                    onDismissRequest = { showFilterMenu = false },
-                                    width = 304.dp
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Sort & Filter",
-                                            fontFamily = OutfitFontFamily,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = PureWhite
-                                        )
-                                        if (activeFilterCount > 0) {
-                                            FrostedMenuOptionPill(
-                                                label = "Reset",
-                                                selected = false,
-                                                onClick = {
-                                                    onFilterChange("ALL")
-                                                    onCategoryChange("ALL")
-                                                    onRadiusChange(800)
-                                                    showFilterMenu = false
-                                                },
-                                                modifier = Modifier.testTag("filter_reset_button")
-                                            )
-                                        }
-                                    }
-
-                                    HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
-
-                                    FrostedMenuSectionTitle("View & Sort")
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        FrostedMenuOptionPill(
-                                            label = "Block Feed",
-                                            selected = !isNearbyFeedMode,
-                                            onClick = {
-                                                isNearbyFeedMode = false
-                                                showFilterMenu = false
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        FrostedMenuOptionPill(
-                                            label = "Closest First",
-                                            selected = isNearbyFeedMode,
-                                            onClick = {
-                                                isNearbyFeedMode = true
-                                                showFilterMenu = false
-                                            },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .testTag("feed_mode_nearby")
-                                        )
-                                    }
-
-                                    FrostedMenuSectionTitle("Post Type")
-                                    val filterTypes = listOf(
-                                        "ALL" to "All",
-                                        "NEED" to "Needs",
-                                        "OFFER" to "Offers",
-                                        "MEETUP" to "Meetups",
-                                        "CIVIC" to "Civic"
-                                    )
-                                    FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        filterTypes.forEach { (type, label) ->
-                                            val activeBg = when (type) {
-                                                "NEED" -> FieryCoral
-                                                "OFFER" -> EmeraldMint
-                                                "CIVIC" -> FieryCoral
-                                                else -> ElectricCobalt
-                                            }
-                                            FrostedMenuOptionPill(
-                                                label = label,
-                                                selected = selectedFilterType == type,
-                                                selectedColor = activeBg,
-                                                onClick = {
-                                                    onFilterChange(type)
-                                                    showFilterMenu = false
-                                                },
-                                                modifier = Modifier.testTag("filter_pill_${type.lowercase()}")
-                                            )
-                                        }
-                                    }
-
-                                    if (selectedFilterType != "CIVIC") {
-                                        FrostedMenuSectionTitle("Topic")
-                                        val categories = listOf("ALL", "TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
-                                        FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            categories.forEach { cat ->
-                                                val label = if (cat == "ALL") {
-                                                    "All topics"
-                                                } else {
-                                                    cat.lowercase().replaceFirstChar { it.uppercase() }
-                                                }
-                                                FrostedMenuOptionPill(
-                                                    label = label,
-                                                    selected = selectedCategory == cat,
-                                                    onClick = {
-                                                        onCategoryChange(cat)
-                                                        showFilterMenu = false
-                                                    },
-                                                    modifier = Modifier.testTag("category_pill_${cat.lowercase()}")
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    FrostedMenuSectionTitle("Discovery Radius")
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        val radii = listOf(300 to "300m", 800 to "800m", 2000 to "2 km")
-                                        radii.forEach { (radius, label) ->
-                                            FrostedMenuOptionPill(
-                                                label = label,
-                                                selected = discoveryRadiusMeters == radius,
-                                                onClick = {
-                                                    onRadiusChange(radius)
-                                                    showFilterMenu = false
-                                                },
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .testTag("radius_chip_$radius")
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            LiquidGlassBurgerMenuButton(
+                                activeFilterCount = activeFilterCount,
+                                onClick = { showFilterMenu = true },
+                                contentDescription = "Open feed sort and filter menu",
+                                modifier = Modifier.testTag("home_filter_menu_button")
+                            )
                         }
                     }
 
@@ -767,7 +615,6 @@ fun HomeScreen(
                 text = "Post",
                 icon = Icons.Default.Add,
                 onClick = { onOpenCreateDialog("NEED") },
-                backdrop = feedBackdrop,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
@@ -850,6 +697,142 @@ fun HomeScreen(
                     onRefreshLocation = onRefreshLocation,
                     onPostMessage = onPostGeohashMessage,
                     onDismissStatus = onDismissGeohashStatus
+                )
+            }
+        }
+    }
+
+    val activeHomeFilterCount = (if (selectedFilterType != "ALL") 1 else 0) +
+        (if (selectedFilterType != "CIVIC" && selectedCategory != "ALL") 1 else 0) +
+        (if (discoveryRadiusMeters != 800) 1 else 0)
+
+    FrostedGlassFilterSheet(
+        expanded = showFilterMenu,
+        onDismissRequest = { showFilterMenu = false },
+        eyebrow = "Feed Controls",
+        title = "Sort & Filter",
+        sheetTestTag = "home_filter_sheet",
+        closeButtonDescription = "Close Sort & Filter sheet",
+        headerTrailingContent = if (activeHomeFilterCount > 0) {
+            {
+                FrostedMenuOptionPill(
+                    label = "Reset",
+                    selected = false,
+                    onClick = {
+                        onFilterChange("ALL")
+                        onCategoryChange("ALL")
+                        onRadiusChange(800)
+                        showFilterMenu = false
+                    },
+                    modifier = Modifier.testTag("filter_reset_button")
+                )
+            }
+        } else null
+    ) {
+        FrostedMenuSectionTitle("View & Sort")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FrostedMenuOptionPill(
+                label = "Block Feed",
+                selected = !isNearbyFeedMode,
+                onClick = {
+                    isNearbyFeedMode = false
+                    showFilterMenu = false
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("feed_mode_block")
+            )
+            FrostedMenuOptionPill(
+                label = "Closest First",
+                selected = isNearbyFeedMode,
+                onClick = {
+                    isNearbyFeedMode = true
+                    showFilterMenu = false
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("feed_mode_nearby")
+            )
+        }
+
+        FrostedMenuSectionTitle("Post Type")
+        val filterTypes = listOf(
+            "ALL" to "All",
+            "NEED" to "Needs",
+            "OFFER" to "Offers",
+            "MEETUP" to "Meetups",
+            "CIVIC" to "Civic"
+        )
+        FrostedMenuWrapRow(
+            horizontalSpacing = 8.dp,
+            verticalSpacing = 8.dp
+        ) {
+            filterTypes.forEach { (type, label) ->
+                val activeBg = when (type) {
+                    "NEED" -> FieryCoral
+                    "OFFER" -> EmeraldMint
+                    "CIVIC" -> FieryCoral
+                    else -> ElectricCobalt
+                }
+                FrostedMenuOptionPill(
+                    label = label,
+                    selected = selectedFilterType == type,
+                    selectedColor = activeBg,
+                    onClick = {
+                        onFilterChange(type)
+                        showFilterMenu = false
+                    },
+                    modifier = Modifier.testTag("filter_pill_${type.lowercase()}")
+                )
+            }
+        }
+
+        if (selectedFilterType != "CIVIC") {
+            FrostedMenuSectionTitle("Topic")
+            val categories = listOf("ALL", "TOOLS", "HOUSEHOLD", "HELP", "STUDY", "SPORTS")
+            FrostedMenuWrapRow(
+                horizontalSpacing = 8.dp,
+                verticalSpacing = 8.dp
+            ) {
+                categories.forEach { cat ->
+                    val label = if (cat == "ALL") {
+                        "All topics"
+                    } else {
+                        cat.lowercase().replaceFirstChar { it.uppercase() }
+                    }
+                    FrostedMenuOptionPill(
+                        label = label,
+                        selected = selectedCategory == cat,
+                        onClick = {
+                            onCategoryChange(cat)
+                            showFilterMenu = false
+                        },
+                        modifier = Modifier.testTag("category_pill_${cat.lowercase()}")
+                    )
+                }
+            }
+        }
+
+        FrostedMenuSectionTitle("Discovery Radius")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val radii = listOf(300 to "300m", 800 to "800m", 2000 to "2 km")
+            radii.forEach { (radius, label) ->
+                FrostedMenuOptionPill(
+                    label = label,
+                    selected = discoveryRadiusMeters == radius,
+                    onClick = {
+                        onRadiusChange(radius)
+                        showFilterMenu = false
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("radius_chip_$radius")
                 )
             }
         }

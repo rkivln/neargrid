@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
+import android.os.Looper
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
@@ -19,9 +20,13 @@ import com.example.data.auth.GoogleAuthRepository
 import com.example.data.auth.GoogleCredentialClient
 import com.example.data.auth.SessionValidationResult
 import com.example.data.auth.findValidActivity
+import com.example.data.local.AppDatabase
 import com.example.data.model.UserProfile
 import com.example.data.remote.FirebaseBootstrap
 import com.example.data.repository.FirestoreRepository
+import com.example.data.repository.NearGridRepository
+import com.example.ui.AuthViewModel
+import com.example.ui.FeatureStartupState
 import com.example.ui.NearGridViewModel
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -32,6 +37,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,6 +49,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -81,7 +88,7 @@ class AuthLifecycleTest {
         )
 
         val resolved = FirebaseBootstrap.resolveWebClientId(app)
-        assertNotNull("Configured Web Client ID must resolve from BuildConfig", resolved)
+        assertNotNull("Configured Web Client ID must resolve from R.string / BuildConfig", resolved)
         assertTrue(FirebaseBootstrap.isValidWebClientId(resolved))
     }
 
@@ -132,9 +139,50 @@ class AuthLifecycleTest {
         assertEquals("uid_test_123", session.uid)
         assertEquals("header.payload.signature", fakeAuthClient.lastIdToken)
         assertEquals(1, fakeCredentialClient.capturedRequests.size)
+        assertEquals(1, fakeCredentialClient.capturedRequests.first().credentialOptions.size)
         assertTrue(
             fakeCredentialClient.capturedRequests.first().credentialOptions.first() is GetSignInWithGoogleOption
         )
+    }
+
+    @Test
+    fun googleAuthRepository_attemptAutoSignInUsesAuthorizedGoogleIdOptionOnly() = runBlocking {
+        val googleCred = GoogleIdTokenCredential(
+            id = "returning@example.com",
+            idToken = "silent.jwt.token",
+            displayName = "Returning User",
+            familyName = null,
+            givenName = null,
+            profilePictureUri = null,
+            phoneNumber = null
+        )
+        val fakeCredentialClient = FakeCredentialClient(
+            responses = ArrayDeque(listOf(Result.success(GetCredentialResponse(googleCred))))
+        )
+        val fakeAuthClient = FakeFirebaseAuthClient(auth = FirebaseBootstrap.getAuth(app))
+        val repo = GoogleAuthRepository(app, fakeCredentialClient, fakeAuthClient)
+
+        val outcome = repo.attemptAutoSignIn(app)
+        assertTrue(outcome is AuthSignInOutcome.Success)
+        assertEquals("silent.jwt.token", fakeAuthClient.lastIdToken)
+        assertEquals(1, fakeCredentialClient.capturedRequests.size)
+        val option = fakeCredentialClient.capturedRequests.first().credentialOptions.single()
+        assertTrue(option is GetGoogleIdOption)
+        assertTrue((option as GetGoogleIdOption).filterByAuthorizedAccounts)
+        assertTrue(option.autoSelectEnabled)
+    }
+
+    @Test
+    fun googleAuthRepository_attemptAutoSignInReturnsCancelledWhenNoAuthorizedAccountCached() = runBlocking {
+        val fakeCredentialClient = FakeCredentialClient(
+            responses = ArrayDeque(listOf(Result.failure(NoCredentialException("No authorized credential"))))
+        )
+        val fakeAuthClient = FakeFirebaseAuthClient(auth = FirebaseBootstrap.getAuth(app))
+        val repo = GoogleAuthRepository(app, fakeCredentialClient, fakeAuthClient)
+
+        val outcome = repo.attemptAutoSignIn(app)
+        assertEquals(AuthSignInOutcome.Cancelled, outcome)
+        assertEquals(1, fakeCredentialClient.capturedRequests.size)
     }
 
     @Test
@@ -324,26 +372,81 @@ class AuthLifecycleTest {
     }
 
     @Test
-    fun nearGridViewModel_initializesUnauthenticatedAndHandlesSignOutCleanly() {
+    fun authViewModel_and_nearGridViewModel_handleUnauthenticatedAndStartupRecoveryCleanly() = runBlocking {
         FirebaseBootstrap.getAuth(app)?.signOut()
-        val viewModel = NearGridViewModel(app)
+        val authVm = AuthViewModel(app)
+        assertEquals(AuthState.Initializing, authVm.authState.value)
 
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
+        // When no valid Activity is available, silent auto-sign-in falls back cleanly to Unauthenticated
+        authVm.attemptStartupAutoSignIn(null)
+        assertEquals(AuthState.Unauthenticated, authVm.authState.value)
+
+        authVm.clearAuthError()
+        authVm.signOut(app)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertNull(authVm.currentUser.value)
+        assertEquals(AuthState.Unauthenticated, authVm.authState.value)
+
+        val viewModel = NearGridViewModel(app)
+        repeat(300) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (viewModel.startupState.value !is FeatureStartupState.Initializing) return@repeat
+            delay(50)
+        }
+        assertEquals(FeatureStartupState.Ready, viewModel.startupState.value)
         assertNull(viewModel.currentUser.value)
 
-        viewModel.clearAuthError()
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
-
-        viewModel.signOut(app)
-        assertEquals(AuthState.Unauthenticated, viewModel.authState.value)
+        viewModel.prepareForSignOut()
+        assertNull(viewModel.currentUser.value)
     }
 
     @Test
-    fun firestoreRepository_sanitizeUserProfilePayloadEnforcesRuleBounds() {
+    fun nearGridViewModel_startupFailureEntersErrorStateAndRecoversOnRetry() = runBlocking {
+        var shouldFail = true
+        val viewModel = NearGridViewModel(app)
+        repeat(300) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (viewModel.startupState.value !is FeatureStartupState.Initializing) return@repeat
+            delay(50)
+        }
+
+        viewModel.startupDependencyResolver = { context ->
+            if (shouldFail) {
+                throw IllegalStateException("Simulated cloud database outage")
+            }
+            val firestore = FirebaseBootstrap.getFirestore(context)!!
+            val localRepo = NearGridRepository(AppDatabase.getDatabase(context))
+            Pair(FirestoreRepository(firestore), localRepo)
+        }
+
+        // Trigger controlled failure
+        viewModel.retryStartup()
+        repeat(300) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (viewModel.startupState.value is FeatureStartupState.Error) return@repeat
+            delay(50)
+        }
+        val errorState = viewModel.startupState.value
+        assertTrue("Expected Error state, got $errorState", errorState is FeatureStartupState.Error)
+        assertTrue((errorState as FeatureStartupState.Error).message.contains("Simulated cloud database outage"))
+
+        // Recover on retry
+        shouldFail = false
+        viewModel.retryStartup()
+        repeat(300) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (viewModel.startupState.value is FeatureStartupState.Ready) return@repeat
+            delay(50)
+        }
+        assertEquals(FeatureStartupState.Ready, viewModel.startupState.value)
+    }
+
+    @Test
+    fun firestoreRepository_sanitizeUserProfilePayloadExcludesPiiAndEnforcesRuleBounds() {
         val longString = "x".repeat(1200)
         val profile = UserProfile(
             userId = "uid_1",
-            email = longString,
+            email = "private@example.com",
             displayName = "   ",
             handle = longString,
             bio = longString,
@@ -361,7 +464,7 @@ class AuthLifecycleTest {
 
         assertEquals("uid_1", payload["userId"])
         assertEquals("Local Resident", payload["displayName"])
-        assertTrue((payload["email"] as String).length <= 200)
+        assertFalse("Public profile payload must not leak PII email", payload.containsKey("email"))
         assertTrue((payload["handle"] as String).length <= 60)
         assertTrue((payload["bio"] as String).length <= 500)
         assertTrue((payload["avatarUri"] as String).length <= 1000)
@@ -371,36 +474,60 @@ class AuthLifecycleTest {
     }
 
     @Test
-    fun googleAuthRepository_sessionValidationHandlesOfflineAndExpiredCorrectly() = runBlocking {
-        // Offline preserves session; invalid user triggers EXPIRED_OR_INVALID
-        val networkErrRepo = GoogleAuthRepository(
+    fun firestoreRepository_sanitizePrivateAccountPayloadEnforcesRuleBounds() {
+        val longEmail = "a".repeat(250) + "@example.com"
+        val createPayload = FirestoreRepository.sanitizePrivateAccountPayload(
+            uid = "uid_1",
+            email = "  $longEmail  ",
+            includeCreatedAt = true
+        )
+        assertEquals("uid_1", createPayload["userId"])
+        assertTrue((createPayload["email"] as String).length <= 200)
+        assertTrue(createPayload.containsKey("createdAt"))
+        assertTrue(createPayload.containsKey("updatedAt"))
+
+        val updatePayload = FirestoreRepository.sanitizePrivateAccountPayload(
+            uid = "uid_1",
+            email = "resident@example.com",
+            includeCreatedAt = false
+        )
+        assertFalse(updatePayload.containsKey("createdAt"))
+        assertEquals("resident@example.com", updatePayload["email"])
+    }
+
+    @Test
+    fun googleAuthRepository_sessionValidationHandlesValidOfflineAndExpiredCorrectly() = runBlocking {
+        val repo = GoogleAuthRepository(
             app,
             FakeCredentialClient(ArrayDeque()),
-            object : FirebaseAuthClient {
-                override fun getAuthOrNull(): FirebaseAuth? = FirebaseBootstrap.getAuth(app)
-                override suspend fun signInWithGoogleIdToken(idToken: String): AuthenticatedUser {
-                    error("Unused")
-                }
-                override suspend fun reloadUser(user: FirebaseUser) {
-                    throw FirebaseNetworkException("Offline")
-                }
-                override fun signOut() {}
-            }
+            FakeFirebaseAuthClient(auth = FirebaseBootstrap.getAuth(app))
         )
-        val expiredRepo = GoogleAuthRepository(
-            app,
-            FakeCredentialClient(ArrayDeque()),
-            object : FirebaseAuthClient {
-                override fun getAuthOrNull(): FirebaseAuth? = FirebaseBootstrap.getAuth(app)
-                override suspend fun signInWithGoogleIdToken(idToken: String): AuthenticatedUser {
-                    error("Unused")
-                }
-                override suspend fun reloadUser(user: FirebaseUser) {
-                    throw FirebaseAuthInvalidUserException("ERROR_USER_DISABLED", "Disabled")
-                }
-                override fun signOut() {}
-            }
+
+        assertEquals(
+            SessionValidationResult.VALID,
+            repo.classifySessionReload { /* valid */ }
         )
+        assertEquals(
+            SessionValidationResult.OFFLINE_OR_TRANSIENT,
+            repo.classifySessionReload { throw FirebaseNetworkException("Offline") }
+        )
+        assertEquals(
+            SessionValidationResult.EXPIRED_OR_INVALID,
+            repo.classifySessionReload { throw FirebaseAuthInvalidUserException("ERROR_USER_DISABLED", "Disabled") }
+        )
+        assertEquals(
+            SessionValidationResult.EXPIRED_OR_INVALID,
+            repo.classifySessionReload { throw FirebaseAuthInvalidCredentialsException("ERROR_INVALID_USER_TOKEN", "Revoked") }
+        )
+
+        var cancellationPropagated = false
+        try {
+            repo.classifySessionReload { throw CancellationException("Cancelled") }
+        } catch (_: CancellationException) {
+            cancellationPropagated = true
+        }
+        assertTrue("CancellationException must propagate during session reload", cancellationPropagated)
+
         // Verify error mapping for expired/invalid user and network exceptions directly
         assertTrue(
             GoogleAuthRepository.mapAuthErrorToMessage(
@@ -412,9 +539,6 @@ class AuthLifecycleTest {
                 FirebaseNetworkException("Offline")
             ).contains("internet connection")
         )
-        assertNotNull(networkErrRepo)
-        assertNotNull(expiredRepo)
-        assertEquals(SessionValidationResult.OFFLINE_OR_TRANSIENT, SessionValidationResult.OFFLINE_OR_TRANSIENT)
     }
 
     private class FakeCredentialClient(
@@ -424,7 +548,7 @@ class AuthLifecycleTest {
         val capturedRequests = mutableListOf<GetCredentialRequest>()
 
         override suspend fun getCredential(
-            activity: Activity,
+            context: Context,
             request: GetCredentialRequest
         ): GetCredentialResponse {
             capturedRequests.add(request)

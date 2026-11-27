@@ -36,10 +36,12 @@ import com.example.util.StorageUsage
 import com.example.util.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +54,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import java.util.UUID
@@ -108,6 +111,12 @@ data class NearGridUiState(
     val showGridQrScreen: Boolean = false
 )
 
+sealed interface FeatureStartupState {
+    data object Initializing : FeatureStartupState
+    data object Ready : FeatureStartupState
+    data class Error(val message: String) : FeatureStartupState
+}
+
 class NearGridViewModel(application: Application) : AndroidViewModel(application) {
 
     private val coroutineExceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
@@ -120,33 +129,37 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         FirebaseBootstrap.getAuth(application)
     }
 
-    private val googleAuthRepository: GoogleAuthRepository by lazy {
-        GoogleAuthRepository(application)
-    }
+    @Volatile
+    private var _firestoreRepository: FirestoreRepository? = null
 
-    private val firestoreRepository: FirestoreRepository = try {
-        FirestoreRepository(application)
-    } catch (e: Exception) {
-        android.util.Log.e("NearGridViewModel", "Failed to create FirestoreRepository, creating fallback", e)
-        val defaultDb = FirebaseBootstrap.getFirestore(application)
-            ?: com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        FirestoreRepository(defaultDb)
-    }
+    @Volatile
+    private var _localRepository: NearGridRepository? = null
 
-    private val localRepository: NearGridRepository = NearGridRepository(AppDatabase.getDatabase(application))
+    @Volatile
+    internal var startupDependencyResolver: (suspend (Application) -> Pair<FirestoreRepository, NearGridRepository>)? = null
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Initializing)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+    private fun requireFirestoreRepository(): FirestoreRepository =
+        _firestoreRepository ?: FirestoreRepository(getApplication()).also { _firestoreRepository = it }
+
+    private fun requireLocalRepository(): NearGridRepository =
+        _localRepository ?: NearGridRepository(AppDatabase.getDatabase(getApplication())).also { _localRepository = it }
+
+    private val _startupState = MutableStateFlow<FeatureStartupState>(FeatureStartupState.Initializing)
+    val startupState: StateFlow<FeatureStartupState> = _startupState.asStateFlow()
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
-    private val authActionInFlight = AtomicBoolean(false)
-    private var signInJob: Job? = null
-    private var signOutJob: Job? = null
+    private var startupJob: Job? = null
     private var sessionJob: Job? = null
     private var activeSessionUid: String? = null
-    private var lastVerifiedUid: String? = null
+    private var authListenerAttached: Boolean = false
+
+    private fun Throwable.unwrapFirestoreException(): FirebaseFirestoreException? {
+        return generateSequence(this) { it.cause }
+            .filterIsInstance<FirebaseFirestoreException>()
+            .firstOrNull()
+    }
 
     private val _currentLocation = MutableStateFlow<UserLocation?>(null)
     val currentLocation: StateFlow<UserLocation?> = _currentLocation.asStateFlow()
@@ -213,38 +226,39 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     // 100% Real-time Firestore geohash messages with strict coordinate distance filtering
     val geohashMessages: StateFlow<List<GeohashMessage>> = combine(
+        _startupState,
         _currentUser,
         _currentGeohash,
         _currentLocation,
         _uiState
-    ) { user, hash, location, state ->
-        Triple(user, hash, location to state.discoveryRadiusMeters)
-    }.flatMapLatest { (user, hash, locAndRadius) ->
+    ) { startup, user, hash, location, state ->
+        Triple(startup is FeatureStartupState.Ready && user != null, hash, location to state.discoveryRadiusMeters)
+    }.flatMapLatest { (canObserve, hash, locAndRadius) ->
         val (location, radius) = locAndRadius
-        if (user == null || hash.isBlank() || location == null) {
+        val fsRepo = _firestoreRepository
+        if (!canObserve || fsRepo == null || hash.isBlank() || location == null) {
             flowOf(emptyList())
         } else {
-            try {
-                val cleanHash = hash.removePrefix("#")
-                firestoreRepository.observeGeohashMessages(cleanHash).map { list ->
-                    val userLat = location.latitude
-                    val userLng = location.longitude
-                    list.filter { msg ->
-                        if (msg.latitude != 0.0 && msg.longitude != 0.0 && userLat != 0.0 && userLng != 0.0) {
-                            val dist = LocationHelper.calculateDistanceMeters(userLat, userLng, msg.latitude, msg.longitude)
-                            dist <= radius
-                        } else {
-                            val msgPrefix = msg.geohash.removePrefix("#").take(4)
-                            val userPrefix = cleanHash.take(4)
-                            msgPrefix.isNotBlank() && msgPrefix.equals(userPrefix, ignoreCase = true)
-                        }
+            val cleanHash = hash.removePrefix("#")
+            fsRepo.observeGeohashMessages(cleanHash).map { list ->
+                val userLat = location.latitude
+                val userLng = location.longitude
+                list.filter { msg ->
+                    if (msg.latitude != 0.0 && msg.longitude != 0.0 && userLat != 0.0 && userLng != 0.0) {
+                        val dist = LocationHelper.calculateDistanceMeters(userLat, userLng, msg.latitude, msg.longitude)
+                        dist <= radius
+                    } else {
+                        val msgPrefix = msg.geohash.removePrefix("#").take(4)
+                        val userPrefix = cleanHash.take(4)
+                        msgPrefix.isNotBlank() && msgPrefix.equals(userPrefix, ignoreCase = true)
                     }
                 }
-            } catch (e: Exception) {
-                flowOf(emptyList())
             }
         }
-    }.catch {
+    }.catch { error ->
+        if (error is CancellationException) throw error
+        val fsError = error.unwrapFirestoreException()
+        android.util.Log.w("NearGridViewModel", "Geohash messages stream error (${fsError?.code}): ${error.message}", error)
         emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -252,44 +266,59 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     private val _activePostForComments = MutableStateFlow<NeighborPost?>(null)
     val activePostForComments: StateFlow<NeighborPost?> = _activePostForComments.asStateFlow()
 
-    val activePostComments: StateFlow<List<PostComment>> = _activePostForComments.flatMapLatest { post: NeighborPost? ->
-        if (post == null) {
+    val activePostComments: StateFlow<List<PostComment>> = combine(
+        _startupState,
+        _activePostForComments
+    ) { startup, post ->
+        if (startup is FeatureStartupState.Ready) post else null
+    }.flatMapLatest { post: NeighborPost? ->
+        val fsRepo = _firestoreRepository
+        val localRepo = _localRepository
+        if (post == null || fsRepo == null || localRepo == null) {
             flowOf(emptyList<PostComment>())
         } else {
-            try {
-                combine(
-                    firestoreRepository.observePostComments(post.id),
-                    localRepository.getPostComments(post.id)
-                ) { remoteComments: List<PostComment>, localComments: List<PostComment> ->
-                    if (remoteComments.isNotEmpty()) {
-                        viewModelScope.launch(Dispatchers.IO) {
-                            localRepository.insertPostComments(remoteComments)
-                        }
+            combine(
+                fsRepo.observePostComments(post.id)
+                    .catch { error ->
+                        if (error is CancellationException) throw error
+                        val fsError = error.unwrapFirestoreException()
+                        android.util.Log.w("NearGridViewModel", "Remote comments error (${fsError?.code}): ${error.message}")
+                        emit(emptyList())
+                    },
+                localRepo.getPostComments(post.id)
+            ) { remoteComments: List<PostComment>, localComments: List<PostComment> ->
+                if (remoteComments.isNotEmpty()) {
+                    viewModelScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
+                        localRepo.insertPostComments(remoteComments)
                     }
-                    val map = (localComments + remoteComments).associateBy { it.id }
-                    map.values.toList().sortedBy { it.timestamp }
                 }
-            } catch (e: Exception) {
-                flowOf(emptyList())
+                val map = (localComments + remoteComments).associateBy { it.id }
+                map.values.toList().sortedBy { it.timestamp }
             }
         }
-    }.catch {
+    }.catch { error ->
+        if (error is CancellationException) throw error
+        android.util.Log.w("NearGridViewModel", "Active comments flow error: ${error.message}", error)
         emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Active conversation chat messages as a stable StateFlow
-    val activeChatMessages: StateFlow<List<ChatMessage>> = _uiState.flatMapLatest { state ->
-        val activeId = state.activeConversation?.id
-        if (activeId.isNullOrBlank()) {
+    val activeChatMessages: StateFlow<List<ChatMessage>> = combine(
+        _startupState,
+        _uiState
+    ) { startup, state ->
+        if (startup is FeatureStartupState.Ready) state.activeConversation?.id else null
+    }.flatMapLatest { activeId ->
+        val fsRepo = _firestoreRepository
+        if (activeId.isNullOrBlank() || fsRepo == null) {
             flowOf(emptyList())
         } else {
-            try {
-                firestoreRepository.observeMessages(activeId)
-            } catch (e: Exception) {
-                flowOf(emptyList())
-            }
+            fsRepo.observeMessages(activeId)
         }
-    }.catch {
+    }.catch { error ->
+        if (error is CancellationException) throw error
+        val fsError = error.unwrapFirestoreException()
+        android.util.Log.w("NearGridViewModel", "Active chat stream error (${fsError?.code}): ${error.message}", error)
         emit(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -351,10 +380,10 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         )
 
         viewModelScope.launch(coroutineExceptionHandler) {
-            localRepository.insertPostComment(localComment)
+            runCatching { requireLocalRepository().insertPostComment(localComment) }
             try {
                 if (user != null) {
-                    firestoreRepository.addPostComment(
+                    requireFirestoreRepository().addPostComment(
                         postId = post.id,
                         text = text.trim(),
                         authorName = author,
@@ -387,164 +416,103 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
-        viewModelScope.launch(coroutineExceptionHandler) {
+        startInitialization()
+    }
+
+    fun retryStartup() {
+        startInitialization()
+    }
+
+    private fun startInitialization() {
+        startupJob?.cancel()
+        _startupState.value = FeatureStartupState.Initializing
+        startupJob = viewModelScope.launch(coroutineExceptionHandler) {
             try {
-                localRepository.seedInitialDataIfEmpty()
+                val app = getApplication<Application>()
+                val (fsRepo, localRepo) = withContext(Dispatchers.IO) {
+                    val override = startupDependencyResolver
+                    if (override != null) {
+                        override(app)
+                    } else {
+                        val firestore = FirebaseBootstrap.getFirestore(app)
+                            ?: throw IllegalStateException(
+                                "Cloud database could not be initialized. Please retry or sign in again."
+                            )
+                        val db = AppDatabase.getDatabase(app)
+                        val local = NearGridRepository(db)
+                        runCatching { local.seedInitialDataIfEmpty() }
+                            .onFailure { err ->
+                                if (err is CancellationException) throw err
+                                android.util.Log.w("NearGridViewModel", "Seed initial data skipped: ${err.message}")
+                            }
+                        Pair(FirestoreRepository(firestore), local)
+                    }
+                }
+
+                _firestoreRepository = fsRepo
+                _localRepository = localRepo
+
+                val firebaseAuth = auth
+                val initialUser = runCatching { firebaseAuth?.currentUser }.getOrNull()
+                _currentUser.value = initialUser
+
+                if (firebaseAuth != null && !authListenerAttached) {
+                    runCatching {
+                        firebaseAuth.addAuthStateListener(authStateListener)
+                        authListenerAttached = true
+                    }.onFailure { err ->
+                        android.util.Log.w("NearGridViewModel", "AuthStateListener attachment skipped: ${err.message}")
+                    }
+                }
+
+                _startupState.value = FeatureStartupState.Ready
+
+                if (initialUser != null) {
+                    syncUserSession(initialUser)
+                }
+
+                runCatching { refreshGridData() }
+                    .onFailure { android.util.Log.w("NearGridViewModel", "Initial refreshGridData failed", it) }
+
+                runCatching { CrashTelemetryManager.initialize(app) }
+
+                runCatching {
+                    com.example.data.update.AppUpdateManager.instance.init(app.applicationContext)
+                    _isUpdateBannerDismissed.value = com.example.data.update.AppUpdateManager.instance.isBannerDismissed.value
+                }.onFailure {
+                    android.util.Log.w("NearGridViewModel", "AppUpdateManager initialization failed", it)
+                }
+
+                runCatching { checkForUpdates(isManual = false) }
+                refreshStorageUsage()
+
+                if (_uiState.value.appSettings.autoTrimCacheEnabled) {
+                    viewModelScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
+                        runCatching { StorageCacheManager.trimCache(app) }
+                        refreshStorageUsage()
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                android.util.Log.w("NearGridViewModel", "Seed initial data failed", e)
-            }
-        }
-
-        val firebaseAuth = auth
-        if (firebaseAuth == null) {
-            _authState.value = AuthState.Error(
-                "Firebase Authentication could not be initialized. Please verify configuration."
-            )
-        } else {
-            try {
-                val initialUser = runCatching { firebaseAuth.currentUser }.getOrNull()
-                if (initialUser != null) {
-                    _currentUser.value = initialUser
-                    _authState.value = AuthState.Authenticated(AuthenticatedUser.fromFirebaseUser(initialUser))
-                    syncUserSession(initialUser)
-                    verifySessionOnForeground()
-                } else {
-                    _authState.value = AuthState.Unauthenticated
-                }
-                firebaseAuth.addAuthStateListener(authStateListener)
-            } catch (e: Exception) {
-                android.util.Log.w("NearGridViewModel", "AuthStateListener attachment failed", e)
-                _authState.value = AuthState.Error(
-                    "Unable to initialize authentication listener. Please restart the app."
+            } catch (t: Throwable) {
+                android.util.Log.e("NearGridViewModel", "Post-login initialization failed", t)
+                _startupState.value = FeatureStartupState.Error(
+                    t.message?.takeIf { it.isNotBlank() }
+                        ?: "Unable to initialize your NearGrid workspace. Please retry or sign out."
                 )
             }
         }
-
-        // Immediately attempt fresh device GPS acquisition when permitted
-        try {
-            refreshGridData()
-        } catch (e: Exception) {
-            android.util.Log.w("NearGridViewModel", "Initial refreshGridData failed", e)
-        }
-
-        // Initialize update manager with persistent context
-        try {
-            com.example.data.update.AppUpdateManager.instance.init(application.applicationContext)
-            _isUpdateBannerDismissed.value = com.example.data.update.AppUpdateManager.instance.isBannerDismissed.value
-        } catch (e: Exception) {
-            android.util.Log.w("NearGridViewModel", "AppUpdateManager initialization failed", e)
-        }
-
-        // Silently check for app releases on launch
-        checkForUpdates(isManual = false)
     }
 
     private fun handleFirebaseUserChanged(user: FirebaseUser?) {
         _currentUser.value = user
         if (user != null) {
-            if (_authState.value !is AuthState.Authenticating) {
-                val currentAuth = _authState.value
-                if (currentAuth !is AuthState.Authenticated || currentAuth.uid != user.uid) {
-                    _authState.value = AuthState.Authenticated(AuthenticatedUser.fromFirebaseUser(user))
-                }
+            if (_startupState.value is FeatureStartupState.Ready) {
                 syncUserSession(user)
             }
         } else {
             stopSessionSync()
             clearUserScopedState()
-            val currentAuth = _authState.value
-            if (currentAuth !is AuthState.Authenticating && currentAuth !is AuthState.Error) {
-                _authState.value = AuthState.Unauthenticated
-            }
-        }
-    }
-
-    fun signInWithGoogle(activity: Activity) {
-        if (!authActionInFlight.compareAndSet(false, true)) {
-            return
-        }
-        if (_authState.value is AuthState.Authenticating || _authState.value is AuthState.Authenticated) {
-            authActionInFlight.set(false)
-            return
-        }
-        _authState.value = AuthState.Authenticating
-        signInJob = viewModelScope.launch(coroutineExceptionHandler) {
-            try {
-                when (val outcome = googleAuthRepository.signInWithGoogle(activity)) {
-                    is AuthSignInOutcome.Success -> {
-                        val user = outcome.session.firebaseUser
-                        if (user == null) {
-                            _authState.value = AuthState.Error("Firebase user session was unavailable after sign-in.")
-                            return@launch
-                        }
-                        _currentUser.value = user
-                        val profileResult = firestoreRepository.ensureUserProfileExists(
-                            user = user,
-                            cellId = _uiState.value.selectedCell?.id ?: "cell_local",
-                            cellName = _currentLocation.value?.displayAreaName ?: "My Neighborhood"
-                        )
-                        if (profileResult.isFailure) {
-                            android.util.Log.w(
-                                "NearGridViewModel",
-                                "Initial Firestore profile sync failed; session remains active",
-                                profileResult.exceptionOrNull()
-                            )
-                        }
-                        syncUserSession(user)
-                        _authState.value = AuthState.Authenticated(outcome.session)
-                        refreshGridData()
-                    }
-                    is AuthSignInOutcome.Cancelled -> {
-                        _authState.value = AuthState.Unauthenticated
-                    }
-                    is AuthSignInOutcome.Error -> {
-                        _authState.value = AuthState.Error(outcome.message)
-                    }
-                }
-            } catch (e: CancellationException) {
-                if (_authState.value is AuthState.Authenticating) {
-                    _authState.value = AuthState.Unauthenticated
-                }
-                throw e
-            } catch (t: Throwable) {
-                android.util.Log.e("NearGridViewModel", "Unexpected Google Sign-In failure", t)
-                _authState.value = AuthState.Error(GoogleAuthRepository.mapAuthErrorToMessage(t))
-            } finally {
-                authActionInFlight.set(false)
-            }
-        }
-    }
-
-    fun clearAuthError() {
-        if (_authState.value is AuthState.Error) {
-            _authState.value = AuthState.Unauthenticated
-        }
-    }
-
-    fun verifySessionOnForeground() {
-        val currentAuth = _authState.value as? AuthState.Authenticated ?: return
-        val user = currentAuth.user ?: return
-        if (lastVerifiedUid == user.uid && signOutJob?.isActive == true) return
-        viewModelScope.launch(coroutineExceptionHandler) {
-            when (googleAuthRepository.validateSession(user)) {
-                SessionValidationResult.VALID -> {
-                    lastVerifiedUid = user.uid
-                }
-                SessionValidationResult.OFFLINE_OR_TRANSIENT -> {
-                    // Keep persisted user authenticated while offline
-                }
-                SessionValidationResult.EXPIRED_OR_INVALID -> {
-                    stopSessionSync()
-                    googleAuthRepository.clearCredentialAndSignOut(getApplication())
-                    clearUserScopedState()
-                    _currentUser.value = null
-                    _authState.value = AuthState.Error(
-                        "Your session has expired or been revoked. Please sign in again with Google."
-                    )
-                }
-            }
         }
     }
 
@@ -552,7 +520,6 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         sessionJob?.cancel()
         sessionJob = null
         activeSessionUid = null
-        lastVerifiedUid = null
     }
 
     private fun clearUserScopedState() {
@@ -619,7 +586,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 if (auth?.currentUser != null) {
                     viewModelScope.launch(Dispatchers.IO + coroutineExceptionHandler) {
                         try {
-                            firestoreRepository.updateUserLocationPresence(
+                            _firestoreRepository?.updateUserLocationPresence(
                                 location.latitude,
                                 location.longitude,
                                 computedGeohash
@@ -637,6 +604,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     private fun syncUserSession(user: FirebaseUser?) {
         if (user == null) return
+        val fsRepo = _firestoreRepository ?: return
         if (activeSessionUid == user.uid && sessionJob?.isActive == true) {
             return
         }
@@ -646,7 +614,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         sessionJob = viewModelScope.launch(coroutineExceptionHandler) {
             supervisorScope {
                 launch {
-                    val ensured = firestoreRepository.ensureUserProfileExists(
+                    val ensured = fsRepo.ensureUserProfileExists(
                         user = user,
                         cellId = _uiState.value.selectedCell?.id ?: "cell_local",
                         cellName = _currentLocation.value?.displayAreaName ?: "My Neighborhood"
@@ -655,9 +623,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                         applyProfileToUiState(user, profile)
                     }
 
-                    firestoreRepository.observeUserProfile(user.uid)
+                    fsRepo.observeUserProfile(user.uid)
                         .catch { error ->
-                            android.util.Log.w("NearGridViewModel", "User profile stream error", error)
+                            if (error is CancellationException) throw error
+                            val fsError = error.unwrapFirestoreException()
+                            android.util.Log.w("NearGridViewModel", "User profile stream error (${fsError?.code})", error)
                         }
                         .collect { profile ->
                             if (profile != null) {
@@ -667,7 +637,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                             val hash = _currentGeohash.value
                             if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
                                 runCatching {
-                                    firestoreRepository.updateUserLocationPresence(
+                                    fsRepo.updateUserLocationPresence(
                                         loc.latitude,
                                         loc.longitude,
                                         hash
@@ -681,8 +651,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 launch {
                     _currentGeohash.flatMapLatest { rawGeohash ->
                         val geohashPrefix = rawGeohash.removePrefix("#").take(5)
-                        firestoreRepository.observePosts(geohashPrefix = geohashPrefix)
-                    }.catch {
+                        fsRepo.observePosts(geohashPrefix = geohashPrefix)
+                    }.catch { error ->
+                        if (error is CancellationException) throw error
+                        val fsError = error.unwrapFirestoreException()
+                        android.util.Log.w("NearGridViewModel", "Posts stream error (${fsError?.code})", error)
                         emit(emptyList())
                     }.collect { posts ->
                         _firestorePosts.value = posts
@@ -693,8 +666,11 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 launch {
                     _currentGeohash.flatMapLatest { rawGeohash ->
                         val geohashPrefix = rawGeohash.removePrefix("#").take(3)
-                        firestoreRepository.observeNearbyUsers(geohashPrefix = geohashPrefix)
-                    }.catch {
+                        fsRepo.observeNearbyUsers(geohashPrefix = geohashPrefix)
+                    }.catch { error ->
+                        if (error is CancellationException) throw error
+                        val fsError = error.unwrapFirestoreException()
+                        android.util.Log.w("NearGridViewModel", "Nearby users stream error (${fsError?.code})", error)
                         emit(emptyList())
                     }.collect { users ->
                         _firestoreUsers.value = users
@@ -703,8 +679,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
                 // Live real-time community issues from Firestore
                 launch {
-                    firestoreRepository.observeIssues()
-                        .catch { emit(emptyList()) }
+                    fsRepo.observeIssues()
+                        .catch { error ->
+                            if (error is CancellationException) throw error
+                            val fsError = error.unwrapFirestoreException()
+                            android.util.Log.w("NearGridViewModel", "Issues stream error (${fsError?.code})", error)
+                            emit(emptyList())
+                        }
                         .collect { issuesList ->
                             _firestoreIssues.value = issuesList
                         }
@@ -715,8 +696,13 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     var isInitialLoad = true
                     val lastSeenTimes = mutableMapOf<String, Long>()
 
-                    firestoreRepository.observeConversations()
-                        .catch { emit(emptyList()) }
+                    fsRepo.observeConversations()
+                        .catch { error ->
+                            if (error is CancellationException) throw error
+                            val fsError = error.unwrapFirestoreException()
+                            android.util.Log.w("NearGridViewModel", "Conversations stream error (${fsError?.code})", error)
+                            emit(emptyList())
+                        }
                         .collect { convs ->
                             val currentUid = auth?.currentUser?.uid ?: ""
                             val activeConvId = _uiState.value.activeConversation?.id
@@ -906,38 +892,40 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val topIntentMatches: StateFlow<List<IntentMatchResult>> = combine(
-        _firestorePosts,
-        _uiState
-    ) { posts, _ ->
-        localRepository.findTopIntentMatches(posts)
+        _startupState,
+        _firestorePosts
+    ) { startup, posts ->
+        val localRepo = _localRepository
+        if (startup is FeatureStartupState.Ready && localRepo != null) {
+            localRepo.findTopIntentMatches(posts)
+        } else {
+            emptyList()
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 100% Real-time Firestore issues
     val issues: StateFlow<List<CommunityIssue>> = _firestoreIssues
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val notices: StateFlow<List<CommunityNotice>> = localRepository.allNotices
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val notices: StateFlow<List<CommunityNotice>> = _startupState.flatMapLatest { startup ->
+        val localRepo = _localRepository
+        if (startup is FeatureStartupState.Ready && localRepo != null) {
+            localRepo.allNotices
+        } else {
+            flowOf(emptyList())
+        }
+    }.catch { error ->
+        if (error is CancellationException) throw error
+        android.util.Log.w("NearGridViewModel", "Notices stream error: ${error.message}", error)
+        emit(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 100% Real-time Firestore conversations
     val conversations: StateFlow<List<Conversation>> = _firestoreConversations
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        try {
-            CrashTelemetryManager.initialize(application)
-        } catch (ignored: Exception) {}
-
-        refreshStorageUsage()
-
-        if (_uiState.value.appSettings.autoTrimCacheEnabled) {
-            viewModelScope.launch(Dispatchers.IO) {
-                StorageCacheManager.trimCache(getApplication())
-                refreshStorageUsage()
-            }
-        }
-
-        viewModelScope.launch {
+        viewModelScope.launch(coroutineExceptionHandler) {
             cells.collect { cellList ->
                 if (cellList.isNotEmpty() && _uiState.value.selectedCell == null) {
                     _uiState.value = _uiState.value.copy(
@@ -981,7 +969,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         if (message.isBlank()) return
         viewModelScope.launch(coroutineExceptionHandler) {
             _uiState.value = _uiState.value.copy(supportTicketStatus = "Submitting ticket...")
-            val result = firestoreRepository.submitSupportTicket(
+            val result = requireFirestoreRepository().submitSupportTicket(
                 category = category,
                 message = message,
                 userNickname = _uiState.value.userNickname,
@@ -1118,15 +1106,15 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun deletePost(postId: String) {
         launchSafely("deletePost") {
-            firestoreRepository.deletePost(postId)
-            localRepository.deletePost(postId)
+            requireFirestoreRepository().deletePost(postId)
+            requireLocalRepository().deletePost(postId)
         }
     }
 
     fun editPost(postId: String, title: String, description: String, category: String, urgency: String) {
         launchSafely("editPost") {
-            firestoreRepository.updatePostContent(postId, title, description, category, urgency)
-            localRepository.updatePostContent(postId, title, description, category, urgency)
+            requireFirestoreRepository().updatePostContent(postId, title, description, category, urgency)
+            requireLocalRepository().updatePostContent(postId, title, description, category, urgency)
         }
     }
 
@@ -1134,29 +1122,29 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
         val active = _uiState.value.activeConversation ?: return
         if (text.isBlank()) return
         launchSafely("sendMessageToActive") {
-            firestoreRepository.sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
+            requireFirestoreRepository().sendMessage(active.id, text.trim(), isMeetingPoint, meetingPoint)
         }
     }
 
     fun deleteChatMessage(conversationId: String, messageId: String) {
         launchSafely("deleteChatMessage") {
-            firestoreRepository.deleteChatMessage(conversationId, messageId)
-            localRepository.deleteChatMessage(messageId)
+            requireFirestoreRepository().deleteChatMessage(conversationId, messageId)
+            requireLocalRepository().deleteChatMessage(messageId)
         }
     }
 
     fun editChatMessage(conversationId: String, messageId: String, newText: String) {
         if (newText.isBlank()) return
         launchSafely("editChatMessage") {
-            firestoreRepository.editChatMessage(conversationId, messageId, newText.trim())
-            localRepository.editChatMessage(messageId, newText.trim())
+            requireFirestoreRepository().editChatMessage(conversationId, messageId, newText.trim())
+            requireLocalRepository().editChatMessage(messageId, newText.trim())
         }
     }
 
     fun connectFromPost(post: NeighborPost) {
         launchSafely("connectFromPost") {
-            val result = firestoreRepository.startConversationForPost(post)
-            val convId = result.getOrNull() ?: localRepository.startConversationForPost(post)
+            val result = requireFirestoreRepository().startConversationForPost(post)
+            val convId = result.getOrNull() ?: requireLocalRepository().startConversationForPost(post)
             val conv = Conversation(
                 id = convId,
                 participantName = post.authorName,
@@ -1175,7 +1163,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
     fun connectWithNeighbor(neighbor: NearbyNeighbor) {
         launchSafely("connectWithNeighbor") {
             val neighborUser = neighbor.user
-            val result = firestoreRepository.startDirectConversationWithNeighbor(
+            val result = requireFirestoreRepository().startDirectConversationWithNeighbor(
                 neighborUser.userId,
                 neighborUser.displayName.ifBlank { "Neighbor" }
             )
@@ -1197,7 +1185,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleIssueUpvote(issue: CommunityIssue) {
         launchSafely("toggleIssueUpvote") {
-            firestoreRepository.toggleIssueUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
+            requireFirestoreRepository().toggleIssueUpvote(issue.id, issue.upvotesCount, issue.hasUserUpvoted)
         }
     }
 
@@ -1264,7 +1252,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                     hideExactDistance = hideExactDistance,
                     blockedUserIds = _uiState.value.blockedUserIds
                 )
-                firestoreRepository.saveUserProfile(profile)
+                requireFirestoreRepository().saveUserProfile(profile)
             }
         }
     }
@@ -1319,7 +1307,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 hideExactDistance = state.hideExactDistance,
                 blockedUserIds = state.blockedUserIds
             )
-            firestoreRepository.saveUserProfile(profile)
+            requireFirestoreRepository().saveUserProfile(profile)
         }
     }
 
@@ -1330,7 +1318,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             currentBlocked.add(targetUserId)
             _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
             launchSafely("blockUser") {
-                firestoreRepository.blockUser(targetUserId)
+                requireFirestoreRepository().blockUser(targetUserId)
             }
         }
     }
@@ -1342,26 +1330,26 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
             currentBlocked.remove(targetUserId)
             _uiState.value = _uiState.value.copy(blockedUserIds = currentBlocked)
             launchSafely("unblockUser") {
-                firestoreRepository.unblockUser(targetUserId)
+                requireFirestoreRepository().unblockUser(targetUserId)
             }
         }
     }
 
     fun reportUser(targetUserId: String, targetDisplayName: String, reason: String, notes: String) {
         launchSafely("reportUser") {
-            firestoreRepository.reportUser(targetUserId, targetDisplayName, reason, notes)
+            requireFirestoreRepository().reportUser(targetUserId, targetDisplayName, reason, notes)
         }
     }
 
     fun togglePostUpvote(post: NeighborPost) {
         launchSafely("togglePostUpvote") {
-            firestoreRepository.togglePostUpvote(post.id, post.upvotesCount, post.hasUserUpvoted)
+            requireFirestoreRepository().togglePostUpvote(post.id, post.upvotesCount, post.hasUserUpvoted)
         }
     }
 
     fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?) {
         launchSafely("updateIssueStatus") {
-            firestoreRepository.updateIssueStatus(issueId, newStatus, volunteer)
+            requireFirestoreRepository().updateIssueStatus(issueId, newStatus, volunteer)
         }
     }
 
@@ -1409,7 +1397,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
-            firestoreRepository.createPost(post)
+            requireFirestoreRepository().createPost(post)
             closeCreateDialog()
         }
     }
@@ -1457,7 +1445,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
-            firestoreRepository.createPost(post)
+            requireFirestoreRepository().createPost(post)
             closeCreateDialog()
         }
     }
@@ -1490,7 +1478,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
-            firestoreRepository.createIssue(issue)
+            requireFirestoreRepository().createIssue(issue)
             closeCreateDialog()
             _uiState.value = _uiState.value.copy(
                 currentDestination = NavigationDestination.HOME,
@@ -1537,7 +1525,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 mediaUris = processedMediaUris,
                 mediaTypes = mediaTypes
             )
-            firestoreRepository.createPost(post)
+            requireFirestoreRepository().createPost(post)
         }
     }
 
@@ -1566,7 +1554,7 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
                 val author = _uiState.value.userNickname.ifBlank { user?.displayName ?: "Resident" }
                 val locality = loc.displayAreaName.ifBlank { "Local Area" }
 
-                val result = firestoreRepository.postGeohashMessage(
+                val result = requireFirestoreRepository().postGeohashMessage(
                     text = trimmed,
                     latitude = lat,
                     longitude = lon,
@@ -1605,32 +1593,30 @@ class NearGridViewModel(application: Application) : AndroidViewModel(application
 
     fun resetToFreshGrid() {
         launchSafely("resetToFreshGrid") {
-            localRepository.resetToFreshState()
+            requireLocalRepository().resetToFreshState()
             refreshDeviceLocation()
         }
     }
 
-    fun signOut(context: Context) {
-        if (signOutJob?.isActive == true) return
-        signOutJob = viewModelScope.launch(coroutineExceptionHandler) {
-            signInJob?.cancel()
-            authActionInFlight.set(false)
+    suspend fun prepareForSignOut() {
+        withContext(NonCancellable) {
+            startupJob?.cancel()
             stopSessionSync()
             withTimeoutOrNull(1200L) {
-                firestoreRepository.markUserOfflineBestEffort()
+                runCatching { _firestoreRepository?.markUserOfflineBestEffort() }
             }
-            googleAuthRepository.clearCredentialAndSignOut(context)
             clearUserScopedState()
             _currentUser.value = null
-            _authState.value = AuthState.Unauthenticated
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        runCatching { auth?.removeAuthStateListener(authStateListener) }
+        if (authListenerAttached) {
+            runCatching { auth?.removeAuthStateListener(authStateListener) }
+            authListenerAttached = false
+        }
+        startupJob?.cancel()
         stopSessionSync()
-        signInJob?.cancel()
-        signOutJob?.cancel()
     }
 }

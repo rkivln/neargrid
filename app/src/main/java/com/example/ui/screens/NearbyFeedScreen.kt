@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -75,9 +73,10 @@ import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.CircularOutlineIconButton
 import com.example.ui.components.DarkGlassCard
-import com.example.ui.components.FrostedGlassBurgerPopup
+import com.example.ui.components.FrostedGlassFilterSheet
 import com.example.ui.components.FrostedMenuOptionPill
 import com.example.ui.components.FrostedMenuSectionTitle
+import com.example.ui.components.FrostedMenuWrapRow
 import com.example.ui.components.LiquidGlassBackButton
 import com.example.ui.components.LiquidGlassBurgerMenuButton
 import com.example.ui.components.LiquidGlassSwitch
@@ -109,7 +108,10 @@ import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureWhite
 import com.example.util.LocationHelper
 import com.example.data.remote.FirebaseBootstrap
+import com.example.data.remote.OperationType
+import com.example.data.remote.handleFirestoreError
 import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -173,79 +175,83 @@ fun NearbyFeedComponent(
     var activeViewerTitle by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
+    val currentAuthUid = FirebaseBootstrap.getAuth(context)?.currentUser?.uid
+
+    fun parsePostSnapshot(
+        snapshot: com.google.firebase.firestore.QuerySnapshot,
+        currentUid: String
+    ): List<NeighborPost> {
+        return snapshot.documents.mapNotNull { doc ->
+            try {
+                val data = doc.data ?: return@mapNotNull null
+                val upvoters = (data["upvoterIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                NeighborPost(
+                    id = doc.id,
+                    userId = data["userId"] as? String ?: "",
+                    type = data["type"] as? String ?: "NEED",
+                    title = data["title"] as? String ?: "",
+                    description = data["description"] as? String ?: "",
+                    category = data["category"] as? String ?: "TOOLS",
+                    authorName = data["authorName"] as? String ?: "Neighbor",
+                    authorInitials = data["authorInitials"] as? String ?: "N",
+                    authorCellId = data["authorCellId"] as? String ?: "cell_local",
+                    cellName = data["cellName"] as? String ?: "Nearby Block",
+                    lat = (data["lat"] as? Number)?.toDouble() ?: 0.0,
+                    lng = (data["lng"] as? Number)?.toDouble() ?: 0.0,
+                    approxDistanceBand = data["approxDistanceBand"] as? String ?: "within 300 m",
+                    urgency = data["urgency"] as? String ?: "NORMAL",
+                    expiresInHours = (data["expiresInHours"] as? Number)?.toInt() ?: 48,
+                    status = data["status"] as? String ?: "ACTIVE",
+                    mediaUris = (data["mediaUris"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                    mediaTypes = (data["mediaTypes"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                    upvotesCount = (data["upvotesCount"] as? Number)?.toInt() ?: upvoters.size,
+                    hasUserUpvoted = upvoters.contains(currentUid),
+                    upvoterIds = upvoters,
+                    createdAt = (data["createdAt"] as? com.google.firebase.Timestamp)?.toDate()?.time
+                        ?: System.currentTimeMillis()
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
 
     fun loadFirestorePosts() {
         coroutineScope.launch {
+            val firebaseAuth = FirebaseBootstrap.getAuth(context)
+            val uid = firebaseAuth?.currentUser?.uid
+            if (uid.isNullOrBlank()) {
+                rawPosts.clear()
+                isLoading = false
+                isRefreshing = false
+                errorMessage = "Sign in with Google to view nearby neighbor posts."
+                return@launch
+            }
+
             isLoading = rawPosts.isEmpty()
             isRefreshing = rawPosts.isNotEmpty()
             errorMessage = null
 
             try {
                 val db = FirebaseBootstrap.getFirestore(context)
-
                 if (db != null) {
                     val snapshot = withContext(Dispatchers.IO) {
-                        try {
-                            db.collection("posts")
-                                .whereEqualTo("status", "ACTIVE")
-                                .get()
-                                .await()
-                        } catch (e: Exception) {
-                            null
-                        }
+                        db.collection("posts")
+                            .whereEqualTo("status", "ACTIVE")
+                            .get()
+                            .await()
                     }
-
-                    if (snapshot != null && !snapshot.isEmpty) {
-                        val currentUid = FirebaseBootstrap.getAuth(context)?.currentUser?.uid ?: ""
-                        val items = snapshot.documents.mapNotNull { doc ->
-                            try {
-                                val data = doc.data ?: return@mapNotNull null
-                                val upvoters = (data["upvoterIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                                NeighborPost(
-                                    id = doc.id,
-                                    userId = data["userId"] as? String ?: "",
-                                    type = data["type"] as? String ?: "NEED",
-                                    title = data["title"] as? String ?: "",
-                                    description = data["description"] as? String ?: "",
-                                    category = data["category"] as? String ?: "TOOLS",
-                                    authorName = data["authorName"] as? String ?: "Neighbor",
-                                    authorInitials = data["authorInitials"] as? String ?: "N",
-                                    authorCellId = data["authorCellId"] as? String ?: "cell_local",
-                                    cellName = data["cellName"] as? String ?: "Nearby Block",
-                                    lat = (data["lat"] as? Number)?.toDouble() ?: 0.0,
-                                    lng = (data["lng"] as? Number)?.toDouble() ?: 0.0,
-                                    approxDistanceBand = data["approxDistanceBand"] as? String ?: "within 300 m",
-                                    urgency = data["urgency"] as? String ?: "NORMAL",
-                                    expiresInHours = (data["expiresInHours"] as? Number)?.toInt() ?: 48,
-                                    status = data["status"] as? String ?: "ACTIVE",
-                                    mediaUris = (data["mediaUris"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                                    mediaTypes = (data["mediaTypes"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                                    upvotesCount = (data["upvotesCount"] as? Number)?.toInt() ?: upvoters.size,
-                                    hasUserUpvoted = upvoters.contains(currentUid),
-                                    upvoterIds = upvoters,
-                                    createdAt = (data["createdAt"] as? com.google.firebase.Timestamp)?.toDate()?.time
-                                        ?: System.currentTimeMillis()
-                                )
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-
-                        rawPosts.clear()
-                        rawPosts.addAll(items)
-                    } else if (rawPosts.isEmpty()) {
-                        rawPosts.clear()
-                        rawPosts.addAll(generateSeedPostsForCoordinates(userLatitude, userLongitude))
-                    }
-                } else if (rawPosts.isEmpty()) {
+                    val items = parsePostSnapshot(snapshot, uid)
                     rawPosts.clear()
-                    rawPosts.addAll(generateSeedPostsForCoordinates(userLatitude, userLongitude))
+                    rawPosts.addAll(items)
+                } else {
+                    errorMessage = "Firestore database is not configured."
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                handleFirestoreError(e, OperationType.LIST, "posts", firebaseAuth)
                 errorMessage = e.localizedMessage ?: "Failed to fetch nearby posts"
-                if (rawPosts.isEmpty()) {
-                    rawPosts.addAll(generateSeedPostsForCoordinates(userLatitude, userLongitude))
-                }
             } finally {
                 isLoading = false
                 isRefreshing = false
@@ -253,61 +259,43 @@ fun NearbyFeedComponent(
         }
     }
 
-    LaunchedEffect(userLatitude, userLongitude) {
+    LaunchedEffect(userLatitude, userLongitude, currentAuthUid) {
         loadFirestorePosts()
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(currentAuthUid) {
         var listenerRegistration: ListenerRegistration? = null
-        try {
-            val db = FirebaseBootstrap.getFirestore(context)
-            listenerRegistration = db?.collection("posts")
-                ?.whereEqualTo("status", "ACTIVE")
-                ?.addSnapshotListener { snapshot, error ->
-                    if (error == null && snapshot != null && !snapshot.isEmpty) {
-                        val currentUid = FirebaseBootstrap.getAuth(context)?.currentUser?.uid ?: ""
-                        val items = snapshot.documents.mapNotNull { doc ->
-                            try {
-                                val data = doc.data ?: return@mapNotNull null
-                                val upvoters = (data["upvoterIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                                NeighborPost(
-                                    id = doc.id,
-                                    userId = data["userId"] as? String ?: "",
-                                    type = data["type"] as? String ?: "NEED",
-                                    title = data["title"] as? String ?: "",
-                                    description = data["description"] as? String ?: "",
-                                    category = data["category"] as? String ?: "TOOLS",
-                                    authorName = data["authorName"] as? String ?: "Neighbor",
-                                    authorInitials = data["authorInitials"] as? String ?: "N",
-                                    authorCellId = data["authorCellId"] as? String ?: "cell_local",
-                                    cellName = data["cellName"] as? String ?: "Nearby Block",
-                                    lat = (data["lat"] as? Number)?.toDouble() ?: 0.0,
-                                    lng = (data["lng"] as? Number)?.toDouble() ?: 0.0,
-                                    approxDistanceBand = data["approxDistanceBand"] as? String ?: "within 300 m",
-                                    urgency = data["urgency"] as? String ?: "NORMAL",
-                                    expiresInHours = (data["expiresInHours"] as? Number)?.toInt() ?: 48,
-                                    status = data["status"] as? String ?: "ACTIVE",
-                                    mediaUris = (data["mediaUris"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                                    mediaTypes = (data["mediaTypes"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                                    upvotesCount = (data["upvotesCount"] as? Number)?.toInt() ?: upvoters.size,
-                                    hasUserUpvoted = upvoters.contains(currentUid),
-                                    upvoterIds = upvoters,
-                                    createdAt = (data["createdAt"] as? com.google.firebase.Timestamp)?.toDate()?.time
-                                        ?: System.currentTimeMillis()
-                                )
-                            } catch (e: Exception) {
-                                null
+        val firebaseAuth = FirebaseBootstrap.getAuth(context)
+        val uid = firebaseAuth?.currentUser?.uid
+        if (!uid.isNullOrBlank()) {
+            try {
+                val db = FirebaseBootstrap.getFirestore(context)
+                listenerRegistration = db?.collection("posts")
+                    ?.whereEqualTo("status", "ACTIVE")
+                    ?.addSnapshotListener { snapshot, error ->
+                        if (error != null) {
+                            if (firebaseAuth.currentUser?.uid == uid) {
+                                handleFirestoreError(error, OperationType.LIST, "posts", firebaseAuth)
+                                errorMessage = error.localizedMessage ?: "Unable to stream nearby posts"
                             }
+                            isLoading = false
+                            return@addSnapshotListener
                         }
-                        if (items.isNotEmpty()) {
+                        if (snapshot != null) {
+                            val currentUid = firebaseAuth.currentUser?.uid ?: uid
+                            val items = parsePostSnapshot(snapshot, currentUid)
                             rawPosts.clear()
                             rawPosts.addAll(items)
+                            errorMessage = null
                             isLoading = false
                         }
                     }
-                }
-        } catch (e: Throwable) {
-            // Graceful fallback
+            } catch (e: Exception) {
+                handleFirestoreError(e, OperationType.LIST, "posts", firebaseAuth)
+            }
+        } else {
+            rawPosts.clear()
+            isLoading = false
         }
 
         onDispose {
@@ -495,7 +483,6 @@ fun NearbyFeedTopHeader(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NearbyControlsBar(
     selectedRadiusMeters: Int,
@@ -564,126 +551,119 @@ fun NearbyControlsBar(
                 modifier = Modifier.testTag("nearby_feed_refresh_button")
             )
 
-            Box {
-                LiquidGlassBurgerMenuButton(
-                    activeFilterCount = activeCount,
-                    onClick = { showMenu = !showMenu },
-                    contentDescription = "Open nearby sort and filter menu",
-                    modifier = Modifier.testTag("nearby_filter_menu_button")
-                )
+            LiquidGlassBurgerMenuButton(
+                activeFilterCount = activeCount,
+                onClick = { showMenu = true },
+                contentDescription = "Open nearby sort and filter menu",
+                modifier = Modifier.testTag("nearby_filter_menu_button")
+            )
+        }
+    }
 
-                FrostedGlassBurgerPopup(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    width = 304.dp
-                ) {
-                    Text(
-                        text = "Nearby Filters",
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        color = PureWhite
-                    )
+    FrostedGlassFilterSheet(
+        expanded = showMenu,
+        onDismissRequest = { showMenu = false },
+        eyebrow = "Proximity Filters",
+        title = "Nearby Filters",
+        sheetTestTag = "nearby_filter_sheet",
+        closeButtonDescription = "Close Nearby Filters sheet"
+    ) {
+        FrostedMenuSectionTitle("Sort Order")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FrostedMenuOptionPill(
+                label = "Closest First",
+                selected = sortByDistance,
+                onClick = {
+                    if (!sortByDistance) onToggleSort()
+                    showMenu = false
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("nearby_feed_sort_button")
+            )
+            FrostedMenuOptionPill(
+                label = "Newest First",
+                selected = !sortByDistance,
+                onClick = {
+                    if (sortByDistance) onToggleSort()
+                    showMenu = false
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("nearby_feed_sort_newest_button")
+            )
+        }
 
-                    HorizontalDivider(thickness = 1.dp, color = com.example.ui.theme.SubtleGlassDivider)
-
-                    FrostedMenuSectionTitle("Sort Order")
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FrostedMenuOptionPill(
-                            label = "Closest First",
-                            selected = sortByDistance,
-                            onClick = {
-                                if (!sortByDistance) onToggleSort()
-                                showMenu = false
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("nearby_feed_sort_button")
-                        )
-                        FrostedMenuOptionPill(
-                            label = "Newest First",
-                            selected = !sortByDistance,
-                            onClick = {
-                                if (sortByDistance) onToggleSort()
-                                showMenu = false
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    FrostedMenuSectionTitle("Post Type")
-                    val types = listOf(
-                        "ALL" to "All",
-                        "NEED" to "Needs",
-                        "OFFER" to "Offers",
-                        "MEETUP" to "Meetups"
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        types.forEach { (key, label) ->
-                            val selectedBg = when (key) {
-                                "NEED" -> FieryCoral
-                                "OFFER" -> EmeraldMint
-                                "MEETUP" -> AmberGlow
-                                else -> ElectricCobalt
-                            }
-                            FrostedMenuOptionPill(
-                                label = label,
-                                selected = selectedType == key,
-                                selectedColor = selectedBg,
-                                onClick = {
-                                    onTypeSelect(key)
-                                    showMenu = false
-                                },
-                                modifier = Modifier.testTag("type_filter_$key")
-                            )
-                        }
-                    }
-
-                    FrostedMenuSectionTitle("Radius")
-                    val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        radiusOptions.forEach { (meters, label) ->
-                            FrostedMenuOptionPill(
-                                label = label,
-                                selected = selectedRadiusMeters == meters,
-                                onClick = {
-                                    onRadiusSelect(meters)
-                                    showMenu = false
-                                },
-                                modifier = Modifier.testTag("radius_chip_$label")
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Photos only",
-                            fontFamily = PlusJakartaFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = PureWhite
-                        )
-                        LiquidGlassSwitch(
-                            checked = onlyWithPhotos,
-                            onCheckedChange = { onTogglePhotos() },
-                            modifier = Modifier.testTag("photos_only_filter_button")
-                        )
-                    }
+        FrostedMenuSectionTitle("Post Type")
+        val types = listOf(
+            "ALL" to "All",
+            "NEED" to "Needs",
+            "OFFER" to "Offers",
+            "MEETUP" to "Meetups"
+        )
+        FrostedMenuWrapRow(
+            horizontalSpacing = 8.dp,
+            verticalSpacing = 8.dp
+        ) {
+            types.forEach { (key, label) ->
+                val selectedBg = when (key) {
+                    "NEED" -> FieryCoral
+                    "OFFER" -> EmeraldMint
+                    "MEETUP" -> AmberGlow
+                    else -> ElectricCobalt
                 }
+                FrostedMenuOptionPill(
+                    label = label,
+                    selected = selectedType == key,
+                    selectedColor = selectedBg,
+                    onClick = {
+                        onTypeSelect(key)
+                        showMenu = false
+                    },
+                    modifier = Modifier.testTag("type_filter_$key")
+                )
             }
+        }
+
+        FrostedMenuSectionTitle("Radius")
+        val radiusOptions = listOf(500 to "500m", 1000 to "1km", 3000 to "3km", 5000 to "5km", 10000 to "10km")
+        FrostedMenuWrapRow(
+            horizontalSpacing = 8.dp,
+            verticalSpacing = 8.dp
+        ) {
+            radiusOptions.forEach { (meters, label) ->
+                FrostedMenuOptionPill(
+                    label = label,
+                    selected = selectedRadiusMeters == meters,
+                    onClick = {
+                        onRadiusSelect(meters)
+                        showMenu = false
+                    },
+                    modifier = Modifier.testTag("radius_chip_$label")
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Photos only",
+                fontFamily = PlusJakartaFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = PureWhite
+            )
+            LiquidGlassSwitch(
+                checked = onlyWithPhotos,
+                onCheckedChange = { onTogglePhotos() },
+                modifier = Modifier.testTag("photos_only_filter_button")
+            )
         }
     }
 }

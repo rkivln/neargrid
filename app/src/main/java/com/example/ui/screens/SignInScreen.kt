@@ -81,7 +81,6 @@ fun SignInScreen(
     authState: AuthState = AuthState.Unauthenticated,
     onSignInClick: (Activity) -> Unit = {},
     onDismissError: () -> Unit = {},
-    onSignInSuccess: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

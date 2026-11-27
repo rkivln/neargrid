@@ -30,24 +30,26 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 /**
  * Abstracts Credential Manager calls for reliable error handling and unit testing.
  */
 interface GoogleCredentialClient {
-    suspend fun getCredential(activity: Activity, request: GetCredentialRequest): GetCredentialResponse
+    suspend fun getCredential(context: Context, request: GetCredentialRequest): GetCredentialResponse
     suspend fun clearCredentialState(context: Context)
 }
 
 internal class AndroidGoogleCredentialClient : GoogleCredentialClient {
     override suspend fun getCredential(
-        activity: Activity,
+        context: Context,
         request: GetCredentialRequest
     ): GetCredentialResponse {
-        val credentialManager = CredentialManager.create(activity)
+        val credentialManager = CredentialManager.create(context)
         return credentialManager.getCredential(
-            context = activity,
+            context = context,
             request = request
         )
     }
@@ -105,6 +107,54 @@ class GoogleAuthRepository(
 
     fun getAuthOrNull(): FirebaseAuth? = firebaseAuthClient.getAuthOrNull()
 
+    /**
+     * Silent startup auto-sign-in for returning users who previously authorized Google Sign-In.
+     * Uses a single-option [GetGoogleIdOption] request with `filterByAuthorizedAccounts = true`
+     * and `autoSelectEnabled = true`, falling back silently to [AuthSignInOutcome.Cancelled] so
+     * the interactive Sign-In screen can be shown whenever no authorized credential is available.
+     */
+    suspend fun attemptAutoSignIn(context: Context = appContext): AuthSignInOutcome {
+        if (context is Activity && (context.isFinishing || context.isDestroyed)) {
+            Log.d(TAG, "Skipping silent auto-sign-in: Activity is finishing or destroyed")
+            return AuthSignInOutcome.Cancelled
+        }
+
+        val existingUser = runCatching { firebaseAuthClient.getAuthOrNull()?.currentUser }.getOrNull()
+        if (existingUser != null) {
+            return AuthSignInOutcome.Success(AuthenticatedUser.fromFirebaseUser(existingUser))
+        }
+
+        val serverClientId = webClientIdProvider(appContext)
+        if (!FirebaseBootstrap.isValidWebClientId(serverClientId)) {
+            Log.w(TAG, "Skipping silent auto-sign-in: Web Client ID unavailable")
+            return AuthSignInOutcome.Cancelled
+        }
+        val validatedClientId = serverClientId!!
+
+        if (firebaseAuthClient.getAuthOrNull() == null) {
+            return AuthSignInOutcome.Cancelled
+        }
+
+        return try {
+            val request = buildSilentAutoSignInRequest(validatedClientId)
+            val response = credentialClient.getCredential(context, request)
+            val idToken = extractGoogleIdToken(response)
+            val session = firebaseAuthClient.signInWithGoogleIdToken(idToken)
+            AuthSignInOutcome.Success(session)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: GetCredentialCancellationException) {
+            Log.w("Auth", "Silent Google auto-sign-in cancelled or dismissed: ${e.message}", e)
+            AuthSignInOutcome.Cancelled
+        } catch (e: NoCredentialException) {
+            Log.d(TAG, "No authorized Google credential available for silent auto-sign-in")
+            AuthSignInOutcome.Cancelled
+        } catch (t: Throwable) {
+            Log.d(TAG, "Silent auto-sign-in skipped (${t.javaClass.simpleName}): ${t.message}")
+            AuthSignInOutcome.Cancelled
+        }
+    }
+
     suspend fun signInWithGoogle(activity: Activity): AuthSignInOutcome {
         if (activity.isFinishing || activity.isDestroyed) {
             return AuthSignInOutcome.Error("Sign-in window is no longer active. Please try again.")
@@ -133,7 +183,7 @@ class GoogleAuthRepository(
         } catch (e: CancellationException) {
             throw e
         } catch (e: GetCredentialCancellationException) {
-            Log.d(TAG, "Google Sign-In cancelled by user")
+            Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
             AuthSignInOutcome.Cancelled
         } catch (e: Throwable) {
             Log.e(TAG, "Google Sign-In failed: ${e.javaClass.simpleName}", e)
@@ -167,6 +217,17 @@ class GoogleAuthRepository(
             val googleIdRequest = buildGoogleIdRequest(serverClientId)
             credentialClient.getCredential(activity, googleIdRequest)
         }
+    }
+
+    internal fun buildSilentAutoSignInRequest(serverClientId: String): GetCredentialRequest {
+        val option = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(true)
+            .setServerClientId(serverClientId)
+            .setAutoSelectEnabled(true)
+            .build()
+        return GetCredentialRequest.Builder()
+            .addCredentialOption(option)
+            .build()
     }
 
     internal fun buildSignInWithGoogleRequest(serverClientId: String): GetCredentialRequest {
@@ -205,9 +266,14 @@ class GoogleAuthRepository(
         return idToken
     }
 
-    suspend fun validateSession(user: FirebaseUser): SessionValidationResult {
+    suspend fun validateSession(user: FirebaseUser): SessionValidationResult =
+        classifySessionReload { firebaseAuthClient.reloadUser(user) }
+
+    internal suspend fun classifySessionReload(
+        reloadBlock: suspend () -> Unit
+    ): SessionValidationResult {
         return try {
-            firebaseAuthClient.reloadUser(user)
+            reloadBlock()
             SessionValidationResult.VALID
         } catch (e: CancellationException) {
             throw e
@@ -227,17 +293,18 @@ class GoogleAuthRepository(
     }
 
     suspend fun clearCredentialAndSignOut(context: Context) {
-        try {
-            credentialClient.clearCredentialState(context)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            Log.w(TAG, "Credential Manager state clear skipped: ${e.message}")
-        }
-        try {
-            firebaseAuthClient.signOut()
-        } catch (e: Exception) {
-            Log.w(TAG, "FirebaseAuth signOut error: ${e.message}")
+        withContext(NonCancellable) {
+            try {
+                credentialClient.clearCredentialState(context)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Credential Manager state clear skipped: ${e.message}")
+            } finally {
+                try {
+                    firebaseAuthClient.signOut()
+                } catch (e: Exception) {
+                    Log.w(TAG, "FirebaseAuth signOut error: ${e.message}")
+                }
+            }
         }
     }
 

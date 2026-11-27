@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -13,10 +12,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -32,27 +27,36 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -71,11 +75,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -87,8 +92,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.example.ui.theme.AuraKickerStyle
 import com.example.ui.theme.AuraOrange
 import com.example.ui.theme.CobaltBorder
@@ -112,6 +115,7 @@ import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureBlack
 import com.example.ui.theme.PureWhite
+import com.example.ui.theme.SubtleGlassDivider
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCanvasBackdrop
@@ -1668,97 +1672,80 @@ fun LiquidGlassBurgerMenuButton(
 }
 
 /**
- * Elevated Frosted Glass Burger Popover Menu anchored beneath the single menu button.
+ * Elevated Obsidian Modal Bottom Sheet for sort and filter controls, matching the Radar drawer.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FrostedGlassBurgerPopup(
+fun FrostedGlassFilterSheet(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
-    width: Dp = 296.dp,
+    eyebrow: String,
+    title: String,
+    sheetTestTag: String = "frosted_filter_sheet",
+    closeButtonDescription: String = "Close $title",
+    headerTrailingContent: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val density = LocalDensity.current
     if (!expanded) return
 
-    val popupBackdrop = rememberCanvasBackdrop {
-        drawRect(Color(0xFF0B0F1A))
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    ElectricCobalt.copy(alpha = 0.28f),
-                    Color.Transparent
-                ),
-                center = Offset(size.width * 0.85f, size.height * 0.12f),
-                radius = size.width * 0.85f
-            ),
-            center = Offset(size.width * 0.85f, size.height * 0.12f),
-            radius = size.width * 0.85f
-        )
-    }
-
-    Popup(
-        alignment = Alignment.TopEnd,
-        offset = IntOffset(0, with(density) { 52.dp.roundToPx() }),
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        properties = PopupProperties(focusable = true)
+        sheetState = sheetState,
+        containerColor = ObsidianCanvas,
+        contentColor = PureWhite,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        modifier = Modifier.testTag(sheetTestTag)
     ) {
-        val menuShape = RoundedCornerShape(24.dp)
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(tween(150)) + scaleIn(
-                initialScale = 0.92f,
-                transformOrigin = TransformOrigin(1f, 0f),
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium)
-            ),
-            exit = fadeOut(tween(110)) + scaleOut(targetScale = 0.94f)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .width(width)
-                    .drawBackdrop(
-                        backdrop = popupBackdrop,
-                        shape = { menuShape },
-                        effects = {
-                            vibrancy()
-                            blur(22.dp.toPx())
-                            lens(
-                                refractionHeight = 10.dp.toPx(),
-                                refractionAmount = 18.dp.toPx(),
-                                depthEffect = true,
-                                chromaticAberration = true
-                            )
-                        },
-                        highlight = { Highlight.Default },
-                        shadow = {
-                            Shadow(
-                                radius = 24.dp,
-                                offset = DpOffset(0.dp, 12.dp),
-                                color = PureBlack.copy(alpha = 0.56f)
-                            )
-                        },
-                        innerShadow = { InnerShadow.Default },
-                        onDrawSurface = {
-                            drawRect(Color(0xFF101624).copy(alpha = 0.88f))
-                        }
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                PureWhite.copy(alpha = 0.34f),
-                                HairlineGlassBorder.copy(alpha = 0.7f)
-                            )
-                        ),
-                        shape = menuShape
-                    )
-                    .padding(16.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    content = content
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = eyebrow.uppercase(),
+                        fontFamily = PlusJakartaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = CobaltGlow
+                    )
+                    Text(
+                        text = title,
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        color = PureWhite
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    headerTrailingContent?.invoke(this)
+                    CircularOutlineIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = closeButtonDescription,
+                        onClick = onDismissRequest,
+                        size = 48.dp,
+                        modifier = Modifier.testTag("${sheetTestTag}_close_button")
+                    )
+                }
             }
+
+            HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
+
+            content()
         }
     }
 }
@@ -1776,6 +1763,81 @@ fun FrostedMenuSectionTitle(
     )
 }
 
+/**
+ * Wrapping horizontal layout for filter pills using core Compose Layout
+ * to avoid FlowRow experimental overload ABI mismatches.
+ */
+@Composable
+fun FrostedMenuWrapRow(
+    modifier: Modifier = Modifier,
+    horizontalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = 8.dp,
+    content: @Composable () -> Unit
+) {
+    Layout(
+        content = content,
+        modifier = modifier
+    ) { measurables, constraints ->
+        val hGap = horizontalSpacing.roundToPx()
+        val vGap = verticalSpacing.roundToPx()
+        val maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+        val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+
+        val rows = mutableListOf<List<Placeable>>()
+        val rowHeights = mutableListOf<Int>()
+        var currentRow = mutableListOf<Placeable>()
+        var currentRowWidth = 0
+        var currentRowHeight = 0
+
+        for (measurable in measurables) {
+            val placeable = measurable.measure(childConstraints)
+            val neededWidth = if (currentRow.isEmpty()) placeable.width else currentRowWidth + hGap + placeable.width
+            if (currentRow.isNotEmpty() && neededWidth > maxWidth) {
+                rows.add(currentRow)
+                rowHeights.add(currentRowHeight)
+                currentRow = mutableListOf(placeable)
+                currentRowWidth = placeable.width
+                currentRowHeight = placeable.height
+            } else {
+                currentRow.add(placeable)
+                currentRowWidth = neededWidth
+                currentRowHeight = maxOf(currentRowHeight, placeable.height)
+            }
+        }
+        if (currentRow.isNotEmpty()) {
+            rows.add(currentRow)
+            rowHeights.add(currentRowHeight)
+        }
+
+        val totalHeight = if (rowHeights.isEmpty()) {
+            constraints.minHeight
+        } else {
+            (rowHeights.sum() + vGap * (rowHeights.size - 1)).coerceIn(constraints.minHeight, constraints.maxHeight)
+        }
+        val layoutWidth = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth
+        } else {
+            val widest = rows.maxOfOrNull { row ->
+                row.sumOf { it.width } + hGap * (row.size - 1).coerceAtLeast(0)
+            } ?: 0
+            widest.coerceIn(constraints.minWidth, constraints.maxWidth)
+        }
+
+        layout(layoutWidth, totalHeight) {
+            var y = 0
+            rows.forEachIndexed { index, row ->
+                var x = 0
+                val rowHeight = rowHeights[index]
+                row.forEach { placeable ->
+                    placeable.placeRelative(x = x, y = y + (rowHeight - placeable.height) / 2)
+                    x += placeable.width + hGap
+                }
+                y += rowHeight + vGap
+            }
+        }
+    }
+}
+
 @Composable
 fun FrostedMenuOptionPill(
     label: String,
@@ -1788,6 +1850,7 @@ fun FrostedMenuOptionPill(
     val pillShape = CircleShape
     Box(
         modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
             .clip(pillShape)
             .background(
                 if (selected) selectedColor.copy(alpha = 0.90f) else PureWhite.copy(alpha = 0.08f)
@@ -1801,14 +1864,14 @@ fun FrostedMenuOptionPill(
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick()
             }
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             fontFamily = PlusJakartaFontFamily,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             color = if (selected) PureWhite else ObsidianInk,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

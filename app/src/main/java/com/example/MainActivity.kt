@@ -12,30 +12,43 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -46,17 +59,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.auth.AuthState
 import com.example.data.auth.findValidActivity
+import com.example.ui.AuthViewModel
+import com.example.ui.FeatureStartupState
 import com.example.ui.NavigationDestination
 import com.example.ui.NearGridViewModel
 import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
-import com.example.ui.components.AuthVerificationDialog
 import com.example.ui.components.CellPickerDialog
 import com.example.ui.components.ConversationChatView
 import com.example.ui.components.CreateIntentSheet
+import com.example.ui.components.DarkGlassCard
 import com.example.ui.components.GeohashQrInviteDialog
+import com.example.ui.components.GlassSecondaryPillButton
 import com.example.ui.components.LiquidGlassBottomBar
 import com.example.ui.components.NearGridBrandMark
+import com.example.ui.components.PillPrimaryButton
 import com.example.ui.components.PostCommentsSheet
 import com.example.ui.components.QrCodeScannerDialog
 import com.example.ui.screens.AppSettingsScreen
@@ -72,6 +89,9 @@ import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.UserProfileScreen
 import com.example.ui.theme.BackgroundCanvas
 import com.example.ui.theme.CobaltGlow
+import com.example.ui.theme.FieryCoral
+import com.example.ui.theme.FieryCoralGlow
+import com.example.ui.theme.FieryCoralSoft
 import com.example.ui.theme.MutedSlate
 import com.example.ui.theme.NearGridTheme
 import com.example.ui.theme.OutfitFontFamily
@@ -113,8 +133,86 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NearGridApp(
-    viewModel: NearGridViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel(),
     intentVersion: Int = 0
+) {
+    val context = LocalContext.current
+    val hostActivity = context.findValidActivity()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
+
+    LaunchedEffect(authState, hostActivity) {
+        if (authState is AuthState.Initializing) {
+            authViewModel.attemptStartupAutoSignIn(hostActivity)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                authViewModel.verifySessionOnForeground()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    when (val currentAuth = authState) {
+        is AuthState.Initializing -> {
+            AuthInitializingScreen(subtitle = "Restoring your verified session...")
+        }
+        is AuthState.Unauthenticated,
+        is AuthState.Authenticating,
+        is AuthState.Error -> {
+            SignInScreen(
+                authState = currentAuth,
+                onSignInClick = { activeActivity -> authViewModel.signInWithGoogle(activeActivity) },
+                onDismissError = { authViewModel.clearAuthError() }
+            )
+        }
+        is AuthState.Authenticated -> {
+            key(currentAuth.uid) {
+                val featureViewModel: NearGridViewModel = viewModel(key = currentAuth.uid)
+                val startupState by featureViewModel.startupState.collectAsStateWithLifecycle()
+
+                when (val state = startupState) {
+                    is FeatureStartupState.Initializing -> {
+                        AuthInitializingScreen(subtitle = "Preparing your neighborhood mesh...")
+                    }
+                    is FeatureStartupState.Error -> {
+                        AuthenticatedRecoveryScreen(
+                            errorMessage = state.message,
+                            onRetry = { featureViewModel.retryStartup() },
+                            onSignOut = {
+                                authViewModel.signOut(context) {
+                                    featureViewModel.prepareForSignOut()
+                                }
+                            }
+                        )
+                    }
+                    is FeatureStartupState.Ready -> {
+                        AuthenticatedNearGridContent(
+                            viewModel = featureViewModel,
+                            authViewModel = authViewModel,
+                            userEmail = currentUser?.email ?: currentAuth.user?.email,
+                            intentVersion = intentVersion
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthenticatedNearGridContent(
+    viewModel: NearGridViewModel,
+    authViewModel: AuthViewModel,
+    userEmail: String?,
+    intentVersion: Int
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -134,7 +232,6 @@ fun NearGridApp(
     val isUpdateBannerDismissed by viewModel.isUpdateBannerDismissed.collectAsStateWithLifecycle()
 
     var showCellPickerDialog by remember { mutableStateOf(false) }
-    var showAuthDialog by remember { mutableStateOf(false) }
     var showOnboarding by remember { mutableStateOf(false) }
 
     // GPS Permission Launcher
@@ -154,26 +251,8 @@ fun NearGridApp(
     ) { /* Notification permission result */ }
 
     val activity = context.findValidActivity()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val authState by viewModel.authState.collectAsStateWithLifecycle()
-    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    val isAuthenticated = authState is AuthState.Authenticated
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                viewModel.verifySessionOnForeground()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(isAuthenticated) {
-        if (!isAuthenticated) return@LaunchedEffect
-
+    LaunchedEffect(Unit) {
         val hasLocationPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -201,8 +280,7 @@ fun NearGridApp(
     }
 
     // Handle deep link notification click to open corresponding conversation directly
-    LaunchedEffect(intentVersion, activity?.intent, conversations, isAuthenticated) {
-        if (!isAuthenticated) return@LaunchedEffect
+    LaunchedEffect(intentVersion, activity?.intent, conversations) {
         val convId = activity?.intent?.getStringExtra(com.example.util.ChatNotificationManager.EXTRA_CONVERSATION_ID)
         if (!convId.isNullOrBlank()) {
             val matchingConv = conversations.find { it.id == convId }
@@ -231,27 +309,6 @@ fun NearGridApp(
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
-        }
-    }
-
-    // Authentication Gate: Prevent login screen flash during session restoration
-    when (val currentAuth = authState) {
-        is AuthState.Initializing -> {
-            AuthInitializingScreen()
-            return
-        }
-        is AuthState.Unauthenticated,
-        is AuthState.Authenticating,
-        is AuthState.Error -> {
-            SignInScreen(
-                authState = currentAuth,
-                onSignInClick = { hostActivity -> viewModel.signInWithGoogle(hostActivity) },
-                onDismissError = { viewModel.clearAuthError() }
-            )
-            return
-        }
-        is AuthState.Authenticated -> {
-            // Proceed into authenticated main application
         }
     }
 
@@ -510,7 +567,6 @@ fun NearGridApp(
                         onRadiusChange = { viewModel.setDiscoveryRadius(it) },
                         onGpsToggle = onToggleGps,
                         onReplayOnboarding = { showOnboarding = true },
-                        onOpenAuthDialog = { showAuthDialog = true },
                         userNickname = uiState.userNickname,
                         userHandle = uiState.userHandle,
                         userBio = uiState.userBio,
@@ -546,8 +602,12 @@ fun NearGridApp(
                         onOpenGridQrScreen = { viewModel.openGridQrScreen() },
                         onOpenSettings = { viewModel.openAppSettings() },
                         onResetToFreshGrid = { viewModel.resetToFreshGrid() },
-                        userEmail = currentUser?.email,
-                        onSignOut = { viewModel.signOut(context) }
+                        userEmail = userEmail,
+                        onSignOut = {
+                            authViewModel.signOut(context) {
+                                viewModel.prepareForSignOut()
+                            }
+                        }
                     )
                 }
             }
@@ -607,15 +667,6 @@ fun NearGridApp(
         )
     }
 
-    // Modal Sheet for resident pass verification
-    if (showAuthDialog) {
-        AuthVerificationDialog(
-            currentCell = uiState.selectedCell,
-            onDismiss = { showAuthDialog = false },
-            onVerified = { /* Verified */ }
-        )
-    }
-
     // Modal Sheet for creating intent posts (Need, Offer, Issue, Meetup)
     if (uiState.showCreateDialog) {
         CreateIntentSheet(
@@ -651,7 +702,9 @@ fun NearGridApp(
 }
 
 @Composable
-private fun AuthInitializingScreen() {
+private fun AuthInitializingScreen(
+    subtitle: String = "Restoring your verified session..."
+) {
     AuraMeshBackground(
         variant = AuraVariant.COBALT,
         modifier = Modifier
@@ -659,7 +712,10 @@ private fun AuthInitializingScreen() {
             .testTag("auth_initializing_screen")
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -674,7 +730,7 @@ private fun AuthInitializingScreen() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Restoring your verified session...",
+                text = subtitle,
                 fontFamily = PlusJakartaFontFamily,
                 fontSize = 13.sp,
                 color = MutedSlate
@@ -685,6 +741,102 @@ private fun AuthInitializingScreen() {
                 strokeWidth = 2.5.dp,
                 modifier = Modifier.size(28.dp)
             )
+        }
+    }
+}
+
+@Composable
+internal fun AuthenticatedRecoveryScreen(
+    errorMessage: String,
+    onRetry: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    AuraMeshBackground(
+        variant = AuraVariant.COBALT,
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("authenticated_recovery_screen")
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            DarkGlassCard(
+                cornerRadius = 26.dp,
+                modifier = Modifier.widthIn(max = 520.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(FieryCoralSoft)
+                            .border(1.dp, FieryCoral.copy(alpha = 0.55f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = "Setup recovery alert",
+                            tint = FieryCoralGlow,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Couldn't Open Your Block",
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        color = PureWhite,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = errorMessage,
+                        fontFamily = PlusJakartaFontFamily,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        color = MutedSlate,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.testTag("recovery_error_message")
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    PillPrimaryButton(
+                        text = "Retry Setup",
+                        icon = Icons.Default.Refresh,
+                        onClick = onRetry,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("retry_startup_button")
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    GlassSecondaryPillButton(
+                        text = "Sign Out",
+                        icon = Icons.AutoMirrored.Filled.Logout,
+                        onClick = onSignOut,
+                        height = 48.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("recovery_sign_out_button")
+                    )
+                }
+            }
         }
     }
 }

@@ -110,7 +110,6 @@ fun ProfileScreen(
     onRadiusChange: (Int) -> Unit,
     onGpsToggle: () -> Unit,
     onReplayOnboarding: () -> Unit,
-    onOpenAuthDialog: () -> Unit,
     userNickname: String = "Alex Rivera",
     userHandle: String = "@alex_oakwood",
     userBio: String = "",
@@ -261,26 +260,15 @@ fun ProfileScreen(
                 }
             )
 
-            // 1-Tap QR Pass & Resident Pass Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                GlassSecondaryPillButton(
-                    text = "Grid QR Pass",
-                    icon = Icons.Default.QrCodeScanner,
-                    onClick = onOpenGridQrScreen,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("profile_share_grid_qr_card")
-                )
-                GlassSecondaryPillButton(
-                    text = "Verify Pass",
-                    icon = Icons.Default.VerifiedUser,
-                    onClick = onOpenAuthDialog,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            // 1-Tap QR Pass Shortcut
+            GlassSecondaryPillButton(
+                text = "Grid QR Pass",
+                icon = Icons.Default.QrCodeScanner,
+                onClick = onOpenGridQrScreen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("profile_share_grid_qr_card")
+            )
 
             // 1-Tap Privacy & Radio Switches Card
             DarkGlassCard(cornerRadius = 24.dp) {

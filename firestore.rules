@@ -31,10 +31,10 @@ service cloud.firestore {
       return ts is timestamp && ts <= request.time;
     }
 
-    // Validation for User Profile
+    // Validation for Public User Profile (PII email stored in users/{uid}/private/account)
     function isValidUserProfile(data) {
-      return data.userId is string && data.userId.size() > 0 &&
-             data.email is string && data.email.size() <= 200 &&
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
              (!('handle' in data) || (data.handle is string && data.handle.size() <= 60)) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
@@ -57,6 +57,11 @@ service cloud.firestore {
              (!('lastActiveAt' in data) || isServerTimestamp(data.lastActiveAt) || data.lastActiveAt is int || data.lastActiveAt is timestamp);
     }
 
+    function isValidPrivateAccount(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200));
+    }
+
     // Validation for Neighbor Post (Need, Offer, Meetup)
     function isValidPost(data) {
       return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
@@ -67,13 +72,29 @@ service cloud.firestore {
              data.category is string && data.category.size() <= 50 &&
              data.authorName is string && data.authorName.size() <= 100 &&
              data.status in ['ACTIVE', 'RESOLVED', 'CANCELLED'] &&
+             (!('authorInitials' in data) || (data.authorInitials is string && data.authorInitials.size() <= 10)) &&
              (!('urgency' in data) || data.urgency in ['NORMAL', 'TIME_SENSITIVE', 'URGENT']) &&
              (!('cellName' in data) || (data.cellName is string && data.cellName.size() <= 100)) &&
              (!('authorCellId' in data) || (data.authorCellId is string && data.authorCellId.size() <= 80)) &&
              (!('approxDistanceBand' in data) || (data.approxDistanceBand is string && data.approxDistanceBand.size() <= 50)) &&
              (!('expiresInHours' in data) || data.expiresInHours is int) &&
-             (!('lat' in data) || (data.lat is number)) &&
-             (!('lng' in data) || (data.lng is number));
+             (!('lat' in data) || data.lat is number) &&
+             (!('lng' in data) || data.lng is number) &&
+             (!('geohash' in data) || (data.geohash is string && data.geohash.size() <= 32)) &&
+             (!('mediaUris' in data) || (data.mediaUris is list && data.mediaUris.size() <= 10)) &&
+             (!('mediaTypes' in data) || (data.mediaTypes is list && data.mediaTypes.size() <= 10)) &&
+             (!('upvotesCount' in data) || (data.upvotesCount is int && data.upvotesCount >= 0)) &&
+             (!('upvoterIds' in data) || (data.upvoterIds is list && data.upvoterIds.size() <= 1000));
+    }
+
+    function isValidPostComment(data, postId, commentId) {
+      return data.id is string && data.id == commentId &&
+             data.postId is string && data.postId == postId &&
+             data.authorId is string && data.authorId.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+             (!('authorInitials' in data) || (data.authorInitials is string && data.authorInitials.size() <= 10)) &&
+             (!('parentId' in data) || data.parentId == null || (data.parentId is string && data.parentId.size() <= 128));
     }
 
     // Validation for Community Issue
@@ -87,8 +108,10 @@ service cloud.firestore {
              (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 100)) &&
              (!('cellId' in data) || (data.cellId is string && data.cellId.size() <= 80)) &&
              (!('locationSnippet' in data) || (data.locationSnippet is string && data.locationSnippet.size() <= 300)) &&
-             (!('upvotesCount' in data) || data.upvotesCount is int) &&
+             (!('upvotesCount' in data) || (data.upvotesCount is int && data.upvotesCount >= 0)) &&
              (!('upvoterIds' in data) || (data.upvoterIds is list && data.upvoterIds.size() <= 1000)) &&
+             (!('mediaUris' in data) || (data.mediaUris is list && data.mediaUris.size() <= 10)) &&
+             (!('mediaTypes' in data) || (data.mediaTypes is list && data.mediaTypes.size() <= 10)) &&
              (!('assignedVolunteer' in data) || data.assignedVolunteer == null || (data.assignedVolunteer is string && data.assignedVolunteer.size() <= 200));
     }
 
@@ -98,8 +121,11 @@ service cloud.firestore {
              data.participantIds is list && data.participantIds.size() == 2 &&
              (!('participantNames' in data) || (data.participantNames is list && data.participantNames.size() <= 2)) &&
              (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500)) &&
+             (!('lastMessageSenderId' in data) || (data.lastMessageSenderId is string && data.lastMessageSenderId.size() <= 128)) &&
+             (!('relatedPostId' in data) || (data.relatedPostId is string && data.relatedPostId.size() <= 128)) &&
              (!('relatedPostTitle' in data) || (data.relatedPostTitle is string && data.relatedPostTitle.size() <= 200)) &&
              (!('relatedPostType' in data) || (data.relatedPostType is string && data.relatedPostType.size() <= 50)) &&
+             (!('distanceBand' in data) || (data.distanceBand is string && data.distanceBand.size() <= 50)) &&
              (!('isResolved' in data) || data.isResolved is bool);
     }
 
@@ -127,123 +153,270 @@ service cloud.firestore {
              (!('localityName' in data) || (data.localityName is string && data.localityName.size() <= 100));
     }
 
+    // Validation for Safety Report
+    function isValidReport(data, reportId) {
+      return data.id is string && data.id == reportId &&
+             data.reporterId is string && data.reporterId.size() > 0 &&
+             data.targetUserId is string && data.targetUserId.size() > 0 && data.targetUserId.size() <= 128 &&
+             (!('targetDisplayName' in data) || (data.targetDisplayName is string && data.targetDisplayName.size() <= 100)) &&
+             data.reason is string && data.reason.size() > 0 && data.reason.size() <= 100 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // Validation for Support Ticket
+    function isValidSupportTicket(data, ticketId) {
+      return data.ticketId is string && data.ticketId == ticketId &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 60 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 2000 &&
+             (!('userName' in data) || (data.userName is string && data.userName.size() <= 100)) &&
+             (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() <= 200)) &&
+             (!('appVersion' in data) || (data.appVersion is string && data.appVersion.size() <= 40)) &&
+             data.status in ['OPEN', 'IN_PROGRESS', 'RESOLVED'];
+    }
+
+    // Validation for Telemetry Log
+    function isValidTelemetryLog(data, logId) {
+      return data.logId is string && data.logId == logId &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.severity in ['FATAL', 'NON_FATAL', 'INFO'] &&
+             data.errorName is string && data.errorName.size() > 0 && data.errorName.size() <= 100 &&
+             data.errorMessage is string && data.errorMessage.size() <= 1000 &&
+             (!('stackTraceSummary' in data) || (data.stackTraceSummary is string && data.stackTraceSummary.size() <= 3000)) &&
+             (!('appVersion' in data) || (data.appVersion is string && data.appVersion.size() <= 40)) &&
+             (!('deviceModel' in data) || (data.deviceModel is string && data.deviceModel.size() <= 120)) &&
+             (!('androidVersion' in data) || (data.androidVersion is string && data.androidVersion.size() <= 40)) &&
+             (!('sdkInt' in data) || data.sdkInt is int) &&
+             (!('timestamp' in data) || data.timestamp is int);
+    }
+
     // --- Users Collection ---
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn();
       allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
                        incoming().userId == request.auth.uid &&
                        isServerTimestamp(incoming().createdAt) &&
                        isValidUserProfile(incoming());
       allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
                        incoming().userId == existing().userId &&
                        incoming().createdAt == existing().createdAt &&
                        isServerTimestamp(incoming().updatedAt) &&
                        isValidUserProfile(incoming());
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Owner-only private account PII (email)
+      match /private/{docId} {
+        allow get: if isOwner(userId) && isValidId(docId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(docId) &&
+                         incoming().userId == request.auth.uid &&
+                         isServerTimestamp(incoming().createdAt) &&
+                         isServerTimestamp(incoming().updatedAt) &&
+                         isValidPrivateAccount(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(docId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isServerTimestamp(incoming().updatedAt) &&
+                         isValidPrivateAccount(incoming(), userId);
+        allow delete: if isOwner(userId) && isValidId(docId);
+      }
     }
 
     // --- Posts Collection ---
     match /posts/{postId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(postId);
+      allow list: if isSignedIn();
       allow create: if isSignedIn() &&
+                       isValidId(postId) &&
+                       incoming().id == postId &&
                        incoming().userId == request.auth.uid &&
                        isServerTimestamp(incoming().createdAt) &&
                        isValidPost(incoming());
       allow update: if isSignedIn() &&
-                       existing().userId == request.auth.uid &&
+                       isValidId(postId) &&
+                       incoming().id == existing().id &&
                        incoming().userId == existing().userId &&
                        incoming().createdAt == existing().createdAt &&
                        isServerTimestamp(incoming().updatedAt) &&
-                       isValidPost(incoming());
-      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+                       isValidPost(incoming()) && (
+                         // Action 1: Neighbor upvote toggle
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['upvotesCount', 'upvoterIds', 'updatedAt']) &&
+                          incoming().upvotesCount is int &&
+                          incoming().upvotesCount >= 0 &&
+                          incoming().upvoterIds is list) ||
+                         // Action 2: Author full edit / status change
+                         existing().userId == request.auth.uid
+                       );
+      allow delete: if isSignedIn() && isValidId(postId) && existing().userId == request.auth.uid;
 
       // --- Nested Post Comments ---
       match /comments/{commentId} {
-        allow get, list: if isSignedIn();
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(commentId);
+        allow list: if isSignedIn() && isValidId(postId);
         allow create: if isSignedIn() &&
+                         isValidId(postId) &&
+                         isValidId(commentId) &&
+                         exists(/databases/$(database)/documents/posts/$(postId)) &&
                          incoming().authorId == request.auth.uid &&
-                         incoming().postId == postId &&
-                         incoming().text is string && incoming().text.size() > 0 && incoming().text.size() <= 2000 &&
-                         isServerTimestamp(incoming().timestamp);
-        allow update, delete: if isSignedIn() && existing().authorId == request.auth.uid;
+                         isServerTimestamp(incoming().timestamp) &&
+                         isValidPostComment(incoming(), postId, commentId);
+        allow update: if isSignedIn() &&
+                         isValidId(postId) &&
+                         isValidId(commentId) &&
+                         existing().authorId == request.auth.uid &&
+                         incoming().id == existing().id &&
+                         incoming().authorId == existing().authorId &&
+                         incoming().postId == existing().postId &&
+                         incoming().timestamp == existing().timestamp &&
+                         isValidPostComment(incoming(), postId, commentId);
+        allow delete: if isSignedIn() &&
+                         isValidId(postId) &&
+                         isValidId(commentId) &&
+                         existing().authorId == request.auth.uid;
       }
     }
 
     // --- Issues Collection ---
     match /issues/{issueId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(issueId);
+      allow list: if isSignedIn();
       allow create: if isSignedIn() &&
+                       isValidId(issueId) &&
+                       incoming().id == issueId &&
                        incoming().reporterId == request.auth.uid &&
                        isServerTimestamp(incoming().createdAt) &&
                        isValidIssue(incoming());
-      allow update: if isSignedIn() && (
-        // Action 1: Toggle upvote
-        (incoming().diff(existing()).affectedKeys().hasOnly(['upvotesCount', 'upvoterIds', 'updatedAt']) &&
-         incoming().upvotesCount is int &&
-         isServerTimestamp(incoming().updatedAt)) ||
-        // Action 2: Advance status or assign volunteer
-        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'assignedVolunteer', 'updatedAt']) &&
-         incoming().status in ['REPORTED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'] &&
-         isServerTimestamp(incoming().updatedAt)) ||
-        // Action 3: Reporter full update
-        (existing().reporterId == request.auth.uid &&
-         incoming().reporterId == existing().reporterId &&
-         incoming().createdAt == existing().createdAt &&
-         isServerTimestamp(incoming().updatedAt) &&
-         isValidIssue(incoming()))
-      );
-      allow delete: if isSignedIn() && existing().reporterId == request.auth.uid;
+      allow update: if isSignedIn() &&
+                       isValidId(issueId) &&
+                       incoming().id == existing().id &&
+                       incoming().reporterId == existing().reporterId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isServerTimestamp(incoming().updatedAt) &&
+                       isValidIssue(incoming()) && (
+                         // Action 1: Toggle upvote
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['upvotesCount', 'upvoterIds', 'updatedAt']) &&
+                          incoming().upvotesCount is int &&
+                          incoming().upvotesCount >= 0) ||
+                         // Action 2: Advance status or assign volunteer
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'assignedVolunteer', 'updatedAt']) ||
+                         // Action 3: Reporter full update
+                         existing().reporterId == request.auth.uid
+                       );
+      allow delete: if isSignedIn() && isValidId(issueId) && existing().reporterId == request.auth.uid;
     }
 
     // --- Conversations Collection ---
     match /conversations/{conversationId} {
-      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+      allow get: if isSignedIn() && isValidId(conversationId) && request.auth.uid in resource.data.participantIds;
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
       allow create: if isSignedIn() &&
+                       isValidId(conversationId) &&
+                       incoming().id == conversationId &&
                        request.auth.uid in incoming().participantIds &&
                        isServerTimestamp(incoming().createdAt) &&
                        isValidConversation(incoming());
       allow update: if isSignedIn() &&
+                       isValidId(conversationId) &&
                        request.auth.uid in existing().participantIds &&
+                       incoming().id == existing().id &&
                        incoming().participantIds == existing().participantIds &&
                        incoming().createdAt == existing().createdAt &&
                        isValidConversation(incoming());
-      allow delete: if isSignedIn() && request.auth.uid in existing().participantIds;
+      allow delete: if isSignedIn() && isValidId(conversationId) && request.auth.uid in existing().participantIds;
 
       // --- Nested Chat Messages ---
       match /messages/{messageId} {
-        allow get, list: if isSignedIn() &&
-                            request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow get: if isSignedIn() &&
+                      isValidId(conversationId) &&
+                      isValidId(messageId) &&
+                      request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow list: if isSignedIn() &&
+                       isValidId(conversationId) &&
+                       request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow create: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         isValidId(messageId) &&
+                         incoming().id == messageId &&
+                         incoming().conversationId == conversationId &&
                          incoming().senderId == request.auth.uid &&
                          isServerTimestamp(incoming().createdAt) &&
                          isValidChatMessage(incoming()) &&
                          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow update: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         isValidId(messageId) &&
                          existing().senderId == request.auth.uid &&
+                         incoming().id == existing().id &&
                          incoming().senderId == existing().senderId &&
                          incoming().conversationId == existing().conversationId &&
                          incoming().createdAt == existing().createdAt &&
                          isValidChatMessage(incoming());
-        allow delete: if isSignedIn() && existing().senderId == request.auth.uid;
+        allow delete: if isSignedIn() &&
+                         isValidId(conversationId) &&
+                         isValidId(messageId) &&
+                         existing().senderId == request.auth.uid;
       }
     }
 
     // --- Geohash Messages (Broadcasts by Geohash) ---
     match /geohash_messages/{messageId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(messageId);
+      allow list: if isSignedIn();
       allow create: if isSignedIn() &&
+                       isValidId(messageId) &&
+                       incoming().id == messageId &&
                        incoming().userId == request.auth.uid &&
                        isServerTimestamp(incoming().timestamp) &&
                        isValidGeohashMessage(incoming());
-      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow update: if isSignedIn() &&
+                       isValidId(messageId) &&
+                       existing().userId == request.auth.uid &&
+                       incoming().id == existing().id &&
+                       incoming().userId == existing().userId &&
+                       incoming().timestamp == existing().timestamp &&
+                       isValidGeohashMessage(incoming());
+      allow delete: if isSignedIn() && isValidId(messageId) && existing().userId == request.auth.uid;
     }
 
     // --- Reports Collection (Safety & Moderation) ---
     match /reports/{reportId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(reportId) && resource.data.reporterId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.reporterId == request.auth.uid;
       allow create: if isSignedIn() &&
+                       isValidId(reportId) &&
                        incoming().reporterId == request.auth.uid &&
-                       isServerTimestamp(incoming().createdAt);
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidReport(incoming(), reportId);
+      allow update, delete: if false;
+    }
+
+    // --- Support Tickets Collection ---
+    match /support_tickets/{ticketId} {
+      allow get: if isSignedIn() && isValidId(ticketId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       isValidId(ticketId) &&
+                       incoming().userId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isServerTimestamp(incoming().updatedAt) &&
+                       isValidSupportTicket(incoming(), ticketId);
+      allow update, delete: if false;
+    }
+
+    // --- Crash & Diagnostic Telemetry Logs ---
+    match /telemetry_logs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       isValidId(logId) &&
+                       incoming().userId == request.auth.uid &&
+                       isServerTimestamp(incoming().createdAt) &&
+                       isValidTelemetryLog(incoming(), logId);
       allow update, delete: if false;
     }
   }

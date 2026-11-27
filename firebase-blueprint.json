@@ -2,11 +2,10 @@
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
-      "description": "Public and privacy-preserving settings for a neighborhood resident.",
+      "description": "Public and privacy-preserving settings for a neighborhood resident (excluding private account PII).",
       "type": "object",
       "properties": {
         "userId": { "type": "string", "description": "Authenticated Firebase User UID." },
-        "email": { "type": "string", "description": "Google account email." },
         "displayName": { "type": "string", "description": "Resident display nickname." },
         "handle": { "type": "string", "description": "Local handle e.g. @alex_oakwood." },
         "bio": { "type": "string", "description": "Short bio or skill offer snippet." },
@@ -18,10 +17,30 @@
         "fuzzyCoords": { "type": "boolean", "description": "Whether coordinates are dynamically offset." },
         "incognito": { "type": "boolean", "description": "Whether resident is hidden on living mesh canvas." },
         "allowDMs": { "type": "boolean", "description": "Whether neighbor allows direct handoff coordination messages." },
+        "locationPrecision": { "type": "string", "enum": ["EXACT", "APPROXIMATE", "NEIGHBORHOOD"], "description": "Coordinate precision level." },
+        "hideOnlineStatus": { "type": "boolean", "description": "Hide online presence status." },
+        "hideExactDistance": { "type": "boolean", "description": "Show coarse distance bands." },
+        "blockedUserIds": { "type": "array", "description": "Blocked neighbor UIDs." },
+        "latitude": { "type": "number", "description": "Presence latitude." },
+        "longitude": { "type": "number", "description": "Presence longitude." },
+        "geohash": { "type": "string", "description": "Presence geohash." },
+        "isOnline": { "type": "boolean", "description": "Online presence flag." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update." }
       },
-      "required": ["userId", "email", "displayName", "createdAt"]
+      "required": ["userId", "displayName", "createdAt"]
+    },
+    "UserPrivateAccount": {
+      "title": "UserPrivateAccount",
+      "description": "Owner-only private account fields such as Google email.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase UID." },
+        "email": { "type": "string", "description": "Private Google account email." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update." }
+      },
+      "required": ["userId", "createdAt", "updatedAt"]
     },
     "NeighborPost": {
       "title": "NeighborPost",
@@ -40,14 +59,33 @@
         "cellName": { "type": "string", "description": "Cell display name." },
         "lat": { "type": "number", "description": "Fuzzy centroid latitude." },
         "lng": { "type": "number", "description": "Fuzzy centroid longitude." },
+        "geohash": { "type": "string", "description": "Geohash for area queries." },
         "approxDistanceBand": { "type": "string", "description": "Distance band label e.g. within 300 m." },
         "urgency": { "type": "string", "enum": ["NORMAL", "TIME_SENSITIVE", "URGENT"], "description": "Urgency rating." },
         "expiresInHours": { "type": "integer", "description": "Active duration in hours." },
         "status": { "type": "string", "enum": ["ACTIVE", "RESOLVED", "CANCELLED"], "description": "Post lifecycle status." },
+        "upvotesCount": { "type": "integer", "description": "Upvote total." },
+        "upvoterIds": { "type": "array", "description": "UIDs of upvoting neighbors." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of update." }
       },
       "required": ["id", "userId", "type", "title", "description", "category", "authorName", "status", "createdAt"]
+    },
+    "PostComment": {
+      "title": "PostComment",
+      "description": "Threaded reply on a neighbor post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorInitials": { "type": "string" },
+        "text": { "type": "string" },
+        "parentId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "postId", "authorId", "text", "timestamp"]
     },
     "CommunityIssue": {
       "title": "CommunityIssue",
@@ -83,6 +121,7 @@
         "relatedPostTitle": { "type": "string", "description": "Title of the item or need." },
         "relatedPostType": { "type": "string", "description": "NEED or OFFER." },
         "lastMessage": { "type": "string", "description": "Preview snippet of last message." },
+        "lastMessageSenderId": { "type": "string", "description": "Sender UID of last message." },
         "lastMessageTime": { "type": "string", "format": "date-time", "description": "Timestamp of last message." },
         "distanceBand": { "type": "string", "description": "Approximate proximity band." },
         "isResolved": { "type": "boolean", "description": "Whether coordination has completed." },
@@ -106,16 +145,96 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of message." }
       },
       "required": ["id", "conversationId", "senderId", "senderName", "text", "createdAt"]
+    },
+    "GeohashMessage": {
+      "title": "GeohashMessage",
+      "description": "Hyper-local mesh broadcast tied to a geohash sector.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorInitials": { "type": "string" },
+        "text": { "type": "string" },
+        "geohash": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "localityName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "text", "geohash", "latitude", "longitude", "timestamp"]
+    },
+    "SafetyReport": {
+      "title": "SafetyReport",
+      "description": "Private moderation report filed by a signed-in neighbor.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "targetUserId": { "type": "string" },
+        "targetDisplayName": { "type": "string" },
+        "reason": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "reporterId", "targetUserId", "reason", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Owner-scoped support request submitted from App Settings.",
+      "type": "object",
+      "properties": {
+        "ticketId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "appVersion": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "RESOLVED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ticketId", "userId", "category", "message", "status", "createdAt", "updatedAt"]
+    },
+    "TelemetryLog": {
+      "title": "TelemetryLog",
+      "description": "Authenticated diagnostic and crash telemetry event.",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string" },
+        "userId": { "type": "string" },
+        "appVersion": { "type": "string" },
+        "severity": { "type": "string", "enum": ["FATAL", "NON_FATAL", "INFO"] },
+        "errorName": { "type": "string" },
+        "errorMessage": { "type": "string" },
+        "stackTraceSummary": { "type": "string" },
+        "deviceModel": { "type": "string" },
+        "androidVersion": { "type": "string" },
+        "sdkInt": { "type": "integer" },
+        "timestamp": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["logId", "userId", "severity", "errorName", "errorMessage", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
-      "description": "Resident profiles keyed by UID."
+      "description": "Public resident profiles keyed by UID (without PII email)."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateAccount" },
+      "description": "Owner-only private account fields such as Google email."
     },
     "/posts/{postId}": {
       "schema": { "$ref": "#/entities/NeighborPost" },
       "description": "Public neighborhood requests, offers, and meetups."
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/PostComment" },
+      "description": "Threaded comments on a neighbor post."
     },
     "/issues/{issueId}": {
       "schema": { "$ref": "#/entities/CommunityIssue" },
@@ -128,6 +247,22 @@
     "/conversations/{conversationId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/ChatMessage" },
       "description": "Handoff coordination messages inside a conversation."
+    },
+    "/geohash_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/GeohashMessage" },
+      "description": "Geohash-scoped mesh broadcasts."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/SafetyReport" },
+      "description": "Private safety and moderation reports."
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Owner-scoped app support tickets."
+    },
+    "/telemetry_logs/{logId}": {
+      "schema": { "$ref": "#/entities/TelemetryLog" },
+      "description": "Authenticated diagnostic and crash telemetry logs."
     }
   }
 }

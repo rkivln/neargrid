@@ -34,12 +34,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         get() = try {
             FirebaseAuth.getInstance(db.app)
         } catch (e: Exception) {
-            try {
-                FirebaseAuth.getInstance()
-            } catch (ignored: Exception) {
-                android.util.Log.w("FirestoreRepository", "FirebaseAuth.getInstance() failed: ${e.message}")
-                null
-            }
+            android.util.Log.w("FirestoreRepository", "FirebaseAuth.getInstance(db.app) failed: ${e.message}")
+            null
         }
 
     companion object {
@@ -47,7 +43,9 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
         private fun getSafeFirestoreInstance(context: Context): FirebaseFirestore {
             return FirebaseBootstrap.getFirestore(context)
-                ?: FirebaseFirestore.getInstance()
+                ?: throw IllegalStateException(
+                    "Named Firestore database could not be initialized. Check R.string.firestore_database_id."
+                )
         }
 
         internal fun sanitizeUserProfilePayload(
@@ -56,7 +54,6 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             includeCreatedAt: Boolean = false
         ): HashMap<String, Any> {
             val safeDisplayName = profile.displayName.trim().ifBlank { "Local Resident" }.take(100)
-            val safeEmail = profile.email.trim().take(200)
             val safeHandle = profile.handle.trim().take(60)
             val safeBio = profile.bio.trim().take(500)
             val safeCellId = profile.cellId.trim().ifBlank { "cell_local" }.take(80)
@@ -69,7 +66,6 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
             val payload = hashMapOf<String, Any>(
                 "userId" to uid,
-                "email" to safeEmail,
                 "displayName" to safeDisplayName,
                 "handle" to safeHandle,
                 "bio" to safeBio,
@@ -98,6 +94,22 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             if (profile.geohash.isNotBlank()) {
                 payload["geohash"] = profile.geohash.removePrefix("#").lowercase(Locale.ROOT).take(32)
             }
+            if (includeCreatedAt) {
+                payload["createdAt"] = FieldValue.serverTimestamp()
+            }
+            return payload
+        }
+
+        internal fun sanitizePrivateAccountPayload(
+            uid: String,
+            email: String,
+            includeCreatedAt: Boolean = false
+        ): HashMap<String, Any> {
+            val payload = hashMapOf<String, Any>(
+                "userId" to uid,
+                "email" to email.trim().take(200),
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
             if (includeCreatedAt) {
                 payload["createdAt"] = FieldValue.serverTimestamp()
             }
@@ -168,11 +180,8 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     "lastActiveAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
-                val email = user.email?.trim()?.take(200).orEmpty()
-                if (existing.email.isBlank() && email.isNotBlank()) {
-                    updates["email"] = email
-                }
                 runCatching { docRef.update(updates).await() }
+                syncPrivateAccountRecord(uid, user.email.orEmpty())
                 Result.success(existing)
             } else {
                 val defaultEmail = user.email?.trim()?.take(200).orEmpty()
@@ -183,7 +192,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     .ifBlank { "resident" }
                 val newProfile = UserProfile(
                     userId = uid,
-                    email = defaultEmail,
+                    email = "",
                     displayName = defaultName.take(100),
                     handle = "@$defaultHandlePrefix".take(60),
                     bio = "Civic resident connected via Google Resident Pass.",
@@ -203,13 +212,31 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     includeCreatedAt = true
                 )
                 docRef.set(payload).await()
+                syncPrivateAccountRecord(uid, defaultEmail)
                 Result.success(newProfile)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            handleFirestoreError(e, OperationType.WRITE, docRef.path, auth)
             Result.failure(e)
+        }
+    }
+
+    private suspend fun syncPrivateAccountRecord(uid: String, email: String) {
+        val privateRef = db.collection("users").document(uid)
+            .collection("private").document("account")
+        try {
+            val snap = privateRef.get().await()
+            if (!snap.exists()) {
+                privateRef.set(sanitizePrivateAccountPayload(uid, email, includeCreatedAt = true)).await()
+            } else {
+                privateRef.update(sanitizePrivateAccountPayload(uid, email, includeCreatedAt = false)).await()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, privateRef.path, auth)
         }
     }
 
@@ -223,8 +250,9 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         val docRef = db.collection("users").document(userId)
         val listener = docRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                handleFirestoreError(error, OperationType.GET, docRef.path)
-                // Close with error instead of emitting null so transient failures never overwrite profile
+                if (auth?.currentUser?.uid == uid) {
+                    handleFirestoreError(error, OperationType.GET, docRef.path, auth)
+                }
                 close(error)
                 return@addSnapshotListener
             }
@@ -265,7 +293,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            handleFirestoreError(e, OperationType.WRITE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -294,7 +322,7 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 val defaultHandle = "@" + (user?.displayName?.replace(" ", "")?.lowercase(Locale.ROOT)?.ifBlank { null } ?: "resident")
                 val initialProfile = UserProfile(
                     userId = uid,
-                    email = email,
+                    email = "",
                     displayName = defaultName,
                     handle = defaultHandle,
                     bio = "Local neighbor on NearGrid",
@@ -312,12 +340,15 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                     isOnline = true
                 )
                 docRef.set(sanitizeUserProfilePayload(uid, initialProfile, includeCreatedAt = true)).await()
+                if (email.isNotBlank()) {
+                    syncPrivateAccountRecord(uid, email)
+                }
             }
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -350,25 +381,33 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         appVersion: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val user = auth?.currentUser
-        val uid = user?.uid ?: "anonymous"
+            ?: return@withContext Result.failure(IllegalStateException("User must be signed in with Google before submitting a support ticket."))
+        val uid = user.uid
+        val trimmedMessage = message.trim().take(2000)
+        if (trimmedMessage.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Support message cannot be blank."))
+        }
+        val ticketId = UUID.randomUUID().toString()
+        val docRef = db.collection("support_tickets").document(ticketId)
         val ticket = mapOf(
-            "ticketId" to UUID.randomUUID().toString(),
+            "ticketId" to ticketId,
             "userId" to uid,
-            "userName" to userNickname,
-            "userEmail" to (user?.email ?: ""),
-            "category" to category,
-            "message" to message.trim(),
-            "appVersion" to appVersion,
-            "createdAt" to System.currentTimeMillis(),
+            "userName" to userNickname.trim().ifBlank { user.displayName ?: "Resident" }.take(100),
+            "userEmail" to (user.email ?: "").trim().take(200),
+            "category" to category.trim().ifBlank { "GENERAL" }.take(60),
+            "message" to trimmedMessage,
+            "appVersion" to appVersion.trim().take(40),
+            "createdAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp(),
             "status" to "OPEN"
         )
         try {
-            db.collection("support_tickets").add(ticket).await()
+            docRef.set(ticket).await()
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, "support_tickets")
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -393,9 +432,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                handleFirestoreError(error, OperationType.LIST, "users")
-                trySend(emptyList())
-                close()
+                if (auth?.currentUser?.uid == uid) {
+                    handleFirestoreError(error, OperationType.LIST, "users", auth)
+                }
+                close(error)
                 return@addSnapshotListener
             }
             if (snapshot == null) {
@@ -413,24 +453,40 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     suspend fun blockUser(targetUserId: String): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        if (targetUserId.isBlank()) return@withContext Result.failure(IllegalArgumentException("Target user ID required"))
         val docRef = db.collection("users").document(uid)
         try {
-            docRef.update("blockedUserIds", FieldValue.arrayUnion(targetUserId)).await()
+            docRef.update(
+                mapOf(
+                    "blockedUserIds" to FieldValue.arrayUnion(targetUserId),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
 
     suspend fun unblockUser(targetUserId: String): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = auth?.currentUser?.uid ?: return@withContext Result.failure(IllegalStateException("Not authenticated"))
+        if (targetUserId.isBlank()) return@withContext Result.failure(IllegalArgumentException("Target user ID required"))
         val docRef = db.collection("users").document(uid)
         try {
-            docRef.update("blockedUserIds", FieldValue.arrayRemove(targetUserId)).await()
+            docRef.update(
+                mapOf(
+                    "blockedUserIds" to FieldValue.arrayRemove(targetUserId),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -447,17 +503,19 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         val data = hashMapOf<String, Any>(
             "id" to reportId,
             "reporterId" to uid,
-            "targetUserId" to targetUserId,
-            "targetDisplayName" to targetDisplayName,
-            "reason" to reason,
-            "notes" to notes,
+            "targetUserId" to targetUserId.trim().take(128),
+            "targetDisplayName" to targetDisplayName.trim().take(100),
+            "reason" to reason.trim().ifBlank { "OTHER" }.take(100),
+            "notes" to notes.trim().take(1000),
             "createdAt" to FieldValue.serverTimestamp()
         )
         try {
             docRef.set(data).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -487,9 +545,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         }
         val listener = query.addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    handleFirestoreError(error, OperationType.LIST, path)
-                    trySend(emptyList())
-                    close()
+                    if (auth?.currentUser?.uid == uid) {
+                        handleFirestoreError(error, OperationType.LIST, path, auth)
+                    }
+                    close(error)
                     return@addSnapshotListener
                 }
                 val currentUid = auth?.currentUser?.uid ?: ""
@@ -532,28 +591,34 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     suspend fun createPost(post: NeighborPost): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
+        val safeTitle = post.title.trim().take(200)
+        if (safeTitle.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Post title cannot be blank."))
+        }
+        val safeType = if (post.type in setOf("NEED", "OFFER", "MEETUP")) post.type else "NEED"
+        val safeUrgency = if (post.urgency in setOf("NORMAL", "TIME_SENSITIVE", "URGENT")) post.urgency else "NORMAL"
         val docId = if (post.id.isNotBlank()) post.id else UUID.randomUUID().toString()
         val docRef = db.collection("posts").document(docId)
         val payload = hashMapOf<String, Any>(
             "id" to docId,
             "userId" to uid,
-            "type" to post.type,
-            "title" to post.title,
-            "description" to post.description,
-            "category" to post.category,
-            "authorName" to post.authorName,
-            "authorInitials" to post.authorInitials,
-            "authorCellId" to post.authorCellId,
-            "cellName" to post.cellName,
+            "type" to safeType,
+            "title" to safeTitle,
+            "description" to post.description.trim().take(2000),
+            "category" to post.category.trim().ifBlank { "TOOLS" }.take(50),
+            "authorName" to post.authorName.trim().ifBlank { "Neighbor" }.take(100),
+            "authorInitials" to post.authorInitials.trim().ifBlank { "N" }.take(10),
+            "authorCellId" to post.authorCellId.trim().ifBlank { "cell_local" }.take(80),
+            "cellName" to post.cellName.trim().ifBlank { "Local Area" }.take(100),
             "lat" to post.lat,
             "lng" to post.lng,
             "geohash" to com.example.util.GeohashUtil.encode(post.lat, post.lng, 7),
-            "approxDistanceBand" to post.approxDistanceBand,
-            "urgency" to post.urgency,
-            "expiresInHours" to post.expiresInHours,
+            "approxDistanceBand" to post.approxDistanceBand.trim().ifBlank { "nearby" }.take(50),
+            "urgency" to safeUrgency,
+            "expiresInHours" to post.expiresInHours.coerceIn(1, 720),
             "status" to "ACTIVE",
-            "mediaUris" to post.mediaUris,
-            "mediaTypes" to post.mediaTypes,
+            "mediaUris" to post.mediaUris.take(10),
+            "mediaTypes" to post.mediaTypes.take(10),
             "upvotesCount" to 0,
             "upvoterIds" to emptyList<String>(),
             "createdAt" to FieldValue.serverTimestamp(),
@@ -562,8 +627,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             docRef.set(payload).await()
             Result.success(docId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -571,12 +638,13 @@ class FirestoreRepository(val db: FirebaseFirestore) {
     suspend fun togglePostUpvote(postId: String, currentUpvotes: Int, currentlyUpvoted: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
         val docRef = db.collection("posts").document(postId)
+        val safeUpvotes = if (currentlyUpvoted) (currentUpvotes - 1).coerceAtLeast(0) else currentUpvotes + 1
         try {
             if (currentlyUpvoted) {
                 docRef.update(
                     mapOf(
                         "upvoterIds" to FieldValue.arrayRemove(uid),
-                        "upvotesCount" to FieldValue.increment(-1),
+                        "upvotesCount" to safeUpvotes,
                         "updatedAt" to FieldValue.serverTimestamp()
                     )
                 ).await()
@@ -584,31 +652,36 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                 docRef.update(
                     mapOf(
                         "upvoterIds" to FieldValue.arrayUnion(uid),
-                        "upvotesCount" to FieldValue.increment(1),
+                        "upvotesCount" to safeUpvotes,
                         "updatedAt" to FieldValue.serverTimestamp()
                     )
                 ).await()
             }
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
 
     suspend fun updatePostStatus(postId: String, status: String): Result<Unit> = withContext(Dispatchers.IO) {
         requireUserId()
+        val safeStatus = if (status in setOf("ACTIVE", "RESOLVED", "CANCELLED")) status else "ACTIVE"
         val docRef = db.collection("posts").document(postId)
         try {
             docRef.update(
                 mapOf(
-                    "status" to status,
+                    "status" to safeStatus,
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -621,20 +694,27 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         urgency: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         requireUserId()
+        val safeTitle = title.trim().take(200)
+        if (safeTitle.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Post title cannot be blank."))
+        }
+        val safeUrgency = if (urgency in setOf("NORMAL", "TIME_SENSITIVE", "URGENT")) urgency else "NORMAL"
         val docRef = db.collection("posts").document(postId)
         try {
             docRef.update(
                 mapOf(
-                    "title" to title,
-                    "description" to description,
-                    "category" to category,
-                    "urgency" to urgency,
+                    "title" to safeTitle,
+                    "description" to description.trim().take(2000),
+                    "category" to category.trim().ifBlank { "TOOLS" }.take(50),
+                    "urgency" to safeUrgency,
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -645,8 +725,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             docRef.delete().await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.DELETE, docRef.path)
+            handleFirestoreError(e, OperationType.DELETE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -667,9 +749,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         }
         val listener = query.addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    handleFirestoreError(error, OperationType.LIST, path)
-                    trySend(emptyList())
-                    close()
+                    if (auth?.currentUser?.uid == uid) {
+                        handleFirestoreError(error, OperationType.LIST, path, auth)
+                    }
+                    close(error)
                     return@addSnapshotListener
                 }
                 val currentUid = auth?.currentUser?.uid ?: ""
@@ -706,30 +789,38 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
     suspend fun createIssue(issue: CommunityIssue): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
+        val safeTitle = issue.title.trim().take(200)
+        if (safeTitle.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Issue title cannot be blank."))
+        }
+        val allowedCategories = setOf("LIGHTING", "ROADS", "SAFETY", "SANITATION", "PARKS", "OTHER")
+        val safeCategory = if (issue.category in allowedCategories) issue.category else "OTHER"
         val docId = if (issue.id.isNotBlank()) issue.id else UUID.randomUUID().toString()
         val docRef = db.collection("issues").document(docId)
         val payload = hashMapOf<String, Any>(
             "id" to docId,
-            "title" to issue.title,
-            "description" to issue.description,
-            "locationSnippet" to issue.locationSnippet,
-            "cellId" to issue.cellId,
-            "category" to issue.category,
+            "title" to safeTitle,
+            "description" to issue.description.trim().take(2000),
+            "locationSnippet" to issue.locationSnippet.trim().take(300),
+            "cellId" to issue.cellId.trim().ifBlank { "cell_local" }.take(80),
+            "category" to safeCategory,
             "status" to "REPORTED",
-            "reporterName" to issue.reporterName,
+            "reporterName" to issue.reporterName.trim().ifBlank { "Resident" }.take(100),
             "reporterId" to uid,
             "upvotesCount" to 1,
             "upvoterIds" to listOf(uid),
-            "mediaUris" to issue.mediaUris,
-            "mediaTypes" to issue.mediaTypes,
+            "mediaUris" to issue.mediaUris.take(10),
+            "mediaTypes" to issue.mediaTypes.take(10),
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
         try {
             docRef.set(payload).await()
             Result.success(docId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -746,27 +837,36 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             docRef.update(updates).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
 
     suspend fun updateIssueStatus(issueId: String, newStatus: String, volunteer: String?): Result<Unit> = withContext(Dispatchers.IO) {
         requireUserId()
+        val safeStatus = if (newStatus in setOf("REPORTED", "ACKNOWLEDGED", "IN_PROGRESS", "RESOLVED")) {
+            newStatus
+        } else {
+            "REPORTED"
+        }
         val docRef = db.collection("issues").document(issueId)
         val updates = hashMapOf<String, Any>(
-            "status" to newStatus,
+            "status" to safeStatus,
             "updatedAt" to FieldValue.serverTimestamp()
         )
         if (volunteer != null) {
-            updates["assignedVolunteer"] = volunteer
+            updates["assignedVolunteer"] = volunteer.trim().take(200)
         }
         try {
             docRef.update(updates).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -785,9 +885,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             .whereArrayContains("participantIds", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    handleFirestoreError(error, OperationType.LIST, path)
-                    trySend(emptyList())
-                    close()
+                    if (auth?.currentUser?.uid == uid) {
+                        handleFirestoreError(error, OperationType.LIST, path, auth)
+                    }
+                    close(error)
                     return@addSnapshotListener
                 }
                 val items = snapshot?.documents?.mapNotNull { doc ->
@@ -795,8 +896,12 @@ class FirestoreRepository(val db: FirebaseFirestore) {
                         val data = doc.data ?: return@mapNotNull null
                         val pIds = (data["participantIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                         val pNames = (data["participantNames"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                        val otherName = pNames.firstOrNull { it != (auth?.currentUser?.displayName ?: "") }
-                            ?: pNames.firstOrNull() ?: "Neighbor"
+                        val otherIndex = pIds.indexOfFirst { it != uid }
+                        val otherName = (if (otherIndex >= 0) pNames.getOrNull(otherIndex) else null)
+                            ?.takeIf { it.isNotBlank() }
+                            ?: pNames.firstOrNull { it.isNotBlank() && it != (auth?.currentUser?.displayName ?: "") }
+                            ?: pNames.firstOrNull()
+                            ?: "Neighbor"
 
                         Conversation(
                             id = doc.id,
@@ -833,9 +938,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             .collection("messages")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    handleFirestoreError(error, OperationType.LIST, path)
-                    trySend(emptyList())
-                    close()
+                    if (auth?.currentUser?.uid == uid) {
+                        handleFirestoreError(error, OperationType.LIST, path, auth)
+                    }
+                    close(error)
                     return@addSnapshotListener
                 }
                 val currentUid = auth?.currentUser?.uid ?: ""
@@ -870,7 +976,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         meetingPoint: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = auth?.currentUser?.displayName ?: "Neighbor"
+        val safeText = text.trim().take(2000)
+        if (safeText.isEmpty() || conversationId.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Message text cannot be blank."))
+        }
+        val displayName = (auth?.currentUser?.displayName ?: "Neighbor").trim().ifBlank { "Neighbor" }.take(100)
         val msgDoc = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
@@ -881,12 +991,12 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "conversationId" to conversationId,
             "senderId" to uid,
             "senderName" to displayName,
-            "text" to text,
+            "text" to safeText,
             "isPickupLocation" to isPickupLocation,
             "createdAt" to FieldValue.serverTimestamp()
         )
-        if (meetingPoint != null) {
-            msgPayload["meetingPoint"] = meetingPoint
+        if (!meetingPoint.isNullOrBlank()) {
+            msgPayload["meetingPoint"] = meetingPoint.trim().take(200)
         }
 
         try {
@@ -894,15 +1004,17 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             // Update parent conversation
             db.collection("conversations").document(conversationId).update(
                 mapOf(
-                    "lastMessage" to text,
+                    "lastMessage" to safeText.take(500),
                     "lastMessageSenderId" to uid,
                     "lastMessageTime" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, msgDoc.path)
+            handleFirestoreError(e, OperationType.CREATE, msgDoc.path, auth)
             Result.failure(e)
         }
     }
@@ -913,6 +1025,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         newText: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         requireUserId()
+        val safeText = newText.trim().take(2000)
+        if (safeText.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Message text cannot be blank."))
+        }
         val msgDoc = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
@@ -920,12 +1036,14 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             msgDoc.update(
                 mapOf(
-                    "text" to newText
+                    "text" to safeText
                 )
             ).await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, msgDoc.path)
+            handleFirestoreError(e, OperationType.UPDATE, msgDoc.path, auth)
             Result.failure(e)
         }
     }
@@ -942,65 +1060,91 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             msgDoc.delete().await()
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.DELETE, msgDoc.path)
+            handleFirestoreError(e, OperationType.DELETE, msgDoc.path, auth)
             Result.failure(e)
         }
     }
 
     suspend fun startConversationForPost(post: NeighborPost): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val currentUserName = auth?.currentUser?.displayName ?: "Neighbor"
+        val currentUserName = (auth?.currentUser?.displayName ?: "Neighbor").trim().take(100)
         val convId = "conv_${post.id}_${uid.take(6)}"
         val convRef = db.collection("conversations").document(convId)
 
-        val convPayload = hashMapOf<String, Any>(
-            "id" to convId,
-            "participantIds" to listOf(uid, post.userId.ifBlank { "neighbor_author" }),
-            "participantNames" to listOf(currentUserName, post.authorName),
-            "relatedPostId" to post.id,
-            "relatedPostTitle" to post.title,
-            "relatedPostType" to post.type,
-            "lastMessage" to "Connecting on \"${post.title}\"",
-            "lastMessageTime" to FieldValue.serverTimestamp(),
-            "distanceBand" to post.approxDistanceBand,
-            "isResolved" to false,
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-
         try {
-            convRef.set(convPayload).await()
+            val existing = convRef.get().await()
+            if (existing.exists()) {
+                convRef.update(
+                    mapOf(
+                        "relatedPostTitle" to post.title.take(200),
+                        "relatedPostType" to post.type.take(50),
+                        "distanceBand" to post.approxDistanceBand.take(50),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+            } else {
+                val convPayload = hashMapOf<String, Any>(
+                    "id" to convId,
+                    "participantIds" to listOf(uid, post.userId.ifBlank { "neighbor_author" }),
+                    "participantNames" to listOf(currentUserName, post.authorName.trim().ifBlank { "Neighbor" }.take(100)),
+                    "relatedPostId" to post.id,
+                    "relatedPostTitle" to post.title.take(200),
+                    "relatedPostType" to post.type.take(50),
+                    "lastMessage" to "Connecting on \"${post.title}\"".take(500),
+                    "lastMessageTime" to FieldValue.serverTimestamp(),
+                    "distanceBand" to post.approxDistanceBand.take(50),
+                    "isResolved" to false,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                convRef.set(convPayload).await()
+            }
             Result.success(convId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, convRef.path)
+            handleFirestoreError(e, OperationType.WRITE, convRef.path, auth)
             Result.failure(e)
         }
     }
 
     suspend fun startDirectConversationWithNeighbor(neighborUserId: String, neighborName: String): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val currentUserName = auth?.currentUser?.displayName ?: "Neighbor"
+        val currentUserName = (auth?.currentUser?.displayName ?: "Neighbor").trim().take(100)
         val convId = if (uid < neighborUserId) "dm_${uid.take(8)}_${neighborUserId.take(8)}" else "dm_${neighborUserId.take(8)}_${uid.take(8)}"
         val convRef = db.collection("conversations").document(convId)
 
-        val convPayload = hashMapOf<String, Any>(
-            "id" to convId,
-            "participantIds" to listOf(uid, neighborUserId),
-            "participantNames" to listOf(currentUserName, neighborName),
-            "lastMessage" to "Connecting nearby on the map",
-            "lastMessageTime" to FieldValue.serverTimestamp(),
-            "distanceBand" to "nearby on map",
-            "isResolved" to false,
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-
         try {
-            convRef.set(convPayload, com.google.firebase.firestore.SetOptions.merge()).await()
+            val existing = convRef.get().await()
+            if (existing.exists()) {
+                convRef.update(
+                    mapOf(
+                        "distanceBand" to "nearby on map",
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+            } else {
+                val convPayload = hashMapOf<String, Any>(
+                    "id" to convId,
+                    "participantIds" to listOf(uid, neighborUserId),
+                    "participantNames" to listOf(currentUserName, neighborName.trim().ifBlank { "Neighbor" }.take(100)),
+                    "lastMessage" to "Connecting nearby on the map",
+                    "lastMessageTime" to FieldValue.serverTimestamp(),
+                    "distanceBand" to "nearby on map",
+                    "isResolved" to false,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                convRef.set(convPayload).await()
+            }
             Result.success(convId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, convRef.path)
+            handleFirestoreError(e, OperationType.WRITE, convRef.path, auth)
             Result.failure(e)
         }
     }
@@ -1023,9 +1167,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                handleFirestoreError(error, OperationType.LIST, path)
-                trySend(emptyList())
-                close()
+                if (auth?.currentUser?.uid == uid) {
+                    handleFirestoreError(error, OperationType.LIST, path, auth)
+                }
+                close(error)
                 return@addSnapshotListener
             }
             val currentUid = auth?.currentUser?.uid ?: ""
@@ -1068,13 +1213,19 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         localityName: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = authorName.ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }
+        val safeText = text.trim().take(2000)
+        val safeHash = geohash.trim().lowercase(Locale.ROOT).removePrefix("#").take(32)
+        if (safeText.isEmpty() || safeHash.isEmpty()) {
+            return@withContext Result.failure(IllegalArgumentException("Broadcast text and geohash are required."))
+        }
+        val displayName = authorName.trim().ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }.take(100)
         val initials = displayName.split(" ")
             .filter { it.isNotBlank() }
             .take(2)
             .map { it.first().uppercase() }
             .joinToString("")
             .ifEmpty { "N" }
+            .take(10)
 
         val docId = UUID.randomUUID().toString()
         val docRef = db.collection("geohash_messages").document(docId)
@@ -1084,11 +1235,11 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "userId" to uid,
             "authorName" to displayName,
             "authorInitials" to initials,
-            "text" to text.trim(),
-            "geohash" to geohash.trim().lowercase(Locale.ROOT).removePrefix("#"),
+            "text" to safeText,
+            "geohash" to safeHash,
             "latitude" to latitude,
             "longitude" to longitude,
-            "localityName" to localityName,
+            "localityName" to localityName.trim().take(100),
             "timestamp" to FieldValue.serverTimestamp(),
             "createdAt" to FieldValue.serverTimestamp()
         )
@@ -1096,8 +1247,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         try {
             docRef.set(payload).await()
             Result.success(docId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }
@@ -1115,8 +1268,10 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         val listener = db.collection(path)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    handleFirestoreError(error, OperationType.LIST, path)
-                    trySend(emptyList())
+                    if (auth?.currentUser?.uid == uid) {
+                        handleFirestoreError(error, OperationType.LIST, path, auth)
+                    }
+                    close(error)
                     return@addSnapshotListener
                 }
                 val items = snapshot?.documents?.mapNotNull { doc ->
@@ -1148,13 +1303,18 @@ class FirestoreRepository(val db: FirebaseFirestore) {
         parentId: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         val uid = requireUserId()
-        val displayName = authorName.ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }
+        val safeText = text.trim().take(2000)
+        if (safeText.isEmpty() || postId.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Comment text and postId are required."))
+        }
+        val displayName = authorName.trim().ifBlank { auth?.currentUser?.displayName ?: "Neighbor" }.take(100)
         val initials = displayName.split(" ")
             .filter { it.isNotBlank() }
             .take(2)
             .map { it.first().uppercase() }
             .joinToString("")
             .ifEmpty { "N" }
+            .take(10)
 
         val docId = UUID.randomUUID().toString()
         val docRef = db.collection("posts").document(postId).collection("comments").document(docId)
@@ -1165,16 +1325,19 @@ class FirestoreRepository(val db: FirebaseFirestore) {
             "authorId" to uid,
             "authorName" to displayName,
             "authorInitials" to initials,
-            "text" to text.trim(),
-            "parentId" to parentId,
+            "text" to safeText,
+            "parentId" to parentId?.takeIf { it.isNotBlank() },
             "timestamp" to FieldValue.serverTimestamp()
         )
 
         try {
+            @Suppress("UNCHECKED_CAST")
             docRef.set(payload.filterValues { it != null } as Map<String, Any>).await()
             Result.success(docId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+            handleFirestoreError(e, OperationType.CREATE, docRef.path, auth)
             Result.failure(e)
         }
     }

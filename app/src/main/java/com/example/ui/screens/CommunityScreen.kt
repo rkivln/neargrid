@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,9 +56,10 @@ import com.example.data.model.CommunityNotice
 import com.example.ui.components.AuraMeshBackground
 import com.example.ui.components.AuraVariant
 import com.example.ui.components.DarkGlassCard
-import com.example.ui.components.FrostedGlassBurgerPopup
+import com.example.ui.components.FrostedGlassFilterSheet
 import com.example.ui.components.FrostedMenuOptionPill
 import com.example.ui.components.FrostedMenuSectionTitle
+import com.example.ui.components.FrostedMenuWrapRow
 import com.example.ui.components.GlassSecondaryPillButton
 import com.example.ui.components.LiquidGlassBurgerMenuButton
 import com.example.ui.components.PillPrimaryButton
@@ -89,7 +88,7 @@ import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SubtleGlassDivider
 import com.example.ui.theme.SubtleSlate
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
     isRefreshing: Boolean = false,
@@ -344,45 +343,12 @@ fun CommunityScreen(
                                     color = if (issueStatusFilter != "ALL") CobaltGlow else MutedSlate
                                 )
 
-                                Box {
-                                    LiquidGlassBurgerMenuButton(
-                                        activeFilterCount = if (issueStatusFilter != "ALL") 1 else 0,
-                                        onClick = { showIssueFilterMenu = !showIssueFilterMenu },
-                                        contentDescription = "Filter civic issues",
-                                        modifier = Modifier.testTag("community_filter_menu_button")
-                                    )
-
-                                    FrostedGlassBurgerPopup(
-                                        expanded = showIssueFilterMenu,
-                                        onDismissRequest = { showIssueFilterMenu = false },
-                                        width = 276.dp
-                                    ) {
-                                        Text(
-                                            text = "Issue Status",
-                                            fontFamily = OutfitFontFamily,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = PureWhite
-                                        )
-                                        HorizontalDivider(thickness = 1.dp, color = SubtleGlassDivider)
-                                        FrostedMenuSectionTitle("Filter By Status")
-                                        FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            statuses.forEach { (status, label) ->
-                                                FrostedMenuOptionPill(
-                                                    label = label,
-                                                    selected = issueStatusFilter == status,
-                                                    onClick = {
-                                                        issueStatusFilter = status
-                                                        showIssueFilterMenu = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                LiquidGlassBurgerMenuButton(
+                                    activeFilterCount = if (issueStatusFilter != "ALL") 1 else 0,
+                                    onClick = { showIssueFilterMenu = true },
+                                    contentDescription = "Filter civic issues",
+                                    modifier = Modifier.testTag("community_filter_menu_button")
+                                )
                             }
                         }
 
@@ -473,6 +439,40 @@ fun CommunityScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        val communityStatuses = listOf(
+            "ALL" to "All issues",
+            "REPORTED" to "Reported",
+            "ACKNOWLEDGED" to "Acknowledged",
+            "IN_PROGRESS" to "In progress",
+            "RESOLVED" to "Resolved"
+        )
+        FrostedGlassFilterSheet(
+            expanded = showIssueFilterMenu,
+            onDismissRequest = { showIssueFilterMenu = false },
+            eyebrow = "Civic Filters",
+            title = "Issue Status",
+            sheetTestTag = "community_filter_sheet",
+            closeButtonDescription = "Close Issue Status sheet"
+        ) {
+            FrostedMenuSectionTitle("Filter By Status")
+            FrostedMenuWrapRow(
+                horizontalSpacing = 8.dp,
+                verticalSpacing = 8.dp
+            ) {
+                communityStatuses.forEach { (status, label) ->
+                    FrostedMenuOptionPill(
+                        label = label,
+                        selected = issueStatusFilter == status,
+                        onClick = {
+                            issueStatusFilter = status
+                            showIssueFilterMenu = false
+                        },
+                        modifier = Modifier.testTag("issue_status_pill_${status.lowercase()}")
+                    )
                 }
             }
         }

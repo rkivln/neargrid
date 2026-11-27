@@ -113,36 +113,28 @@ object FirebaseBootstrap {
         val app = ensureInitialized(appContext) ?: return null
         val databaseId = readDatabaseId(appContext)
 
-        if (databaseId.isNotBlank() && databaseId != "(default)") {
-            try {
-                return FirebaseFirestore.getInstance(app, databaseId)
-            } catch (e: Exception) {
-                Log.w(TAG, "Named Firestore database ($databaseId) unavailable, falling back to default", e)
-            }
+        if (databaseId.isBlank() || databaseId == "(default)") {
+            Log.e(
+                TAG,
+                "Named Firestore database ID (R.string.firestore_database_id) is missing or invalid; refusing (default) fallback."
+            )
+            return null
         }
 
         return try {
-            FirebaseFirestore.getInstance(app)
+            FirebaseFirestore.getInstance(app, databaseId)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to obtain default FirebaseFirestore instance", e)
+            Log.e(TAG, "Failed to obtain named FirebaseFirestore instance ($databaseId)", e)
             null
         }
     }
 
     fun readDatabaseId(context: Context): String {
         return try {
-            val resId = context.resources.getIdentifier(
-                "firestore_database_id",
-                "string",
-                context.packageName
-            )
-            if (resId != 0) context.getString(resId).trim() else ""
+            context.getString(R.string.firestore_database_id).trim()
         } catch (e: Exception) {
-            try {
-                context.getString(R.string.firestore_database_id).trim()
-            } catch (ignored: Exception) {
-                ""
-            }
+            Log.w(TAG, "firestore_database_id string resource unavailable", e)
+            ""
         }
     }
 
@@ -163,13 +155,17 @@ object FirebaseBootstrap {
      * Resolves the OAuth 2.0 Web Client ID for Credential Manager / Google Sign-In.
      *
      * Priority:
-     * 1. `default_web_client_id` generated from `google-services.json` (if present and valid)
+     * 1. `R.string.default_web_client_id` generated from `google-services.json`
      * 2. `BuildConfig.DEFAULT_WEB_CLIENT_ID` populated from `.env` / `.env.example`
      */
     fun resolveWebClientId(context: Context): String? {
-        val fromResources = readStringResourceOrNull(context, "default_web_client_id")
+        val fromResources = try {
+            context.getString(R.string.default_web_client_id).trim()
+        } catch (_: Exception) {
+            null
+        }
         if (isValidWebClientId(fromResources)) {
-            return fromResources!!.trim()
+            return fromResources!!
         }
 
         val fromBuildConfig = runCatching { BuildConfig.DEFAULT_WEB_CLIENT_ID }.getOrNull()
@@ -188,14 +184,5 @@ object FirebaseBootstrap {
             return false
         }
         return GOOGLE_OAUTH_CLIENT_ID_REGEX.matches(trimmed)
-    }
-
-    private fun readStringResourceOrNull(context: Context, name: String): String? {
-        return try {
-            val resId = context.resources.getIdentifier(name, "string", context.packageName)
-            if (resId != 0) context.getString(resId).trim() else null
-        } catch (e: Exception) {
-            null
-        }
     }
 }
