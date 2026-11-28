@@ -75,8 +75,6 @@ import com.example.ui.theme.PlusJakartaFontFamily
 import com.example.ui.theme.PureBlack
 import com.example.ui.theme.PureWhite
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -149,7 +147,6 @@ fun LiquidGlassBottomBar(
     val jellyScaleX = 1f + stretchFactor + swellFactor
     val jellyScaleY = (1f - stretchFactor * 0.38f + swellFactor).coerceAtLeast(0.82f)
 
-    val dockBackdrop = rememberLayerBackdrop()
     val activeGlassBlue = Color(0xFF60A5FF)
 
     Box(
@@ -223,61 +220,55 @@ fun LiquidGlassBottomBar(
                 )
             }
     ) {
-        // Layer 1: Dark Smoked Liquid Glass Dock captured into dockBackdrop
+        // Layer 1: Dark Smoked Liquid Glass Dock
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(dockBackdrop)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { pillShape },
-                        effects = {
-                            vibrancy()
-                            blur(20.dp.toPx())
-                            lens(
-                                refractionHeight = 14.dp.toPx(),
-                                refractionAmount = 28.dp.toPx(),
-                                depthEffect = true,
-                                chromaticAberration = true
-                            )
-                        },
-                        highlight = { Highlight.Default },
-                        shadow = {
-                            Shadow(
-                                radius = 24.dp,
-                                offset = DpOffset(0.dp, 10.dp),
-                                color = PureBlack.copy(alpha = 0.52f)
-                            )
-                        },
-                        innerShadow = { InnerShadow.Default },
-                        onDrawSurface = {
-                            drawRect(Color(0xFF0E121C).copy(alpha = 0.72f))
-                        }
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                PureWhite.copy(alpha = 0.30f),
-                                HairlineGlassBorder.copy(alpha = 0.65f)
-                            )
-                        ),
-                        shape = pillShape
-                    )
-            )
-        }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { pillShape },
+                    effects = {
+                        vibrancy()
+                        blur(20.dp.toPx())
+                        lens(
+                            refractionHeight = 14.dp.toPx(),
+                            refractionAmount = 28.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = true
+                        )
+                    },
+                    highlight = { Highlight.Default },
+                    shadow = {
+                        Shadow(
+                            radius = 24.dp,
+                            offset = DpOffset(0.dp, 10.dp),
+                            color = PureBlack.copy(alpha = 0.52f)
+                        )
+                    },
+                    innerShadow = { InnerShadow.Default },
+                    onDrawSurface = {
+                        drawRect(Color(0xFF0E121C).copy(alpha = 0.72f))
+                    }
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            PureWhite.copy(alpha = 0.30f),
+                            HairlineGlassBorder.copy(alpha = 0.65f)
+                        )
+                    ),
+                    shape = pillShape
+                )
+        )
 
-        // Layer 2 + Layer 3: Clear Jelly Glass Pill underneath razor-sharp tab icons and labels
+        // Layer 2 + Layer 3: Crystal-Clear See-Through Glass Pill underneath razor-sharp tab icons and labels
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = horizontalInsetDp, vertical = 5.dp)
         ) {
-            // Clear Chromatic Jelly Lens Capsule (no blur; placed behind icons/labels so contents remain crystal clear)
+            // Clear Optical Glass Capsule (zero blur; samples live screen backdrop directly with light lens refraction)
             if (containerWidthPx > 0) {
                 val indicatorWidthDp = with(density) { slotWidthPx.toDp() }
                 val indicatorOffsetX = (animatedIndex.value * slotWidthPx).roundToInt()
@@ -287,14 +278,15 @@ fun LiquidGlassBottomBar(
                         .offset { IntOffset(x = indicatorOffsetX, y = 0) }
                         .width(indicatorWidthDp)
                         .fillMaxHeight()
+                        .testTag("bottom_nav_active_pill")
                         .drawBackdrop(
-                            backdrop = dockBackdrop,
+                            backdrop = backdrop,
                             shape = { innerPillShape },
                             effects = {
                                 vibrancy()
                                 lens(
-                                    refractionHeight = 10.dp.toPx(),
-                                    refractionAmount = 22.dp.toPx(),
+                                    refractionHeight = 7.dp.toPx(),
+                                    refractionAmount = 14.dp.toPx(),
                                     depthEffect = true,
                                     chromaticAberration = true
                                 )
@@ -302,27 +294,26 @@ fun LiquidGlassBottomBar(
                             highlight = { Highlight.Default },
                             shadow = {
                                 Shadow(
-                                    radius = 12.dp,
-                                    offset = DpOffset(0.dp, 4.dp),
-                                    color = PureBlack.copy(alpha = 0.28f)
+                                    radius = 10.dp,
+                                    offset = DpOffset(0.dp, 3.dp),
+                                    color = PureBlack.copy(alpha = 0.14f)
                                 )
                             },
-                            innerShadow = { InnerShadow.Default },
                             layerBlock = {
                                 this.scaleX = jellyScaleX
                                 this.scaleY = jellyScaleY
                             },
                             onDrawSurface = {
-                                drawRect(PureWhite.copy(alpha = 0.11f))
+                                drawRect(PureWhite.copy(alpha = 0.04f))
                             }
                         )
                         .border(
                             width = 1.dp,
                             brush = Brush.verticalGradient(
                                 listOf(
-                                    PureWhite.copy(alpha = 0.58f),
-                                    activeGlassBlue.copy(alpha = 0.28f),
-                                    PureWhite.copy(alpha = 0.36f)
+                                    PureWhite.copy(alpha = 0.62f),
+                                    activeGlassBlue.copy(alpha = 0.26f),
+                                    PureWhite.copy(alpha = 0.32f)
                                 )
                             ),
                             shape = innerPillShape

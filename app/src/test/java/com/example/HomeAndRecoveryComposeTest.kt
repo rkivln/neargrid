@@ -1,10 +1,16 @@
 package com.example
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -14,10 +20,14 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.model.GridCell
 import com.example.data.remote.FirebaseBootstrap
+import com.example.ui.NavigationDestination
+import com.example.ui.components.LiquidGlassBottomBar
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.NearbyControlsBar
 import com.example.ui.theme.NearGridTheme
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -234,5 +244,46 @@ class HomeAndRecoveryComposeTest {
 
         assertEquals(1, retryClicks)
         assertEquals(1, signOutClicks)
+    }
+
+    @Test
+    fun liquidGlassBottomBar_rendersClearActivePillAndSwitchesTabs() {
+        var currentDestination by mutableStateOf(NavigationDestination.HOME)
+
+        composeTestRule.setContent {
+            NearGridTheme {
+                val backdrop = rememberLayerBackdrop()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(backdrop)
+                            .background(Color(0xFF0B1020))
+                    )
+                    LiquidGlassBottomBar(
+                        backdrop = backdrop,
+                        destinations = listOf(
+                            NavigationDestination.HOME,
+                            NavigationDestination.MAP,
+                            NavigationDestination.RADAR,
+                            NavigationDestination.INBOX,
+                            NavigationDestination.PROFILE
+                        ),
+                        currentDestination = currentDestination,
+                        onSelectDestination = { currentDestination = it },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("bottom_nav_bar").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("bottom_nav_active_pill").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("nav_item_radar").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(NavigationDestination.RADAR, currentDestination)
+        composeTestRule.onNodeWithTag("bottom_nav_active_pill").assertIsDisplayed()
     }
 }
